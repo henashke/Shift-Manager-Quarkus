@@ -5,10 +5,11 @@ import commands.UpdateUserCommand;
 import daos.BaseDao;
 import daos.UserDao;
 import entities.User;
-import mappers.CommandToEntityMapper;
-import mappers.UserMapper;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import mappers.CommandToEntityMapper;
+import mappers.UserMapper;
+import org.mindrot.jbcrypt.BCrypt;
 
 @ApplicationScoped
 public class UserService extends BaseService<User, AddUserCommand, UpdateUserCommand> {
@@ -27,5 +28,11 @@ public class UserService extends BaseService<User, AddUserCommand, UpdateUserCom
     @Override
     protected CommandToEntityMapper<User, AddUserCommand, UpdateUserCommand> getMapper() {
         return userMapper;
+    }
+
+    public boolean authenticate(String username, String password) {
+        return userDao.findByUsername(username)
+                .map(user -> BCrypt.checkpw(password, user.password))
+                .orElse(false);
     }
 }

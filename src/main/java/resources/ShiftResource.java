@@ -1,17 +1,23 @@
 package resources;
 
 import commands.AddShiftCommand;
+import commands.DeleteShiftsByWeekCommand;
+import commands.ShiftSuggestCommand;
 import commands.UpdateShiftCommand;
 import entities.AssignedShift;
+import enums.ShiftType;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import services.ShiftService;
 
+import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-@Path("/shifts")
+@Path("/api/shifts")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class ShiftResource {
@@ -56,5 +62,44 @@ public class ShiftResource {
     public Response delete(@PathParam("id") Long id) {
         shiftService.deleteById(id);
         return Response.noContent().build();
+    }
+
+    @DELETE
+    public Response deleteShift(Map<String, String> payload) {
+        LocalDate date = LocalDate.parse(payload.get("date"));
+        ShiftType type = ShiftType.valueOf(payload.get("type"));
+
+        List<AssignedShift> shifts = shiftService.findAll();
+        for (AssignedShift shift : shifts) {
+            if (shift.date.equals(date) && shift.type.equals(type)) {
+                shiftService.deleteById(shift.id);
+                return Response.ok().build();
+            }
+        }
+        throw new NotFoundException();
+    }
+
+    @DELETE
+    @Path("/week")
+    public Response deleteWeek(DeleteShiftsByWeekCommand command) {
+        shiftService.deleteShiftsForWeek(command.weekStart);
+        Map<String, Integer> response = new HashMap<>();
+        response.put("deleted", 14);
+        return Response.ok(response).build();
+    }
+
+    @POST
+    @Path("/suggest")
+    public Response suggest(ShiftSuggestCommand command) throws Exception {
+        List<AssignedShift> suggestions = shiftService.suggestAssignments(
+                command.userIds, command.startDate, command.endDate);
+        return Response.ok(suggestions).build();
+    }
+
+    @POST
+    @Path("/recalculateAllUsersScores")
+    public Response recalculateScores() {
+        shiftService.recalculateAllUsersScores();
+        return Response.ok().build();
     }
 }
