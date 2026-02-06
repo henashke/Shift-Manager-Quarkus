@@ -2,30 +2,30 @@ package services;
 
 import commands.AddShiftCommand;
 import commands.UpdateShiftCommand;
+import daos.AssignedShiftDao;
 import daos.BaseDao;
-import daos.ShiftDao;
-import entities.Shift;
-import mappers.CommandToEntityMapper;
-import mappers.ShiftMapper;
+import entities.AssignedShift;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import mappers.AssignedShiftMapper;
+import mappers.CommandToEntityMapper;
 
 @ApplicationScoped
-public class ShiftService extends BaseService<Shift, AddShiftCommand, UpdateShiftCommand> {
+public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, UpdateShiftCommand> {
 
     @Inject
-    ShiftDao shiftDao;
+    AssignedShiftDao assignedShiftDao;
 
     @Inject
-    ShiftMapper shiftMapper;
+    AssignedShiftMapper assignedShiftMapper;
 
     @Override
-    protected BaseDao<Shift> getDao() {
-        return shiftDao;
+    protected BaseDao<AssignedShift> getDao() {
+        return assignedShiftDao;
     }
 
     @Override
-    protected CommandToEntityMapper<Shift, AddShiftCommand, UpdateShiftCommand> getMapper() {
-        return shiftMapper;
+    protected CommandToEntityMapper<AssignedShift, AddShiftCommand, UpdateShiftCommand> getMapper() {
+        return assignedShiftMapper;
     }
 }

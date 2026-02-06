@@ -1,12 +1,14 @@
 package resources;
 
 import commands.AddShiftCommand;
-import entities.Shift;
+import commands.UpdateShiftCommand;
+import entities.AssignedShift;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import services.ShiftService;
+
 import java.util.List;
 
 @Path("/shifts")
@@ -18,14 +20,14 @@ public class ShiftResource {
     ShiftService shiftService;
 
     @GET
-    public List<Shift> list() {
+    public List<AssignedShift> list() {
         return shiftService.listAll();
     }
 
     @GET
     @Path("/{id}")
-    public Shift get(@PathParam("id") Long id) {
-        Shift shift = shiftService.findById(id);
+    public AssignedShift get(@PathParam("id") Long id) {
+        AssignedShift shift = shiftService.findById(id);
         if (shift == null) {
             throw new NotFoundException();
         }
@@ -34,8 +36,19 @@ public class ShiftResource {
 
     @POST
     public Response create(AddShiftCommand command) {
-        Shift shift = shiftService.create(command);
+        AssignedShift shift = shiftService.create(command);
         return Response.status(Response.Status.CREATED).entity(shift).build();
+    }
+
+    @PUT
+    @Path("/{id}")
+    public AssignedShift update(@PathParam("id") Long id, UpdateShiftCommand command) {
+        command.id = id;
+        AssignedShift updated = shiftService.update(command);
+        if (updated == null) {
+            throw new NotFoundException();
+        }
+        return updated;
     }
 
     @DELETE

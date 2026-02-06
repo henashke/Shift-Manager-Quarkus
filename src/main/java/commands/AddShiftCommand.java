@@ -1,10 +1,13 @@
 package commands;
 
-import entities.Shift;
+import entities.AssignedShift;
 import enums.ShiftType;
+
 import java.time.LocalDate;
 
-public class AddShiftCommand extends AddCommand<Shift> {
+public class AddShiftCommand extends AddCommand<AssignedShift> {
     public LocalDate date;
     public ShiftType type;
+    public Long userId;
+    public Long shiftWeightPresetId;
 }

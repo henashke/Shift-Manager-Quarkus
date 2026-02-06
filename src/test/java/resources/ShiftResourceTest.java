@@ -1,21 +1,22 @@
 package resources;
 
 import commands.AddShiftCommand;
-import entities.Shift;
+import commands.UpdateShiftCommand;
+import entities.AssignedShift;
 import enums.ShiftType;
+import jakarta.ws.rs.NotFoundException;
+import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import services.ShiftService;
 import testsupport.BaseResourceTest;
 
-import jakarta.ws.rs.NotFoundException;
-import jakarta.ws.rs.core.Response;
-
 import java.time.LocalDate;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 public class ShiftResourceTest extends BaseResourceTest {
@@ -30,24 +31,22 @@ public class ShiftResourceTest extends BaseResourceTest {
         injectField(resource, "shiftService", shiftService);
     }
 
-    @Test
-    void list_returnsAll() {
-        List<Shift> expected = List.of(newShift(1L), newShift(2L));
-        when(shiftService.listAll()).thenReturn(expected);
-
-        List<Shift> actual = resource.list();
-        assertEquals(expected, actual);
-        verify(shiftService).listAll();
+    private static AssignedShift newAssignedShift(Long id) {
+        AssignedShift s = new AssignedShift();
+        s.id = id;
+        s.date = LocalDate.now();
+        s.type = ShiftType.DAY;
+        return s;
     }
 
     @Test
-    void get_returnsEntity_whenFound() {
-        Shift s = newShift(7L);
-        when(shiftService.findById(7L)).thenReturn(s);
+    void list_returnsAll() {
+        List<AssignedShift> expected = List.of(newAssignedShift(1L), newAssignedShift(2L));
+        when(shiftService.listAll()).thenReturn(expected);
 
-        Shift actual = resource.get(7L);
-        assertEquals(s, actual);
-        verify(shiftService).findById(7L);
+        List<AssignedShift> actual = resource.list();
+        assertEquals(expected, actual);
+        verify(shiftService).listAll();
     }
 
     @Test
@@ -58,11 +57,22 @@ public class ShiftResourceTest extends BaseResourceTest {
     }
 
     @Test
+    void get_returnsEntity_whenFound() {
+        AssignedShift s = newAssignedShift(7L);
+        when(shiftService.findById(7L)).thenReturn(s);
+
+        AssignedShift actual = resource.get(7L);
+        assertEquals(s, actual);
+        verify(shiftService).findById(7L);
+    }
+
+    @Test
     void create_returns201_withEntity() {
         AddShiftCommand cmd = new AddShiftCommand();
         cmd.date = LocalDate.now();
         cmd.type = ShiftType.DAY;
-        Shift created = newShift(3L);
+        cmd.userId = 1L;
+        AssignedShift created = newAssignedShift(3L);
         when(shiftService.create(cmd)).thenReturn(created);
 
         Response resp = resource.create(cmd);
@@ -72,17 +82,30 @@ public class ShiftResourceTest extends BaseResourceTest {
     }
 
     @Test
+    void update_returnsEntity_whenFound() {
+        UpdateShiftCommand cmd = new UpdateShiftCommand();
+        cmd.userId = 2L;
+        AssignedShift updated = newAssignedShift(4L);
+        when(shiftService.update(any(UpdateShiftCommand.class))).thenReturn(updated);
+
+        AssignedShift actual = resource.update(4L, cmd);
+        assertEquals(4L, cmd.id);
+        assertEquals(updated, actual);
+        verify(shiftService).update(any(UpdateShiftCommand.class));
+    }
+
+    @Test
     void delete_returns204() {
         Response resp = resource.delete(12L);
         assertStatus(resp, Response.Status.NO_CONTENT.getStatusCode());
         verify(shiftService).deleteById(12L);
     }
 
-    private static Shift newShift(Long id) {
-        Shift s = new Shift();
-        s.id = id;
-        s.date = LocalDate.now();
-        s.type = ShiftType.DAY;
-        return s;
+    @Test
+    void update_throwsNotFound_whenMissing() {
+        UpdateShiftCommand cmd = new UpdateShiftCommand();
+        when(shiftService.update(any(UpdateShiftCommand.class))).thenReturn(null);
+        assertThrows(NotFoundException.class, () -> resource.update(11L, cmd));
+        verify(shiftService).update(any(UpdateShiftCommand.class));
     }
 }
