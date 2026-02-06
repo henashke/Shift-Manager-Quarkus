@@ -4,6 +4,7 @@ import commands.AddCommand;
 import commands.UpdateCommand;
 import daos.BaseDao;
 import entities.BaseEntity;
+import mappers.CommandToEntityMapper;
 import jakarta.transaction.Transactional;
 import java.util.List;
 
@@ -11,9 +12,7 @@ public abstract class BaseService<T extends BaseEntity, AC extends AddCommand<T>
 
     protected abstract BaseDao<T> getDao();
 
-    protected abstract T mapToEntity(AC addCommand);
-
-    protected abstract void updateEntity(T entity, UC updateCommand);
+    protected abstract CommandToEntityMapper<T, AC, UC> getMapper();
 
     public T findById(Long id) {
         return getDao().findById(id);
@@ -25,7 +24,7 @@ public abstract class BaseService<T extends BaseEntity, AC extends AddCommand<T>
 
     @Transactional
     public T create(AC addCommand) {
-        T entity = mapToEntity(addCommand);
+        T entity = getMapper().mapToEntity(addCommand);
         getDao().persist(entity);
         return entity;
     }
@@ -36,7 +35,7 @@ public abstract class BaseService<T extends BaseEntity, AC extends AddCommand<T>
         if (entity == null) {
             return null;
         }
-        updateEntity(entity, updateCommand);
+        getMapper().updateEntity(entity, updateCommand);
         return entity;
     }
 
