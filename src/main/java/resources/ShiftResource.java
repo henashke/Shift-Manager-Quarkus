@@ -69,7 +69,7 @@ public class ShiftResource {
         LocalDate date = LocalDate.parse(payload.get("date"));
         ShiftType type = ShiftType.valueOf(payload.get("type"));
 
-        List<AssignedShift> shifts = shiftService.findAll();
+        List<AssignedShift> shifts = shiftService.listAll();
         for (AssignedShift shift : shifts) {
             if (shift.date.equals(date) && shift.type.equals(type)) {
                 shiftService.deleteById(shift.id);

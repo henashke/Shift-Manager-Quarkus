@@ -34,7 +34,7 @@ public class ShiftWeightPresetResourceTest extends BaseResourceTest {
         List<ShiftWeightPreset> expected = List.of(newPreset(1L), newPreset(2L));
         when(service.listAll()).thenReturn(expected);
 
-        List<ShiftWeightPreset> actual = resource.list();
+        List<ShiftWeightPreset> actual = resource.shiftWeightPresetService.listAll();
         assertEquals(expected, actual);
         verify(service).listAll();
     }
@@ -64,7 +64,7 @@ public class ShiftWeightPresetResourceTest extends BaseResourceTest {
         ShiftWeightPreset created = newPreset(3L);
         when(service.create(cmd)).thenReturn(created);
 
-        Response resp = resource.create(cmd);
+        Response resp = resource.savePreset(cmd);
         assertStatus(resp, Response.Status.CREATED.getStatusCode());
         assertEquals(created, resp.getEntity());
         verify(service).create(cmd);
