@@ -29,6 +29,8 @@ public class BackupService {
     ConstraintDao constraintDao;
     @Inject
     ShiftWeightPresetDao shiftWeightPresetDao;
+    @Inject
+    BackupSqlGenerator backupSqlGenerator;
 
     public byte[] createBackup() throws Exception {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -62,6 +64,10 @@ public class BackupService {
     public String generateBackupFilename() {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
         return "backup-" + LocalDateTime.now().format(formatter) + ".zip";
+    }
+
+    public void generateSqlFromBackupDir(String backupDirName) throws IOException {
+        backupSqlGenerator.generateSqlFromBackupDir(backupDirName);
     }
 }
 

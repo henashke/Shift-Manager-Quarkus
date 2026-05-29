@@ -4,10 +4,10 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import enums.ConstraintType;
 import enums.ShiftType;
+import jakarta.enterprise.context.ApplicationScoped;
 
-import java.io.InputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -21,10 +21,11 @@ import java.util.Map;
 /**
  * Utility to generate SQL insert statements from an existing backup directory
  * in resources/backups/<backupName>.
- *
+ * <p>
  * Usage example:
  * new BackupSqlGenerator().generateSqlFromBackupDir("example1", Path.of("out.sql"));
  */
+@ApplicationScoped
 public class BackupSqlGenerator {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -33,8 +34,8 @@ public class BackupSqlGenerator {
     /**
      * Read the backup JSON files from the resources/backups/<backupDir> (or from
      * src/main/resources/backups/<backupDir> when running from the project) and
-     * generate a single .sql file with inserts for users, constraints and assigned_shifts.
-     *
+     * generate a single .sql file with inserts for users, constraints, and assigned_shifts.
+     * <p>
      * The output SQL file is written to: src/main/resources/backup/results/{backupDirName}/backup.sql
      */
     public void generateSqlFromBackupDir(String backupDirName) throws IOException {
@@ -42,24 +43,22 @@ public class BackupSqlGenerator {
         List<Map<String, Object>> constraints = readJsonArray(backupDirName, "constraints.json");
         List<Map<String, Object>> shifts = readJsonArray(backupDirName, "shifts.json");
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("-- Generated SQL from backup ").append(backupDirName).append("\n");
-        sb.append("BEGIN;\n\n");
+        String sb = "-- Generated SQL from backup " + backupDirName + "\n" +
+                "BEGIN;\n\n" +
 
-        // users first
-        sb.append(generateUsersInserts(users)).append("\n\n");
+                // users first
+                generateUsersInserts(users) + "\n\n" +
 
-        // constraints
-        sb.append(generateConstraintsInserts(constraints)).append("\n\n");
+                // constraints
+                generateConstraintsInserts(constraints) + "\n\n" +
 
-        // assigned_shifts
-        sb.append(generateAssignedShiftsInserts(shifts)).append("\n\n");
-
-        sb.append("COMMIT;\n");
+                // assigned_shifts
+                generateAssignedShiftsInserts(shifts) + "\n\n" +
+                "COMMIT;\n";
 
         Path outPath = Path.of("src", "main", "resources", "backup", "results", backupDirName, "backup.sql");
         Files.createDirectories(outPath.getParent());
-        Files.write(outPath, sb.toString().getBytes(StandardCharsets.UTF_8));
+        Files.writeString(outPath, sb);
     }
 
     // --- per-table generators ---
@@ -74,10 +73,10 @@ public class BackupSqlGenerator {
             String role = asString(u.get("role"));
 
             sb.append("INSERT INTO users (name, password, score, role) VALUES (")
-              .append(sqlString(name)).append(", ")
-              .append(sqlString(password)).append(", ")
-              .append(score).append(", ")
-              .append(sqlString(role)).append(");\n");
+                    .append(sqlString(name)).append(", ")
+                    .append(sqlString(password)).append(", ")
+                    .append(score).append(", ")
+                    .append(sqlString(role)).append(");\n");
         }
         return sb.toString();
     }
@@ -97,10 +96,10 @@ public class BackupSqlGenerator {
             String userName = asString(c.get("userId"));
 
             sb.append("INSERT INTO constraints (user_id, shift_date, shift_type, constraint_type) VALUES (")
-              .append("(SELECT id FROM users WHERE name = ").append(sqlString(userName)).append("), ")
-              .append(sqlString(dateStr)).append(", ")
-              .append(sqlString(shiftType)).append(", ")
-              .append(sqlString(constraintType)).append(");\n");
+                    .append("(SELECT id FROM users WHERE name = ").append(sqlString(userName)).append("), ")
+                    .append(sqlString(dateStr)).append(", ")
+                    .append(sqlString(shiftType)).append(", ")
+                    .append(sqlString(constraintType)).append(");\n");
         }
 
         return sb.toString();
@@ -119,9 +118,9 @@ public class BackupSqlGenerator {
             // preset handling omitted - set preset_id to NULL. If you want to map by preset name,
             // another pass would be needed.
             sb.append("INSERT INTO assigned_shifts (user_id, shift_date, shift_type, preset_id) VALUES (")
-              .append("(SELECT id FROM users WHERE name = ").append(sqlString(assignedUsername)).append("), ")
-              .append(sqlString(dateStr)).append(", ")
-              .append(sqlString(type)).append(", NULL);");
+                    .append("(SELECT id FROM users WHERE name = ").append(sqlString(assignedUsername)).append("), ")
+                    .append(sqlString(dateStr)).append(", ")
+                    .append(sqlString(type)).append(", NULL);");
             sb.append("\n");
         }
 
@@ -140,10 +139,12 @@ public class BackupSqlGenerator {
                 return new ArrayList<>();
             }
             byte[] bytes = Files.readAllBytes(p);
-            return objectMapper.readValue(bytes, new TypeReference<List<Map<String, Object>>>(){});
+            return objectMapper.readValue(bytes, new TypeReference<>() {
+            });
         }
         try (InputStream eis = is) {
-            return objectMapper.readValue(eis, new TypeReference<List<Map<String, Object>>>(){});
+            return objectMapper.readValue(eis, new TypeReference<>() {
+            });
         }
     }
 
