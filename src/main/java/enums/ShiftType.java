@@ -6,11 +6,17 @@ public enum ShiftType {
 
     private final String hebrewRepresentation;
 
+    public static ShiftType fromHebrew(String value) {
+        for (ShiftType type : ShiftType.values()) {
+            if (type.hebrewRepresentation.equalsIgnoreCase(value)) {
+                return type;
+            }
+        }
+        throw new IllegalArgumentException("Invalid shift type: " + value);
+    }
+
     ShiftType(String hebrewRepresentation) {
         this.hebrewRepresentation = hebrewRepresentation;
     }
 
-    public String getHebrewRepresentation() {
-        return hebrewRepresentation;
-    }
 }

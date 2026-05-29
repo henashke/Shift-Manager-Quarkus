@@ -1,8 +1,9 @@
 package enums;
 
 public enum ConstraintType {
-    CANT("CANT"),
-    PREFER("PREFER");
+    CANT("לא יכול"),
+    PREFER("מעדיף"),
+    PREFERS_NOT("מעדיף שלא");
 
     private final String value;
 
