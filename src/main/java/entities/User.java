@@ -8,8 +8,13 @@ import jakarta.persistence.Table;
 @Table(name = "users")
 public class User extends BaseEntity {
 
+    @Column(name = "name")
     public String name;
+
+    @Column(name = "password")
     public String password;
+
+    @Column(name = "score")
     public Integer score;
 
     @Column(name = "role")

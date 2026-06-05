@@ -27,7 +27,7 @@ public class ShiftWeightPresetResource {
     @GET
     public Map<String, Object> getSettings() {
         Map<String, Object> settings = new HashMap<>();
-        settings.put("currentPreset", "default");
+        settings.put("currentPreset", "פלוס 60"); // todo if we actually want this, need to add a settings table
 
         Map<String, ShiftWeightPreset> presets = new HashMap<>();
         for (ShiftWeightPreset preset : shiftWeightSettingsService.getAllPresets()) {

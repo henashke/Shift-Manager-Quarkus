@@ -15,6 +15,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -28,6 +29,7 @@ import java.util.Map;
 @ApplicationScoped
 public class BackupSqlGenerator {
 
+    private final Map<String, Long> usernameToIdMap = new HashMap<>();
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
@@ -64,20 +66,27 @@ public class BackupSqlGenerator {
     // --- per-table generators ---
 
     public String generateUsersInserts(List<Map<String, Object>> users) {
+        usernameToIdMap.clear();
         StringBuilder sb = new StringBuilder();
         sb.append("-- users inserts\n");
+        long currentId = 1;
         for (Map<String, Object> u : users) {
             String name = asString(u.get("name"));
             String password = asString(u.get("password"));
             String score = u.get("score") == null ? "NULL" : u.get("score").toString();
             String role = asString(u.get("role"));
 
-            sb.append("INSERT INTO users (name, password, score, role) VALUES (")
+            usernameToIdMap.put(name, currentId);
+
+            sb.append("INSERT INTO users (id, name, password, score, role) VALUES (")
+                    .append(currentId).append(", ")
                     .append(sqlString(name)).append(", ")
                     .append(sqlString(password)).append(", ")
                     .append(score).append(", ")
                     .append(sqlString(role)).append(");\n");
+            currentId++;
         }
+        sb.append("ALTER TABLE users ALTER COLUMN id RESTART WITH ").append(currentId).append(";\n");
         return sb.toString();
     }
 
@@ -95,8 +104,13 @@ public class BackupSqlGenerator {
             String constraintType = ConstraintType.fromValue(constraintTypeHebrew).name();
             String userName = asString(c.get("userId"));
 
+            if (!usernameToIdMap.containsKey(userName)) {
+                continue;
+            }
+            long userIdVal = usernameToIdMap.get(userName);
+
             sb.append("INSERT INTO constraints (user_id, shift_date, shift_type, constraint_type) VALUES (")
-                    .append("(SELECT id FROM users WHERE name = ").append(sqlString(userName)).append("), ")
+                    .append(userIdVal).append(", ")
                     .append(sqlString(dateStr)).append(", ")
                     .append(sqlString(shiftType)).append(", ")
                     .append(sqlString(constraintType)).append(");\n");
@@ -115,10 +129,15 @@ public class BackupSqlGenerator {
             String type = ShiftType.fromHebrew(asString(s.get("type"))).name();
             String assignedUsername = asString(s.get("assignedUsername"));
 
+            if (!usernameToIdMap.containsKey(assignedUsername)) {
+                continue;
+            }
+            long userIdVal = usernameToIdMap.get(assignedUsername);
+
             // preset handling omitted - set preset_id to NULL. If you want to map by preset name,
             // another pass would be needed.
-            sb.append("INSERT INTO assigned_shifts (user_id, shift_date, shift_type, preset_id) VALUES (")
-                    .append("(SELECT id FROM users WHERE name = ").append(sqlString(assignedUsername)).append("), ")
+            sb.append("INSERT INTO assigned_shifts (user_id, date, type, preset_id) VALUES (")
+                    .append(userIdVal).append(", ")
                     .append(sqlString(dateStr)).append(", ")
                     .append(sqlString(type)).append(", NULL);");
             sb.append("\n");

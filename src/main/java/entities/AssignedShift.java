@@ -6,7 +6,7 @@ import jakarta.persistence.*;
 @Table(name = "assigned_shifts")
 public class AssignedShift extends Shift {
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "user_id")
     public User assignedUser;
 

@@ -4,6 +4,7 @@ import commands.AddShiftCommand;
 import commands.DeleteShiftsByWeekCommand;
 import commands.ShiftSuggestCommand;
 import commands.UpdateShiftCommand;
+import dto.AssignedShiftDto;
 import entities.AssignedShift;
 import enums.ShiftType;
 import jakarta.inject.Inject;
@@ -26,8 +27,8 @@ public class ShiftResource {
     ShiftService shiftService;
 
     @GET
-    public List<AssignedShift> list() {
-        return shiftService.listAll();
+    public List<AssignedShiftDto> list() {
+        return shiftService.listAllShiftsDto();
     }
 
     @GET

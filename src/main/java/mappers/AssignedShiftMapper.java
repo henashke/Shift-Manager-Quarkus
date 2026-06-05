@@ -4,9 +4,12 @@ import commands.AddShiftCommand;
 import commands.UpdateShiftCommand;
 import daos.ShiftWeightPresetDao;
 import daos.UserDao;
+import dto.AssignedShiftDto;
 import entities.AssignedShift;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+
+import java.util.List;
 
 @ApplicationScoped
 public class AssignedShiftMapper implements CommandToEntityMapper<AssignedShift, AddShiftCommand, UpdateShiftCommand> {
@@ -37,6 +40,19 @@ public class AssignedShiftMapper implements CommandToEntityMapper<AssignedShift,
         } else {
             entity.shiftWeightPreset = null;
         }
+    }
+
+    public AssignedShiftDto mapToDto(AssignedShift entity) {
+        AssignedShiftDto dto = new AssignedShiftDto();
+        dto.date = entity.date;
+        dto.type = entity.type;
+        dto.assignedUsername = entity.assignedUser.name;
+        dto.shiftWeightPreset = entity.shiftWeightPreset;
+        return dto;
+    }
+
+    public List<AssignedShiftDto> mapToDto(List<AssignedShift> entities) {
+        return entities.stream().map(this::mapToDto).toList();
     }
 
     private void mapFields(AssignedShift entity, java.time.LocalDate date, enums.ShiftType type, Long userId, Long presetId) {

@@ -1,9 +1,11 @@
 package services;
 
+import auth.JwtTokenProvider;
 import commands.LoginCommand;
 import commands.SignupCommand;
 import daos.UserDao;
 import entities.User;
+import io.quarkus.security.AuthenticationFailedException;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.mindrot.jbcrypt.BCrypt;
@@ -34,12 +36,12 @@ public class AuthService {
         return user;
     }
 
-    public AuthResponse login(LoginCommand command) throws Exception {
+    public AuthResponse login(LoginCommand command) throws AuthenticationFailedException {
         User user = userDao.findByUsername(command.name)
-                .orElseThrow(() -> new Exception("Invalid credentials"));
+                .orElseThrow(AuthenticationFailedException::new);
 
         if (!BCrypt.checkpw(command.password, user.password)) {
-            throw new Exception("Invalid credentials");
+            throw new AuthenticationFailedException();
         }
 
         String token = tokenProvider.generateToken(user.name, user.role);

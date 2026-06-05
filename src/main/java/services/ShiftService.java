@@ -5,6 +5,7 @@ import commands.UpdateShiftCommand;
 import daos.AssignedShiftDao;
 import daos.BaseDao;
 import daos.UserDao;
+import dto.AssignedShiftDto;
 import entities.AssignedShift;
 import entities.User;
 import enums.ShiftType;
@@ -51,6 +52,10 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, Up
 
     public List<AssignedShift> getAllShiftsBetween(LocalDate startDate, LocalDate endDate) {
         return assignedShiftDao.find("date >= ?1 and date <= ?2", startDate, endDate).list();
+    }
+
+    public List<AssignedShiftDto> listAllShiftsDto() {
+        return assignedShiftMapper.mapToDto(assignedShiftDao.listAll());
     }
 
     @Transactional

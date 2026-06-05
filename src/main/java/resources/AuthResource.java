@@ -1,7 +1,10 @@
 package resources;
 
+import auth.RoleConstants;
 import commands.LoginCommand;
 import commands.SignupCommand;
+import io.quarkus.security.AuthenticationFailedException;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
@@ -9,6 +12,7 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.jwt.JsonWebToken;
 import services.AuthService;
 
 import java.util.HashMap;
@@ -22,6 +26,9 @@ public class AuthResource {
     @Inject
     AuthService authService;
 
+    @Inject
+    JsonWebToken jwt;
+
     @POST
     @Path("/signup")
     public Response signup(SignupCommand command) {
@@ -33,10 +40,10 @@ public class AuthResource {
         } catch (Exception e) {
             if (e.getMessage().contains("already exists")) {
                 return Response.status(Response.Status.CONFLICT)
-                        .entity(new ErrorResponse("Username already exists")).build();
+                        .entity("Username already exists").build();
             }
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(new ErrorResponse(e.getMessage())).build();
+                    .entity(e.getMessage()).build();
         }
     }
 
@@ -45,18 +52,18 @@ public class AuthResource {
     public Response login(LoginCommand command) {
         try {
             AuthService.AuthResponse authResponse = authService.login(command);
-            return Response.ok(authResponse).build();
-        } catch (Exception e) {
+            return Response.ok(authResponse).build(); // todo bad practice to return in in the response body, the token should be in the header
+        } catch (AuthenticationFailedException e) {
             return Response.status(Response.Status.UNAUTHORIZED)
-                    .entity(new ErrorResponse("Invalid credentials")).build();
+                    .entity("Invalid credentials").build();
         }
     }
 
-    public static class ErrorResponse {
-        public String message;
-
-        public ErrorResponse(String message) {
-            this.message = message;
-        }
+    @POST
+    @Path("/test")
+    @RolesAllowed({RoleConstants.ADMIN})
+    public Response login(String msg) {
+        String username = jwt.getClaim("username");
+        return Response.ok("username: %s. Message: %s".formatted(username, msg)).build();
     }
 }
