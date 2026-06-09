@@ -70,4 +70,3 @@ public class BackupService {
         backupSqlGenerator.generateSqlFromBackupDir(backupDirName);
     }
 }
-

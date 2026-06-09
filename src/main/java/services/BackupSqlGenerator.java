@@ -3,6 +3,7 @@ package services;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import enums.ConstraintType;
+import enums.Day;
 import enums.ShiftType;
 import jakarta.enterprise.context.ApplicationScoped;
 
@@ -30,6 +31,7 @@ import java.util.Map;
 public class BackupSqlGenerator {
 
     private final Map<String, Long> usernameToIdMap = new HashMap<>();
+    private final Map<String, Long> presetNameToIdMap = new HashMap<>();
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
@@ -50,6 +52,9 @@ public class BackupSqlGenerator {
 
                 // users first
                 generateUsersInserts(users) + "\n\n" +
+
+                // presets and weights
+                generatePresetsAndWeightsInserts(backupDirName) + "\n\n" +
 
                 // constraints
                 generateConstraintsInserts(constraints) + "\n\n" +
@@ -134,13 +139,20 @@ public class BackupSqlGenerator {
             }
             long userIdVal = usernameToIdMap.get(assignedUsername);
 
-            // preset handling omitted - set preset_id to NULL. If you want to map by preset name,
-            // another pass would be needed.
+            Map<String, Object> presetObj = (Map<String, Object>) s.get("preset");
+            String presetIdStr = "NULL";
+            if (presetObj != null) {
+                String presetName = asString(presetObj.get("name"));
+                if (presetName != null && presetNameToIdMap.containsKey(presetName)) {
+                    presetIdStr = presetNameToIdMap.get(presetName).toString();
+                }
+            }
+
             sb.append("INSERT INTO assigned_shifts (user_id, date, type, preset_id) VALUES (")
                     .append(userIdVal).append(", ")
                     .append(sqlString(dateStr)).append(", ")
-                    .append(sqlString(type)).append(", NULL);");
-            sb.append("\n");
+                    .append(sqlString(type)).append(", ")
+                    .append(presetIdStr).append(");\n");
         }
 
         return sb.toString();
@@ -156,6 +168,80 @@ public class BackupSqlGenerator {
             Path p = Path.of("src", "main", "resources", "backups", backupDirName, filename);
             if (!Files.exists(p)) {
                 return new ArrayList<>();
+            }
+            byte[] bytes = Files.readAllBytes(p);
+            return objectMapper.readValue(bytes, new TypeReference<>() {
+            });
+        }
+        try (InputStream eis = is) {
+            return objectMapper.readValue(eis, new TypeReference<>() {
+            });
+        }
+    }
+
+    public String generatePresetsAndWeightsInserts(String backupDirName) throws IOException {
+        presetNameToIdMap.clear();
+        Map<String, Object> settings = readJsonObject(backupDirName, "shiftWeightSettings.json");
+        Object presetsObj = settings.get("presets");
+        if (!(presetsObj instanceof Map)) {
+            return "-- no shift weight presets found";
+        }
+        Map<String, Object> presets = (Map<String, Object>) presetsObj;
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("-- shift_weight_presets and shift_weights inserts\n");
+        long currentPresetId = 1;
+        long currentWeightId = 1;
+
+        for (Map.Entry<String, Object> entry : presets.entrySet()) {
+            String presetName = entry.getKey();
+            Map<String, Object> presetData = (Map<String, Object>) entry.getValue();
+
+            presetNameToIdMap.put(presetName, currentPresetId);
+
+            sb.append("INSERT INTO shift_weight_presets (id, name) VALUES (")
+                    .append(currentPresetId).append(", ")
+                    .append(sqlString(presetName)).append(");\n");
+
+            List<Map<String, Object>> weights = (List<Map<String, Object>>) presetData.get("weights");
+            if (weights != null) {
+                for (Map<String, Object> w : weights) {
+                    String dayHebrew = asString(w.get("day"));
+                    String shiftTypeHebrew = asString(w.get("shiftType"));
+                    Integer weightVal = (Integer) w.get("weight");
+
+                    String dayEnum = dayHebrew != null ? Day.fromHebrewName(dayHebrew).name() : null;
+                    String shiftTypeEnum = shiftTypeHebrew != null ? ShiftType.fromHebrew(shiftTypeHebrew).name() : null;
+
+                    sb.append("INSERT INTO shift_weights (id, day, shiftType, weight, preset_id) VALUES (")
+                            .append(currentWeightId).append(", ")
+                            .append(sqlString(dayEnum)).append(", ")
+                            .append(sqlString(shiftTypeEnum)).append(", ")
+                            .append(weightVal).append(", ")
+                            .append(currentPresetId).append(");\n");
+                    currentWeightId++;
+                }
+            }
+            currentPresetId++;
+        }
+
+        if (currentPresetId > 1) {
+            sb.append("ALTER TABLE shift_weight_presets ALTER COLUMN id RESTART WITH ").append(currentPresetId).append(";\n");
+        }
+        if (currentWeightId > 1) {
+            sb.append("ALTER TABLE shift_weights ALTER COLUMN id RESTART WITH ").append(currentWeightId).append(";\n");
+        }
+        return sb.toString();
+    }
+
+    private Map<String, Object> readJsonObject(String backupDirName, String filename) throws IOException {
+        String resourcePath = "backups/" + backupDirName + "/" + filename;
+        InputStream is = Thread.currentThread().getContextClassLoader().getResourceAsStream(resourcePath);
+        if (is == null) {
+            // fallback to project resources path when running from IDE
+            Path p = Path.of("src", "main", "resources", "backups", backupDirName, filename);
+            if (!Files.exists(p)) {
+                return new HashMap<>();
             }
             byte[] bytes = Files.readAllBytes(p);
             return objectMapper.readValue(bytes, new TypeReference<>() {
