@@ -43,6 +43,10 @@ public class ShiftResponder extends BaseResponder<AssignedShift, AddShiftCommand
         return shiftDtoToCommandMapper;
     }
 
+    public List<AssignedShiftDto> listByWeekOffset(int weekOffset) {
+        return shiftDtoToCommandMapper.mapToDto(service.listByWeekOffset(weekOffset));
+    }
+
     @Override
     @Transactional
     public Response createAll(List<AssignedShiftDto> dtos) {

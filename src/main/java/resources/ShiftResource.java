@@ -24,8 +24,10 @@ public class ShiftResource {
     ShiftResponder shiftResponder;
 
     @GET
-    public List<AssignedShiftDto> list() {
-        return shiftResponder.listAll();
+    public List<AssignedShiftDto> list(@QueryParam("weekOffset") Integer weekOffset) {
+        return weekOffset == null
+                ? shiftResponder.listAll()
+                : shiftResponder.listByWeekOffset(weekOffset);
     }
 
     @POST

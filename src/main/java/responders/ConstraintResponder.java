@@ -43,15 +43,19 @@ public class ConstraintResponder extends BaseResponder<Constraint, AddConstraint
         return constraintDtoToCommandMapper;
     }
 
-    public List<ConstraintDto> listByUser(String username, boolean isAdmin) {
+    @Transactional
+    public List<ConstraintDto> listByUser(String username, boolean isAdmin, Integer weekOffset) {
         User user = userDao.findByUsername(username).orElse(null);
         if (user == null) throw new NotFoundException("User not found: " + username);
-        List<Constraint> constraints = isAdmin ? constraintService.listAll() : constraintService.findByUserId(user.id);
+        List<Constraint> constraints;
+        if (weekOffset == null) {
+            constraints = isAdmin ? constraintService.listAll() : constraintService.findByUserId(user.id);
+        } else {
+            constraints = isAdmin
+                    ? constraintService.listByWeekOffset(weekOffset)
+                    : constraintService.findByUserIdAndWeekOffset(user.id, weekOffset);
+        }
         return constraintDtoToCommandMapper.mapToDto(constraints);
-    }
-
-    public List<ConstraintDto> findByUserId(Long userId) {
-        return constraintDtoToCommandMapper.mapToDto(constraintService.findByUserId(userId));
     }
 
     @Transactional

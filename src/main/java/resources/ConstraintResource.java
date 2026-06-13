@@ -27,16 +27,10 @@ public class ConstraintResource {
     JsonWebToken jwt;
 
     @GET
-    public List<ConstraintDto> listConstraints() {
+    public List<ConstraintDto> listConstraints(@QueryParam("weekOffset") Integer weekOffset) {
         String username = jwt.getClaim(JwtClaims.USERNAME);
         boolean isAdmin = jwt.getGroups().contains(RoleConstants.ADMIN);
-        return constraintResponder.listByUser(username, isAdmin);
-    }
-
-    @GET
-    @Path("/user/{userId}")
-    public List<ConstraintDto> getConstraintsByUser(@PathParam("userId") Long userId) {
-        return constraintResponder.findByUserId(userId);
+        return constraintResponder.listByUser(username, isAdmin, weekOffset);
     }
 
     @POST
