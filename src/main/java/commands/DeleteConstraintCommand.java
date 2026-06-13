@@ -9,5 +9,3 @@ public class DeleteConstraintCommand {
     public LocalDate date;
     public ShiftType type;
 }
-
-

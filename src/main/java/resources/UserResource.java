@@ -1,7 +1,6 @@
 package resources;
 
 import commands.AddUserCommand;
-import commands.UpdateUserCommand;
 import dto.UserDto;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -28,9 +27,7 @@ public class UserResource {
     @Path("/{id}")
     public UserDto get(@PathParam("id") Long id) {
         UserDto dto = userResponder.findById(id);
-        if (dto == null) {
-            throw new NotFoundException();
-        }
+        if (dto == null) throw new NotFoundException();
         return dto;
     }
 
@@ -41,16 +38,15 @@ public class UserResource {
     }
 
     @PUT
-    @Path("/{id}")
-    public UserDto update(@PathParam("id") Long id, UpdateUserCommand command) {
-        command.id = id;
-        return userResponder.update(id, command);
+    @Path("/{username}")
+    public UserDto update(@PathParam("username") String username, UserDto dto) {
+        return userResponder.updateByUsername(username, dto);
     }
 
     @DELETE
-    @Path("/{id}")
-    public Response delete(@PathParam("id") Long id) {
-        userResponder.deleteById(id);
+    @Path("/{username}")
+    public Response delete(@PathParam("username") String username) {
+        userResponder.deleteByUsername(username);
         return Response.noContent().build();
     }
 }

@@ -3,12 +3,18 @@ package responders;
 import commands.AddShiftCommand;
 import commands.ShiftSuggestCommand;
 import commands.UpdateShiftCommand;
+import daos.ShiftWeightPresetDao;
+import daos.UserDao;
 import dto.AssignedShiftDto;
+import dto.ShiftSuggestDto;
 import entities.AssignedShift;
+import entities.ShiftWeightPreset;
+import entities.User;
 import enums.ShiftType;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.NotFoundException;
 import mappers.AssignedShiftMapper;
 import mappers.CommandToEntityMapper;
@@ -27,6 +33,12 @@ public class ShiftResponder extends BaseResponder<AssignedShift, AddShiftCommand
     @Inject
     AssignedShiftMapper assignedShiftMapper;
 
+    @Inject
+    UserDao userDao;
+
+    @Inject
+    ShiftWeightPresetDao shiftWeightPresetDao;
+
     @Override
     protected BaseService<AssignedShift> getService() {
         return shiftService;
@@ -38,9 +50,23 @@ public class ShiftResponder extends BaseResponder<AssignedShift, AddShiftCommand
     }
 
     @Transactional
-    public List<AssignedShiftDto> suggest(ShiftSuggestCommand command) throws Exception {
+    public List<AssignedShiftDto> createBulk(List<AssignedShiftDto> dtos) {
+        return dtos.stream().map(dto -> create(toAddCommand(dto))).toList();
+    }
+
+    @Transactional
+    public List<AssignedShiftDto> suggest(ShiftSuggestDto dto) throws Exception {
+        ShiftSuggestCommand cmd = new ShiftSuggestCommand();
+        cmd.userIds = dto.userIds.stream()
+                .map(name -> userDao.findByUsername(name)
+                        .map(u -> u.id)
+                        .orElseThrow(() -> new BadRequestException("User not found: " + name)))
+                .toList();
+        cmd.startDate = dto.startDate;
+        cmd.endDate = dto.endDate;
+
         List<AssignedShift> suggestions = shiftService.suggestAssignments(
-                command.userIds, command.startDate, command.endDate);
+                cmd.userIds, cmd.startDate, cmd.endDate);
         return assignedShiftMapper.mapToDto(suggestions);
     }
 
@@ -60,5 +86,20 @@ public class ShiftResponder extends BaseResponder<AssignedShift, AddShiftCommand
 
     public void recalculateAllUsersScores() {
         shiftService.recalculateAllUsersScores();
+    }
+
+    private AddShiftCommand toAddCommand(AssignedShiftDto dto) {
+        User user = userDao.findByUsername(dto.assignedUsername)
+                .orElseThrow(() -> new BadRequestException("User not found: " + dto.assignedUsername));
+        ShiftWeightPreset preset = dto.preset != null
+                ? shiftWeightPresetDao.findByName(dto.preset.name)
+                : null;
+
+        AddShiftCommand cmd = new AddShiftCommand();
+        cmd.date = dto.date;
+        cmd.type = ShiftType.fromHebrew(dto.type);
+        cmd.userId = user.id;
+        cmd.shiftWeightPresetId = preset != null ? preset.id : null;
+        return cmd;
     }
 }

@@ -1,18 +1,19 @@
 package resources;
 
-import commands.AddShiftCommand;
+import auth.RoleConstants;
 import commands.DeleteShiftsByWeekCommand;
-import commands.ShiftSuggestCommand;
 import commands.UpdateShiftCommand;
 import dto.AssignedShiftDto;
+import dto.ShiftDto;
+import dto.ShiftSuggestDto;
 import enums.ShiftType;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import responders.ShiftResponder;
 
-import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,42 +35,35 @@ public class ShiftResource {
     @Path("/{id}")
     public AssignedShiftDto get(@PathParam("id") Long id) {
         AssignedShiftDto dto = shiftResponder.findById(id);
-        if (dto == null) {
-            throw new NotFoundException();
-        }
+        if (dto == null) throw new NotFoundException();
         return dto;
     }
 
     @POST
-    public Response create(AddShiftCommand command) {
-        AssignedShiftDto dto = shiftResponder.create(command);
-        return Response.status(Response.Status.CREATED).entity(dto).build();
+    @RolesAllowed({RoleConstants.ADMIN})
+    public Response create(List<AssignedShiftDto> dtos) {
+        List<AssignedShiftDto> created = shiftResponder.createBulk(dtos);
+        return Response.status(Response.Status.CREATED).entity(created).build();
     }
 
     @PUT
     @Path("/{id}")
+    @RolesAllowed({RoleConstants.ADMIN})
     public AssignedShiftDto update(@PathParam("id") Long id, UpdateShiftCommand command) {
         command.id = id;
         return shiftResponder.update(id, command);
     }
 
     @DELETE
-    @Path("/{id}")
-    public Response delete(@PathParam("id") Long id) {
-        shiftResponder.deleteById(id);
-        return Response.noContent().build();
-    }
-
-    @DELETE
-    public Response deleteShift(Map<String, String> payload) {
-        LocalDate date = LocalDate.parse(payload.get("date"));
-        ShiftType type = ShiftType.valueOf(payload.get("type"));
-        shiftResponder.deleteByDateAndType(date, type);
+    @RolesAllowed({RoleConstants.ADMIN})
+    public Response deleteShift(ShiftDto shift) {
+        shiftResponder.deleteByDateAndType(shift.date, ShiftType.fromHebrew(shift.type));
         return Response.ok().build();
     }
 
     @DELETE
     @Path("/week")
+    @RolesAllowed({RoleConstants.ADMIN})
     public Response deleteWeek(DeleteShiftsByWeekCommand command) {
         shiftResponder.deleteShiftsForWeek(command.weekStart);
         Map<String, Integer> response = new HashMap<>();
@@ -79,13 +73,15 @@ public class ShiftResource {
 
     @POST
     @Path("/suggest")
-    public Response suggest(ShiftSuggestCommand command) throws Exception {
-        List<AssignedShiftDto> suggestions = shiftResponder.suggest(command);
+    @RolesAllowed({RoleConstants.ADMIN})
+    public Response suggest(ShiftSuggestDto dto) throws Exception {
+        List<AssignedShiftDto> suggestions = shiftResponder.suggest(dto);
         return Response.ok(suggestions).build();
     }
 
     @POST
     @Path("/recalculateAllUsersScores")
+    @RolesAllowed({RoleConstants.ADMIN})
     public Response recalculateScores() {
         shiftResponder.recalculateAllUsersScores();
         return Response.ok().build();

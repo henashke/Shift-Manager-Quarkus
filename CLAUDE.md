@@ -83,6 +83,7 @@ back-references).
 
 - Instead of @Inject-ing, use @RequiredArgsConstructor + making the fields private-final for @ApplicationScoped to
   auto-inject them.
+- Resource functions should be one-liners. All logic goes in responders/services.
 
 ### Auth Flow
 

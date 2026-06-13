@@ -19,7 +19,7 @@ public class JwtTokenProvider {
         return Jwt.issuer(issuer)
                 .upn(username)
                 .groups(Set.of(role))
-                .claim("username", username)
+                .claim(JwtClaims.USERNAME, username)
                 .issuedAt(Instant.now())
                 .expiresAt(Instant.now().plusSeconds(Integer.parseInt(tokenLifespan)))
                 .sign();

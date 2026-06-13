@@ -43,9 +43,7 @@ public class ShiftService extends BaseService<AssignedShift> {
         List<User> users = new ArrayList<>();
         for (Long userId : userIds) {
             User user = userDao.findById(userId);
-            if (user != null) {
-                users.add(user);
-            }
+            if (user != null) users.add(user);
         }
 
         if (users.isEmpty()) {

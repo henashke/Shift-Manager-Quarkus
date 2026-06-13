@@ -11,5 +11,3 @@ public class ConstraintCommand {
     public ShiftType type;
     public ConstraintType constraintType;
 }
-
-
