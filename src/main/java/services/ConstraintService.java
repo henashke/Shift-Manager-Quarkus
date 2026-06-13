@@ -12,10 +12,9 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import mappers.constraint.ConstraintCommandToEntityMapper;
+import util.WeekWindow;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 
 @ApplicationScoped
@@ -42,20 +41,13 @@ public class ConstraintService extends BaseService<Constraint, AddConstraintComm
     }
 
     public List<Constraint> listByWeekOffset(int weekOffset) {
-        LocalDate start = windowStart(weekOffset);
-        return dao.findBetween(start, start.plusWeeks(4).plusDays(6));
+        WeekWindow window = WeekWindow.centeredOn(weekOffset);
+        return dao.findBetween(window.start(), window.end());
     }
 
     public List<Constraint> findByUserIdAndWeekOffset(Long userId, int weekOffset) {
-        LocalDate start = windowStart(weekOffset);
-        return dao.findByUserIdBetween(userId, start, start.plusWeeks(4).plusDays(6));
-    }
-
-    private LocalDate windowStart(int weekOffset) {
-        return LocalDate.now()
-                .with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY))
-                .plusWeeks(weekOffset)
-                .minusWeeks(2);
+        WeekWindow window = WeekWindow.centeredOn(weekOffset);
+        return dao.findByUserIdBetween(userId, window.start(), window.end());
     }
 
     @Transactional

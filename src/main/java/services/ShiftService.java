@@ -15,10 +15,9 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import mappers.CommandToEntityMapper;
 import mappers.shift.ShiftCommandToEntityMapper;
+import util.WeekWindow;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -54,12 +53,8 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, Up
     }
 
     public List<AssignedShift> listByWeekOffset(int weekOffset) {
-        LocalDate currentWeekStart = LocalDate.now()
-                .with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY));
-        LocalDate centerWeekStart = currentWeekStart.plusWeeks(weekOffset);
-        LocalDate rangeStart = centerWeekStart.minusWeeks(2);
-        LocalDate rangeEnd = centerWeekStart.plusWeeks(2).plusDays(6);
-        return dao.findBetween(rangeStart, rangeEnd);
+        WeekWindow window = WeekWindow.centeredOn(weekOffset);
+        return dao.findBetween(window.start(), window.end());
     }
 
     @Transactional
