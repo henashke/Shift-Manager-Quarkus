@@ -57,14 +57,32 @@ Each feature follows the same layered pattern:
 
 ```
 resources/ (JAX-RS endpoint)
-  → services/ (business logic)
-    → daos/ (Panache repository, extends BaseDao<T>)
-      → entities/ (JPA entity, extends BaseEntity)
+  → responders/ (DTO ↔ entity conversion, owns the mapper)
+    → services/ (business logic, entity operations only)
+      → daos/ (Panache repository, extends BaseDao<T>)
+        → entities/ (JPA entity, extends BaseEntity)
 ```
 
-**Commands** (`commands/`) are the POST/PUT request bodies. **Mappers** (`mappers/`, implement
-`CommandToEntityMapper<C,E>`) convert commands to entities. **DTOs** (`dto/`) are used for structured responses (e.g.,
-`AssignedShiftDto`).
+**Commands** (`commands/`) are the POST/PUT request bodies.
+
+**Mappers** (`mappers/`, implement `CommandToEntityMapper<T, AC, UC, D>`) handle two conversions:
+
+- `mapToEntity(command)` — command → entity (inbound)
+- `mapToDto(entity)` → DTO (outbound)
+
+**Responders** (`responders/`) sit between resources and services. They are the only layer that knows about mappers and
+DTOs. `BaseResponder<T, AC, UC, D>` provides generic CRUD methods; concrete responders add domain-specific logic.
+
+**Services** (`services/`, extend `BaseService<T>`) contain business logic and operate exclusively on entities. They
+have no knowledge of DTOs or mappers.
+
+**DTOs** (`dto/`) are the API response types. They never expose internal entity fields (e.g., hashed passwords,
+back-references).
+
+### General Code Preferences
+
+- Instead of @Inject-ing, use @RequiredArgsConstructor + making the fields private-final for @ApplicationScoped to
+  auto-inject them.
 
 ### Auth Flow
 

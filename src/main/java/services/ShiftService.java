@@ -1,32 +1,24 @@
 package services;
 
-import commands.AddShiftCommand;
-import commands.UpdateShiftCommand;
 import daos.AssignedShiftDao;
 import daos.BaseDao;
 import daos.UserDao;
-import dto.AssignedShiftDto;
 import entities.AssignedShift;
 import entities.User;
 import enums.ShiftType;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import mappers.AssignedShiftMapper;
-import mappers.CommandToEntityMapper;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
 @ApplicationScoped
-public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, UpdateShiftCommand, AssignedShiftDto> {
+public class ShiftService extends BaseService<AssignedShift> {
 
     @Inject
     AssignedShiftDao assignedShiftDao;
-
-    @Inject
-    AssignedShiftMapper assignedShiftMapper;
 
     @Inject
     UserDao userDao;
@@ -39,19 +31,14 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, Up
         return assignedShiftDao;
     }
 
-    @Override
-    protected CommandToEntityMapper<AssignedShift, AddShiftCommand, UpdateShiftCommand, AssignedShiftDto> getMapper() {
-        return assignedShiftMapper;
-    }
-
     @Transactional
-    public void deleteShiftsForWeek(LocalDate weekStart) { // todo Add a sliding window for fetching shifts to avoid working with too many shifts at once (Constraints too)
+    public void deleteShiftsForWeek(LocalDate weekStart) {
         LocalDate weekEnd = weekStart.plusDays(6);
         assignedShiftDao.delete("date >= ?1 and date <= ?2", weekStart, weekEnd);
     }
 
     @Transactional
-    public List<AssignedShiftDto> suggestAssignments(List<Long> userIds, LocalDate startDate, LocalDate endDate) throws Exception {
+    public List<AssignedShift> suggestAssignments(List<Long> userIds, LocalDate startDate, LocalDate endDate) throws Exception {
         List<AssignedShift> suggestions = new ArrayList<>();
         List<User> users = new ArrayList<>();
         for (Long userId : userIds) {
@@ -92,7 +79,7 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, Up
             currentDate = currentDate.plusDays(1);
         }
 
-        return assignedShiftMapper.mapToDto(suggestions);
+        return suggestions;
     }
 
     @Transactional

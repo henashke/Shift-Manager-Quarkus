@@ -7,7 +7,7 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import services.ConstraintService;
+import responders.ConstraintResponder;
 
 import java.util.HashMap;
 import java.util.List;
@@ -19,17 +19,17 @@ import java.util.Map;
 public class ConstraintResource {
 
     @Inject
-    ConstraintService constraintService;
+    ConstraintResponder constraintResponder;
 
     @GET
     public List<ConstraintDto> listConstraints() {
-        return constraintService.findAllDto();
+        return constraintResponder.listAll();
     }
 
     @GET
     @Path("/user/{userId}")
     public List<ConstraintDto> getConstraintsByUser(@PathParam("userId") Long userId) {
-        return constraintService.findByUserIdDto(userId);
+        return constraintResponder.findByUserId(userId);
     }
 
     @POST
@@ -38,10 +38,10 @@ public class ConstraintResource {
             if (payload instanceof java.util.List) {
                 List<ConstraintCommand> commands = (List<ConstraintCommand>) payload;
                 for (ConstraintCommand command : commands) {
-                    constraintService.create(command);
+                    constraintResponder.create(command);
                 }
             } else if (payload instanceof ConstraintCommand) {
-                constraintService.create((ConstraintCommand) payload);
+                constraintResponder.create((ConstraintCommand) payload);
             }
             Map<String, String> response = new HashMap<>();
             response.put("message", "Constraint(s) created successfully");
@@ -55,7 +55,7 @@ public class ConstraintResource {
     @DELETE
     public Response deleteConstraint(DeleteConstraintCommand command) {
         try {
-            constraintService.delete(command);
+            constraintResponder.delete(command);
             Map<String, String> response = new HashMap<>();
             response.put("message", "Constraint deleted successfully");
             return Response.ok(response).build();

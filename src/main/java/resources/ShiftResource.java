@@ -10,7 +10,7 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import services.ShiftService;
+import responders.ShiftResponder;
 
 import java.time.LocalDate;
 import java.util.HashMap;
@@ -23,17 +23,17 @@ import java.util.Map;
 public class ShiftResource {
 
     @Inject
-    ShiftService shiftService;
+    ShiftResponder shiftResponder;
 
     @GET
     public List<AssignedShiftDto> list() {
-        return shiftService.listAllDto();
+        return shiftResponder.listAll();
     }
 
     @GET
     @Path("/{id}")
     public AssignedShiftDto get(@PathParam("id") Long id) {
-        AssignedShiftDto dto = shiftService.findByIdDto(id);
+        AssignedShiftDto dto = shiftResponder.findById(id);
         if (dto == null) {
             throw new NotFoundException();
         }
@@ -42,7 +42,7 @@ public class ShiftResource {
 
     @POST
     public Response create(AddShiftCommand command) {
-        AssignedShiftDto dto = shiftService.createDto(command);
+        AssignedShiftDto dto = shiftResponder.create(command);
         return Response.status(Response.Status.CREATED).entity(dto).build();
     }
 
@@ -50,17 +50,13 @@ public class ShiftResource {
     @Path("/{id}")
     public AssignedShiftDto update(@PathParam("id") Long id, UpdateShiftCommand command) {
         command.id = id;
-        AssignedShiftDto dto = shiftService.updateDto(command);
-        if (dto == null) {
-            throw new NotFoundException();
-        }
-        return dto;
+        return shiftResponder.update(id, command);
     }
 
     @DELETE
     @Path("/{id}")
     public Response delete(@PathParam("id") Long id) {
-        shiftService.deleteById(id);
+        shiftResponder.deleteById(id);
         return Response.noContent().build();
     }
 
@@ -68,19 +64,14 @@ public class ShiftResource {
     public Response deleteShift(Map<String, String> payload) {
         LocalDate date = LocalDate.parse(payload.get("date"));
         ShiftType type = ShiftType.valueOf(payload.get("type"));
-
-        entities.AssignedShift found = shiftService.listAll().stream()
-                .filter(s -> s.date.equals(date) && s.type.equals(type))
-                .findFirst()
-                .orElseThrow(NotFoundException::new);
-        shiftService.deleteById(found.id);
+        shiftResponder.deleteByDateAndType(date, type);
         return Response.ok().build();
     }
 
     @DELETE
     @Path("/week")
     public Response deleteWeek(DeleteShiftsByWeekCommand command) {
-        shiftService.deleteShiftsForWeek(command.weekStart);
+        shiftResponder.deleteShiftsForWeek(command.weekStart);
         Map<String, Integer> response = new HashMap<>();
         response.put("deleted", 14);
         return Response.ok(response).build();
@@ -89,15 +80,14 @@ public class ShiftResource {
     @POST
     @Path("/suggest")
     public Response suggest(ShiftSuggestCommand command) throws Exception {
-        List<AssignedShiftDto> suggestions = shiftService.suggestAssignments(
-                command.userIds, command.startDate, command.endDate);
+        List<AssignedShiftDto> suggestions = shiftResponder.suggest(command);
         return Response.ok(suggestions).build();
     }
 
     @POST
     @Path("/recalculateAllUsersScores")
     public Response recalculateScores() {
-        shiftService.recalculateAllUsersScores();
+        shiftResponder.recalculateAllUsersScores();
         return Response.ok().build();
     }
 }

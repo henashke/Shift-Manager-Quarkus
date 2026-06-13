@@ -4,13 +4,11 @@ import commands.ConstraintCommand;
 import commands.DeleteConstraintCommand;
 import daos.ConstraintDao;
 import daos.UserDao;
-import dto.ConstraintDto;
 import entities.Constraint;
 import entities.User;
 import enums.ShiftType;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import mappers.ConstraintMapper;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -24,15 +22,12 @@ public class ConstraintService {
     @Inject
     UserDao userDao;
 
-    @Inject
-    ConstraintMapper constraintMapper;
-
-    public List<ConstraintDto> findAllDto() {
-        return constraintMapper.mapToDto(findAll());
+    public List<Constraint> findAll() {
+        return constraintDao.listAll();
     }
 
-    public List<ConstraintDto> findByUserIdDto(Long userId) {
-        return constraintMapper.mapToDto(constraintDao.findByUserId(userId));
+    public List<Constraint> findByUserId(Long userId) {
+        return constraintDao.findByUserId(userId);
     }
 
     public Constraint create(ConstraintCommand command) throws Exception {
@@ -67,7 +62,4 @@ public class ConstraintService {
         return constraint != null && constraint.constraintType.getValue().equals("CANT");
     }
 
-    public List<Constraint> findAll() {
-        return constraintDao.listAll();
-    }
 }

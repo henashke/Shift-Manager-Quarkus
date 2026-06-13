@@ -7,7 +7,7 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import services.UserService;
+import responders.UserResponder;
 
 import java.util.List;
 
@@ -17,17 +17,17 @@ import java.util.List;
 public class UserResource {
 
     @Inject
-    UserService userService;
+    UserResponder userResponder;
 
     @GET
     public List<UserDto> list() {
-        return userService.listAllDto();
+        return userResponder.listAll();
     }
 
     @GET
     @Path("/{id}")
     public UserDto get(@PathParam("id") Long id) {
-        UserDto dto = userService.findByIdDto(id);
+        UserDto dto = userResponder.findById(id);
         if (dto == null) {
             throw new NotFoundException();
         }
@@ -36,7 +36,7 @@ public class UserResource {
 
     @POST
     public Response create(AddUserCommand command) {
-        UserDto dto = userService.createDto(command);
+        UserDto dto = userResponder.create(command);
         return Response.status(Response.Status.CREATED).entity(dto).build();
     }
 
@@ -44,17 +44,13 @@ public class UserResource {
     @Path("/{id}")
     public UserDto update(@PathParam("id") Long id, UpdateUserCommand command) {
         command.id = id;
-        UserDto dto = userService.updateDto(command);
-        if (dto == null) {
-            throw new NotFoundException();
-        }
-        return dto;
+        return userResponder.update(id, command);
     }
 
     @DELETE
     @Path("/{id}")
     public Response delete(@PathParam("id") Long id) {
-        userService.deleteById(id);
+        userResponder.deleteById(id);
         return Response.noContent().build();
     }
 }
