@@ -9,13 +9,14 @@ import entities.AssignedShift;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
-import java.util.List;
-
 @ApplicationScoped
-public class AssignedShiftMapper implements CommandToEntityMapper<AssignedShift, AddShiftCommand, UpdateShiftCommand> {
+public class AssignedShiftMapper implements CommandToEntityMapper<AssignedShift, AddShiftCommand, UpdateShiftCommand, AssignedShiftDto> {
 
     @Inject
     ShiftWeightPresetDao shiftWeightPresetDao;
+
+    @Inject
+    ShiftWeightPresetMapper shiftWeightPresetMapper;
 
     @Inject
     UserDao userDao;
@@ -42,17 +43,14 @@ public class AssignedShiftMapper implements CommandToEntityMapper<AssignedShift,
         }
     }
 
+    @Override
     public AssignedShiftDto mapToDto(AssignedShift entity) {
         AssignedShiftDto dto = new AssignedShiftDto();
         dto.date = entity.date;
         dto.type = entity.type;
-        dto.assignedUsername = entity.assignedUser.name;
-        dto.shiftWeightPreset = entity.shiftWeightPreset;
+        dto.assignedUsername = entity.assignedUser != null ? entity.assignedUser.name : null;
+        dto.shiftWeightPreset = entity.shiftWeightPreset != null ? shiftWeightPresetMapper.mapToDto(entity.shiftWeightPreset) : null;
         return dto;
-    }
-
-    public List<AssignedShiftDto> mapToDto(List<AssignedShift> entities) {
-        return entities.stream().map(this::mapToDto).toList();
     }
 
     private void mapFields(AssignedShift entity, java.time.LocalDate date, enums.ShiftType type, Long userId, Long presetId) {

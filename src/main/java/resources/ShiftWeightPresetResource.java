@@ -2,11 +2,12 @@ package resources;
 
 import commands.AddShiftWeightPresetCommand;
 import commands.SetCurrentPresetCommand;
-import entities.ShiftWeightPreset;
+import dto.ShiftWeightPresetDto;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import mappers.ShiftWeightPresetMapper;
 import services.ShiftWeightPresetService;
 import services.ShiftWeightSettingsService;
 
@@ -24,14 +25,17 @@ public class ShiftWeightPresetResource {
     @Inject
     ShiftWeightSettingsService shiftWeightSettingsService;
 
+    @Inject
+    ShiftWeightPresetMapper shiftWeightPresetMapper;
+
     @GET
     public Map<String, Object> getSettings() {
         Map<String, Object> settings = new HashMap<>();
         settings.put("currentPreset", "פלוס 60"); // todo if we actually want this, need to add a settings table
 
-        Map<String, ShiftWeightPreset> presets = new HashMap<>();
-        for (ShiftWeightPreset preset : shiftWeightSettingsService.getAllPresets()) {
-            presets.put(preset.name, preset);
+        Map<String, ShiftWeightPresetDto> presets = new HashMap<>();
+        for (entities.ShiftWeightPreset preset : shiftWeightSettingsService.getAllPresets()) {
+            presets.put(preset.name, shiftWeightPresetMapper.mapToDto(preset));
         }
         settings.put("presets", presets);
 
@@ -41,7 +45,7 @@ public class ShiftWeightPresetResource {
     @POST
     @Path("/preset")
     public Response savePreset(AddShiftWeightPresetCommand command) {
-        ShiftWeightPreset preset = shiftWeightPresetService.create(command);
+        shiftWeightPresetService.createDto(command);
         Map<String, String> response = new HashMap<>();
         response.put("message", "Presets saved");
         return Response.ok(response).build();
@@ -56,17 +60,15 @@ public class ShiftWeightPresetResource {
         return Response.ok(response).build();
     }
 
-    // Legacy endpoints for compatibility
     @GET
     @Path("/{id}")
-    public ShiftWeightPreset get(@PathParam("id") Long id) {
-        ShiftWeightPreset preset = shiftWeightPresetService.findById(id);
-        if (preset == null) {
+    public ShiftWeightPresetDto get(@PathParam("id") Long id) {
+        ShiftWeightPresetDto dto = shiftWeightPresetService.findByIdDto(id);
+        if (dto == null) {
             throw new NotFoundException();
         }
-        return preset;
+        return dto;
     }
-
 
     @DELETE
     @Path("/{id}")

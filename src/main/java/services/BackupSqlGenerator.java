@@ -22,7 +22,7 @@ import java.util.Map;
 
 /**
  * Utility to generate SQL insert statements from an existing backup directory
- * in resources/backups/<backupName>.
+ * in resources/backup/<backupName>.
  * <p>
  * Usage example:
  * new BackupSqlGenerator().generateSqlFromBackupDir("example1", Path.of("out.sql"));
@@ -36,8 +36,8 @@ public class BackupSqlGenerator {
     private final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     /**
-     * Read the backup JSON files from the resources/backups/<backupDir> (or from
-     * src/main/resources/backups/<backupDir> when running from the project) and
+     * Read the backup JSON files from the resources/backup/<backupDir> (or from
+     * src/main/resources/backup/<backupDir> when running from the project) and
      * generate a single .sql file with inserts for users, constraints, and assigned_shifts.
      * <p>
      * The output SQL file is written to: src/main/resources/backup/results/{backupDirName}/backup.sql
@@ -161,7 +161,7 @@ public class BackupSqlGenerator {
     // --- helpers ---
 
     private List<Map<String, Object>> readJsonArray(String backupDirName, String filename) throws IOException {
-        String resourcePath = "backups/" + backupDirName + "/" + filename;
+        String resourcePath = "backup/" + backupDirName + "/" + filename;
         InputStream is = Thread.currentThread().getContextClassLoader().getResourceAsStream(resourcePath);
         if (is == null) {
             // fallback to project resources path when running from IDE

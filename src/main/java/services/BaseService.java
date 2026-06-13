@@ -4,39 +4,50 @@ import commands.AddCommand;
 import commands.UpdateCommand;
 import daos.BaseDao;
 import entities.BaseEntity;
-import mappers.CommandToEntityMapper;
 import jakarta.transaction.Transactional;
+import jakarta.ws.rs.NotFoundException;
+import mappers.CommandToEntityMapper;
+
 import java.util.List;
 
-public abstract class BaseService<T extends BaseEntity, AC extends AddCommand<T>, UC extends UpdateCommand<T>> {
+public abstract class BaseService<ENTITY extends BaseEntity, AC extends AddCommand<ENTITY>, UC extends UpdateCommand<ENTITY>, DTO> {
 
-    protected abstract BaseDao<T> getDao();
+    protected abstract BaseDao<ENTITY> getDao();
 
-    protected abstract CommandToEntityMapper<T, AC, UC> getMapper();
+    protected abstract CommandToEntityMapper<ENTITY, AC, UC, DTO> getMapper();
 
-    public T findById(Long id) {
+    public ENTITY findById(Long id) {
         return getDao().findById(id);
     }
 
-    public List<T> listAll() {
+    public List<ENTITY> listAll() {
         return getDao().listAll();
     }
 
-    @Transactional
-    public T create(AC addCommand) {
-        T entity = getMapper().mapToEntity(addCommand);
-        getDao().persist(entity);
-        return entity;
+    public DTO findByIdDto(Long id) {
+        ENTITY entity = findById(id);
+        return entity != null ? getMapper().mapToDto(entity) : null;
+    }
+
+    public List<DTO> listAllDto() {
+        return getMapper().mapToDto(getDao().listAll());
     }
 
     @Transactional
-    public T update(UC updateCommand) {
-        T entity = getDao().findById(updateCommand.id);
+    public DTO createDto(AC addCommand) {
+        ENTITY entity = getMapper().mapToEntity(addCommand);
+        getDao().persist(entity);
+        return getMapper().mapToDto(entity);
+    }
+
+    @Transactional
+    public DTO updateDto(UC updateCommand) throws NotFoundException {
+        ENTITY entity = getDao().findById(updateCommand.id);
         if (entity == null) {
-            return null;
+            throw new NotFoundException("Could not find entity with id: " + updateCommand.id);
         }
         getMapper().updateEntity(entity, updateCommand);
-        return entity;
+        return getMapper().mapToDto(entity);
     }
 
     @Transactional

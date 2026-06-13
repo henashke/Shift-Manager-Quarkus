@@ -5,7 +5,6 @@ import commands.DeleteShiftsByWeekCommand;
 import commands.ShiftSuggestCommand;
 import commands.UpdateShiftCommand;
 import dto.AssignedShiftDto;
-import entities.AssignedShift;
 import enums.ShiftType;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -28,34 +27,34 @@ public class ShiftResource {
 
     @GET
     public List<AssignedShiftDto> list() {
-        return shiftService.listAllShiftsDto();
+        return shiftService.listAllDto();
     }
 
     @GET
     @Path("/{id}")
-    public AssignedShift get(@PathParam("id") Long id) {
-        AssignedShift shift = shiftService.findById(id);
-        if (shift == null) {
+    public AssignedShiftDto get(@PathParam("id") Long id) {
+        AssignedShiftDto dto = shiftService.findByIdDto(id);
+        if (dto == null) {
             throw new NotFoundException();
         }
-        return shift;
+        return dto;
     }
 
     @POST
     public Response create(AddShiftCommand command) {
-        AssignedShift shift = shiftService.create(command);
-        return Response.status(Response.Status.CREATED).entity(shift).build();
+        AssignedShiftDto dto = shiftService.createDto(command);
+        return Response.status(Response.Status.CREATED).entity(dto).build();
     }
 
     @PUT
     @Path("/{id}")
-    public AssignedShift update(@PathParam("id") Long id, UpdateShiftCommand command) {
+    public AssignedShiftDto update(@PathParam("id") Long id, UpdateShiftCommand command) {
         command.id = id;
-        AssignedShift updated = shiftService.update(command);
-        if (updated == null) {
+        AssignedShiftDto dto = shiftService.updateDto(command);
+        if (dto == null) {
             throw new NotFoundException();
         }
-        return updated;
+        return dto;
     }
 
     @DELETE
@@ -70,14 +69,12 @@ public class ShiftResource {
         LocalDate date = LocalDate.parse(payload.get("date"));
         ShiftType type = ShiftType.valueOf(payload.get("type"));
 
-        List<AssignedShift> shifts = shiftService.listAll();
-        for (AssignedShift shift : shifts) {
-            if (shift.date.equals(date) && shift.type.equals(type)) {
-                shiftService.deleteById(shift.id);
-                return Response.ok().build();
-            }
-        }
-        throw new NotFoundException();
+        entities.AssignedShift found = shiftService.listAll().stream()
+                .filter(s -> s.date.equals(date) && s.type.equals(type))
+                .findFirst()
+                .orElseThrow(NotFoundException::new);
+        shiftService.deleteById(found.id);
+        return Response.ok().build();
     }
 
     @DELETE
@@ -92,7 +89,7 @@ public class ShiftResource {
     @POST
     @Path("/suggest")
     public Response suggest(ShiftSuggestCommand command) throws Exception {
-        List<AssignedShift> suggestions = shiftService.suggestAssignments(
+        List<AssignedShiftDto> suggestions = shiftService.suggestAssignments(
                 command.userIds, command.startDate, command.endDate);
         return Response.ok(suggestions).build();
     }

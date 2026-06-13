@@ -20,7 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @ApplicationScoped
-public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, UpdateShiftCommand> {
+public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, UpdateShiftCommand, AssignedShiftDto> {
 
     @Inject
     AssignedShiftDao assignedShiftDao;
@@ -40,26 +40,18 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, Up
     }
 
     @Override
-    protected CommandToEntityMapper<AssignedShift, AddShiftCommand, UpdateShiftCommand> getMapper() {
+    protected CommandToEntityMapper<AssignedShift, AddShiftCommand, UpdateShiftCommand, AssignedShiftDto> getMapper() {
         return assignedShiftMapper;
     }
 
     @Transactional
-    public void deleteShiftsForWeek(LocalDate weekStart) {
+    public void deleteShiftsForWeek(LocalDate weekStart) { // todo Add a sliding window for fetching shifts to avoid working with too many shifts at once (Constraints too)
         LocalDate weekEnd = weekStart.plusDays(6);
         assignedShiftDao.delete("date >= ?1 and date <= ?2", weekStart, weekEnd);
     }
 
-    public List<AssignedShift> getAllShiftsBetween(LocalDate startDate, LocalDate endDate) {
-        return assignedShiftDao.find("date >= ?1 and date <= ?2", startDate, endDate).list();
-    }
-
-    public List<AssignedShiftDto> listAllShiftsDto() {
-        return assignedShiftMapper.mapToDto(assignedShiftDao.listAll());
-    }
-
     @Transactional
-    public List<AssignedShift> suggestAssignments(List<Long> userIds, LocalDate startDate, LocalDate endDate) throws Exception {
+    public List<AssignedShiftDto> suggestAssignments(List<Long> userIds, LocalDate startDate, LocalDate endDate) throws Exception {
         List<AssignedShift> suggestions = new ArrayList<>();
         List<User> users = new ArrayList<>();
         for (Long userId : userIds) {
@@ -79,12 +71,10 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, Up
 
         while (!currentDate.isAfter(endDate)) {
             for (ShiftType shiftType : shiftTypes) {
-                // Find next available user (round-robin with constraint checking)
                 int attempts = 0;
                 while (attempts < users.size()) {
                     User user = users.get(userIndex % users.size());
 
-                    // Check if user has CANT constraint
                     if (!constraintService.hasCANTConstraint(user.id, currentDate, shiftType)) {
                         AssignedShift shift = new AssignedShift();
                         shift.date = currentDate;
@@ -98,16 +88,11 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, Up
                     userIndex++;
                     attempts++;
                 }
-
-                if (attempts == users.size()) {
-                    // All users have CANT constraints for this shift, skip
-                    continue;
-                }
             }
             currentDate = currentDate.plusDays(1);
         }
 
-        return suggestions;
+        return assignedShiftMapper.mapToDto(suggestions);
     }
 
     @Transactional
@@ -117,7 +102,6 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, Up
             int score = 0;
             List<AssignedShift> shifts = assignedShiftDao.find("assignedUser.id", user.id).list();
             for (AssignedShift shift : shifts) {
-                // Weight calculation: "לילה" (night) = 2 points, "יום" (day) = 1 point
                 if (shift.type.equals(ShiftType.NIGHT)) {
                     score += 2;
                 } else {

@@ -2,7 +2,7 @@ package resources;
 
 import commands.ConstraintCommand;
 import commands.DeleteConstraintCommand;
-import entities.Constraint;
+import dto.ConstraintDto;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -22,14 +22,14 @@ public class ConstraintResource {
     ConstraintService constraintService;
 
     @GET
-    public List<Constraint> listConstraints() {
-        return constraintService.findAll();
+    public List<ConstraintDto> listConstraints() {
+        return constraintService.findAllDto();
     }
 
     @GET
     @Path("/user/{userId}")
-    public List<Constraint> getConstraintsByUser(@PathParam("userId") Long userId) {
-        return constraintService.findByUserId(userId);
+    public List<ConstraintDto> getConstraintsByUser(@PathParam("userId") Long userId) {
+        return constraintService.findByUserIdDto(userId);
     }
 
     @POST

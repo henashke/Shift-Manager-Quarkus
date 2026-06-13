@@ -2,7 +2,7 @@ package resources;
 
 import commands.AddUserCommand;
 import commands.UpdateUserCommand;
-import entities.User;
+import dto.UserDto;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -20,35 +20,35 @@ public class UserResource {
     UserService userService;
 
     @GET
-    public List<User> list() {
-        return userService.listAll();
+    public List<UserDto> list() {
+        return userService.listAllDto();
     }
 
     @GET
     @Path("/{id}")
-    public User get(@PathParam("id") Long id) {
-        User user = userService.findById(id);
-        if (user == null) {
+    public UserDto get(@PathParam("id") Long id) {
+        UserDto dto = userService.findByIdDto(id);
+        if (dto == null) {
             throw new NotFoundException();
         }
-        return user;
+        return dto;
     }
 
     @POST
     public Response create(AddUserCommand command) {
-        User user = userService.create(command);
-        return Response.status(Response.Status.CREATED).entity(user).build();
+        UserDto dto = userService.createDto(command);
+        return Response.status(Response.Status.CREATED).entity(dto).build();
     }
 
     @PUT
     @Path("/{id}")
-    public User update(@PathParam("id") Long id, UpdateUserCommand command) {
+    public UserDto update(@PathParam("id") Long id, UpdateUserCommand command) {
         command.id = id;
-        User user = userService.update(command);
-        if (user == null) {
+        UserDto dto = userService.updateDto(command);
+        if (dto == null) {
             throw new NotFoundException();
         }
-        return user;
+        return dto;
     }
 
     @DELETE

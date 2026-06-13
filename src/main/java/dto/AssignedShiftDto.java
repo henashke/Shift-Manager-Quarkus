@@ -1,15 +1,11 @@
 package dto;
 
-import entities.ShiftWeightPreset;
-import enums.ShiftType;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
-import java.time.LocalDate;
-
+@EqualsAndHashCode(callSuper = true)
 @Data
-public class AssignedShiftDto {
-    public LocalDate date;
-    public ShiftType type;
+public class AssignedShiftDto extends ShiftDto {
     public String assignedUsername;
-    public ShiftWeightPreset shiftWeightPreset;
+    public ShiftWeightPresetDto shiftWeightPreset;
 }

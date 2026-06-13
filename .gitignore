@@ -62,4 +62,3 @@ pnpm-debug.log*
 lerna-debug.log*
 /src/main/resources/application.properties
 /src/main/resources/backup*
-/src/main/resources/backups*
