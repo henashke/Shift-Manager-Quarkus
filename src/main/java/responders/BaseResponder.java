@@ -12,7 +12,7 @@ import java.util.List;
 
 public abstract class BaseResponder<T extends BaseEntity, AC extends AddCommand<T>, UC extends UpdateCommand<T>, D> {
 
-    protected abstract BaseService<T> getService();
+    protected abstract BaseService<T, AC> getService();
 
     protected abstract CommandToEntityMapper<T, AC, UC, D> getMapper();
 
