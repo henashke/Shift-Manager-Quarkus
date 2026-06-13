@@ -1,30 +1,30 @@
 package services;
 
 import commands.AddShiftWeightPresetCommand;
+import commands.UpdateShiftWeightPresetCommand;
 import daos.BaseDao;
 import daos.ShiftWeightPresetDao;
 import entities.ShiftWeightPreset;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import mappers.CommandToEntityMapper;
-import mappers.ShiftWeightPresetMapper;
+import mappers.shiftWeightPreset.ShiftWeightPresetCommandToEntityMapper;
 
 @ApplicationScoped
-public class ShiftWeightPresetService extends BaseService<ShiftWeightPreset, AddShiftWeightPresetCommand> {
+public class ShiftWeightPresetService extends BaseService<ShiftWeightPreset, AddShiftWeightPresetCommand, UpdateShiftWeightPresetCommand> {
 
     @Inject
-    ShiftWeightPresetDao shiftWeightPresetDao;
+    ShiftWeightPresetDao dao;
 
     @Inject
-    ShiftWeightPresetMapper shiftWeightPresetMapper;
+    ShiftWeightPresetCommandToEntityMapper commandToEntityMapper;
 
     @Override
     protected BaseDao<ShiftWeightPreset> getDao() {
-        return shiftWeightPresetDao;
+        return dao;
     }
 
     @Override
-    protected CommandToEntityMapper<ShiftWeightPreset, AddShiftWeightPresetCommand, ?, ?> getMapper() {
-        return shiftWeightPresetMapper;
+    protected ShiftWeightPresetCommandToEntityMapper getMapper() {
+        return commandToEntityMapper;
     }
 }

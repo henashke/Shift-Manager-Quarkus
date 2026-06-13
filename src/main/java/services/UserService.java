@@ -1,6 +1,7 @@
 package services;
 
 import commands.AddUserCommand;
+import commands.UpdateUserCommand;
 import daos.BaseDao;
 import daos.UserDao;
 import entities.User;
@@ -8,33 +9,33 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import mappers.CommandToEntityMapper;
-import mappers.UserMapper;
+import mappers.user.UserCommandToEntityMapper;
 
 @ApplicationScoped
-public class UserService extends BaseService<User, AddUserCommand> {
+public class UserService extends BaseService<User, AddUserCommand, UpdateUserCommand> {
 
     @Inject
-    UserDao userDao;
+    UserDao dao;
 
     @Inject
-    UserMapper userMapper;
+    UserCommandToEntityMapper commandToEntityMapper;
 
     @Override
     protected BaseDao<User> getDao() {
-        return userDao;
+        return dao;
     }
 
     @Override
-    protected CommandToEntityMapper<User, AddUserCommand, ?, ?> getMapper() {
-        return userMapper;
+    protected CommandToEntityMapper<User, AddUserCommand, UpdateUserCommand> getMapper() {
+        return commandToEntityMapper;
     }
 
     public User findByUsername(String username) {
-        return userDao.findByUsername(username).orElse(null);
+        return dao.findByUsername(username).orElse(null);
     }
 
     @Transactional
     public void deleteByUsername(String username) {
-        userDao.findByUsername(username).ifPresent(u -> userDao.deleteById(u.id));
+        dao.deleteByUsername(username);
     }
 }

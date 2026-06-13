@@ -12,6 +12,8 @@ import org.eclipse.microprofile.jwt.JsonWebToken;
 import responders.ConstraintResponder;
 
 import java.util.List;
+import java.util.Objects;
+import java.util.function.BiPredicate;
 
 @Path("/api/constraints")
 @Produces(MediaType.APPLICATION_JSON)
@@ -39,19 +41,25 @@ public class ConstraintResource {
 
     @POST
     public Response createConstraints(List<ConstraintDto> dtos) {
-        return constraintResponder.create(dtos);
+        throwIfTriedToPerformActionOnOtherUser(dtos, (payload, username) ->
+                payload.stream().anyMatch(constraint -> !Objects.equals(constraint.userId, username)));
+        return constraintResponder.createAll(dtos);
     }
 
     @DELETE
     public Response deleteConstraint(DeleteConstraintDto dto) {
+        throwIfTriedToPerformActionOnOtherUser(dto, (payload, username) ->
+                !Objects.equals(payload.userId, username));
         return constraintResponder.delete(dto);
     }
 
-    public static class ErrorResponse {
-        public String message;
+    private <T> void throwIfTriedToPerformActionOnOtherUser(T payload, BiPredicate<T, String> isOtherUserPresentInPayload) {
+        String username = jwt.getClaim(JwtClaims.USERNAME);
+        boolean isAdmin = jwt.getGroups().contains(RoleConstants.ADMIN);
+        boolean constraintForOtherUserExists = isOtherUserPresentInPayload.test(payload, username);
 
-        public ErrorResponse(String message) {
-            this.message = message;
+        if (!isAdmin && constraintForOtherUserExists) {
+            throw new BadRequestException("Creating requests for other users is not allowed.");
         }
     }
 }

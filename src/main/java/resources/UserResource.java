@@ -1,6 +1,5 @@
 package resources;
 
-import commands.AddUserCommand;
 import dto.UserDto;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -23,30 +22,20 @@ public class UserResource {
         return userResponder.listAll();
     }
 
-    @GET
-    @Path("/{id}")
-    public UserDto get(@PathParam("id") Long id) {
-        UserDto dto = userResponder.findById(id);
-        if (dto == null) throw new NotFoundException();
-        return dto;
-    }
-
     @POST
-    public Response create(AddUserCommand command) {
-        UserDto dto = userResponder.create(command);
-        return Response.status(Response.Status.CREATED).entity(dto).build();
+    public Response create(UserDto dto) {
+        return userResponder.create(dto);
     }
 
     @PUT
     @Path("/{username}")
-    public UserDto update(@PathParam("username") String username, UserDto dto) {
+    public Response update(@PathParam("username") String username, UserDto dto) { // TODO change password feature
         return userResponder.updateByUsername(username, dto);
     }
 
     @DELETE
     @Path("/{username}")
     public Response delete(@PathParam("username") String username) {
-        userResponder.deleteByUsername(username);
-        return Response.noContent().build();
+        return userResponder.deleteByUsername(username);
     }
 }

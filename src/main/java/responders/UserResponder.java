@@ -8,8 +8,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.NotFoundException;
-import mappers.CommandToEntityMapper;
-import mappers.UserMapper;
+import jakarta.ws.rs.core.Response;
+import mappers.user.UserDtoToCommandMapper;
 import services.BaseService;
 import services.UserService;
 
@@ -17,35 +17,33 @@ import services.UserService;
 public class UserResponder extends BaseResponder<User, AddUserCommand, UpdateUserCommand, UserDto> {
 
     @Inject
-    UserService userService;
+    UserService service;
 
     @Inject
-    UserMapper userMapper;
+    UserDtoToCommandMapper dtoToCommandMapper;
 
     @Override
-    protected BaseService<User, AddUserCommand> getService() {
-        return userService;
+    protected BaseService<User, AddUserCommand, UpdateUserCommand> getService() {
+        return service;
     }
 
     @Override
-    protected CommandToEntityMapper<User, AddUserCommand, UpdateUserCommand, UserDto> getMapper() {
-        return userMapper;
+    protected UserDtoToCommandMapper getDtoToCommandMapper() {
+        return dtoToCommandMapper;
     }
 
     @Transactional
-    public UserDto updateByUsername(String username, UserDto dto) {
-        User entity = userService.findByUsername(username);
+    public Response updateByUsername(String username, UserDto dto) {
+        User entity = service.findByUsername(username);
         if (entity == null) throw new NotFoundException("User not found: " + username);
-        UpdateUserCommand cmd = new UpdateUserCommand();
-        cmd.name = dto.name;
-        cmd.score = dto.score;
-        cmd.password = entity.password; // preserve existing password
-        userMapper.updateEntity(entity, cmd);
-        return userMapper.mapToDto(entity);
+        UpdateUserCommand updateUserCommand = dtoToCommandMapper.mapToUpdateCommand(dto);
+        User updatedUser = service.update(entity.id, updateUserCommand);
+        return Response.ok(dtoToCommandMapper.mapToDto(updatedUser)).build();
     }
 
     @Transactional
-    public void deleteByUsername(String username) {
-        userService.deleteByUsername(username);
+    public Response deleteByUsername(String username) {
+        service.deleteByUsername(username);
+        return Response.noContent().build();
     }
 }

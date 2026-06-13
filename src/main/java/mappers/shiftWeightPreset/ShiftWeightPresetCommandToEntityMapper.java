@@ -1,15 +1,13 @@
-package mappers;
+package mappers.shiftWeightPreset;
 
 import commands.AddShiftWeightPresetCommand;
 import commands.UpdateShiftWeightPresetCommand;
-import dto.ShiftWeightDto;
-import dto.ShiftWeightPresetDto;
-import entities.ShiftWeight;
 import entities.ShiftWeightPreset;
 import jakarta.enterprise.context.ApplicationScoped;
+import mappers.CommandToEntityMapper;
 
 @ApplicationScoped
-public class ShiftWeightPresetMapper implements CommandToEntityMapper<ShiftWeightPreset, AddShiftWeightPresetCommand, UpdateShiftWeightPresetCommand, ShiftWeightPresetDto> {
+public class ShiftWeightPresetCommandToEntityMapper implements CommandToEntityMapper<ShiftWeightPreset, AddShiftWeightPresetCommand, UpdateShiftWeightPresetCommand> {
 
     @Override
     public ShiftWeightPreset mapToEntity(AddShiftWeightPresetCommand addCommand) {
@@ -30,23 +28,5 @@ public class ShiftWeightPresetMapper implements CommandToEntityMapper<ShiftWeigh
             entity.shiftWeights.addAll(updateCommand.shiftWeights);
             entity.shiftWeights.forEach(sw -> sw.preset = entity);
         }
-    }
-
-    @Override
-    public ShiftWeightPresetDto mapToDto(ShiftWeightPreset entity) {
-        ShiftWeightPresetDto dto = new ShiftWeightPresetDto();
-        dto.name = entity.name;
-        dto.weights = entity.shiftWeights != null
-                ? entity.shiftWeights.stream().map(this::mapWeightToDto).toList()
-                : java.util.List.of();
-        return dto;
-    }
-
-    private ShiftWeightDto mapWeightToDto(ShiftWeight sw) {
-        ShiftWeightDto dto = new ShiftWeightDto();
-        dto.day = sw.day;
-        dto.shiftType = sw.shiftType.getHebrewRepresentation();
-        dto.weight = sw.weight;
-        return dto;
     }
 }

@@ -18,7 +18,7 @@ public class ConstraintDao implements BaseDao<Constraint> {
         return find("user.id = ?1 and date = ?2 and type = ?3", userId, date, type).firstResult();
     }
 
-    public void deleteByUserIdAndDateAndType(Long userId, LocalDate date, ShiftType type) {
+    public void deleteByUserIdDateAndType(Long userId, LocalDate date, ShiftType type) {
         delete("user.id = ?1 and date = ?2 and type = ?3", userId, date, type);
     }
 }

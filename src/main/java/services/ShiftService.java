@@ -1,27 +1,31 @@
 package services;
 
 import commands.AddShiftCommand;
+import commands.UpdateShiftCommand;
 import daos.AssignedShiftDao;
-import daos.BaseDao;
 import daos.UserDao;
 import entities.AssignedShift;
+import entities.ShiftWeight;
+import entities.ShiftWeightPreset;
 import entities.User;
+import enums.Day;
 import enums.ShiftType;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import mappers.AssignedShiftMapper;
 import mappers.CommandToEntityMapper;
+import mappers.shift.ShiftCommandToEntityMapper;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @ApplicationScoped
-public class ShiftService extends BaseService<AssignedShift, AddShiftCommand> {
+public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, UpdateShiftCommand> {
 
     @Inject
-    AssignedShiftDao assignedShiftDao;
+    AssignedShiftDao dao;
 
     @Inject
     UserDao userDao;
@@ -30,22 +34,22 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand> {
     ConstraintService constraintService;
 
     @Inject
-    AssignedShiftMapper assignedShiftMapper;
+    ShiftCommandToEntityMapper commandToEntityMapper;
 
     @Override
-    protected BaseDao<AssignedShift> getDao() {
-        return assignedShiftDao;
+    protected AssignedShiftDao getDao() {
+        return dao;
     }
 
     @Override
-    protected CommandToEntityMapper<AssignedShift, AddShiftCommand, ?, ?> getMapper() {
-        return assignedShiftMapper;
+    protected CommandToEntityMapper<AssignedShift, AddShiftCommand, UpdateShiftCommand> getMapper() {
+        return commandToEntityMapper;
     }
 
     @Transactional
     public void deleteShiftsForWeek(LocalDate weekStart) {
         LocalDate weekEnd = weekStart.plusDays(6);
-        assignedShiftDao.delete("date >= ?1 and date <= ?2", weekStart, weekEnd);
+        dao.deleteBetween(weekStart, weekEnd);
     }
 
     @Transactional
@@ -89,20 +93,27 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand> {
         }
 
         return suggestions;
-    }
+    } //todo doesn't work
 
     @Transactional
     public void recalculateAllUsersScores() {
         List<User> users = userDao.listAll();
         for (User user : users) {
             int score = 0;
-            List<AssignedShift> shifts = assignedShiftDao.find("assignedUser.id", user.id).list();
+            List<AssignedShift> shifts = dao.find("assignedUser.id", user.id).list();
             for (AssignedShift shift : shifts) {
-                if (shift.type.equals(ShiftType.NIGHT)) {
-                    score += 2;
-                } else {
-                    score += 1;
+                ShiftWeightPreset shiftWeightPreset = shift.shiftWeightPreset;
+                Day dayOfWeak = Day.fromDate(shift.date);
+                ShiftType shiftType = shift.type;
+                Optional<ShiftWeight> shiftWeight = shiftWeightPreset.shiftWeights
+                        .stream()
+                        .filter(w -> w.day == dayOfWeak && w.shiftType == shiftType)
+                        .findFirst();
+                if (shiftWeight.isEmpty()) {
+                    throw new RuntimeException("Malformed Shift weight preset. Could not find weight for shift on %s of type %s".formatted(dayOfWeak, shiftType));
                 }
+                int scoreToAdd = shiftWeight.get().weight;
+                score += scoreToAdd;
             }
             user.score = score;
             userDao.persist(user);

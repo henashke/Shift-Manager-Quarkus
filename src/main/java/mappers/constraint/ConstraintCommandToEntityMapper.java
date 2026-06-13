@@ -1,24 +1,22 @@
-package mappers;
+package mappers.constraint;
 
 import commands.AddConstraintCommand;
 import commands.UpdateConstraintCommand;
 import daos.ConstraintDao;
 import daos.UserDao;
-import dto.ConstraintDto;
-import dto.ShiftDto;
 import entities.Constraint;
 import entities.User;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.NotFoundException;
-
-import java.util.List;
+import mappers.CommandToEntityMapper;
 
 @ApplicationScoped
-public class ConstraintMapper implements CommandToEntityMapper<Constraint, AddConstraintCommand, UpdateConstraintCommand, ConstraintDto> {
+public class ConstraintCommandToEntityMapper implements CommandToEntityMapper<Constraint, AddConstraintCommand, UpdateConstraintCommand> {
 
     @Inject
     ConstraintDao constraintDao;
+
     @Inject
     UserDao userDao;
 
@@ -38,27 +36,11 @@ public class ConstraintMapper implements CommandToEntityMapper<Constraint, AddCo
         constraint.date = addCommand.date;
         constraint.type = addCommand.type;
         constraint.constraintType = addCommand.constraintType;
-        constraintDao.persist(constraint);
         return constraint;
     }
 
     @Override
     public void updateEntity(Constraint entity, UpdateConstraintCommand updateCommand) {
-        throw new UnsupportedOperationException("Can't update a constraint, only create or delete");
-    }
-
-    public ConstraintDto mapToDto(Constraint entity) {
-        ConstraintDto dto = new ConstraintDto();
-        dto.userId = entity.user.name;
-        ShiftDto shiftDto = new ShiftDto();
-        shiftDto.date = entity.date;
-        shiftDto.type = entity.type.getHebrewRepresentation();
-        dto.shift = shiftDto;
-        dto.constraintType = entity.constraintType.getHebrewRepresentation();
-        return dto;
-    }
-
-    public List<ConstraintDto> mapToDto(List<Constraint> entities) {
-        return entities.stream().map(this::mapToDto).toList();
+        throw new UnsupportedOperationException("Constraints cannot be updated, only created or deleted");
     }
 }
