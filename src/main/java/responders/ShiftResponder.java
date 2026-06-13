@@ -40,7 +40,7 @@ public class ShiftResponder extends BaseResponder<AssignedShift, AddShiftCommand
     ShiftWeightPresetDao shiftWeightPresetDao;
 
     @Override
-    protected BaseService<AssignedShift> getService() {
+    protected BaseService<AssignedShift, AddShiftCommand> getService() {
         return shiftService;
     }
 

@@ -1,5 +1,6 @@
 package services;
 
+import commands.AddShiftCommand;
 import daos.AssignedShiftDao;
 import daos.BaseDao;
 import daos.UserDao;
@@ -9,13 +10,15 @@ import enums.ShiftType;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import mappers.AssignedShiftMapper;
+import mappers.CommandToEntityMapper;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
 @ApplicationScoped
-public class ShiftService extends BaseService<AssignedShift> {
+public class ShiftService extends BaseService<AssignedShift, AddShiftCommand> {
 
     @Inject
     AssignedShiftDao assignedShiftDao;
@@ -26,9 +29,17 @@ public class ShiftService extends BaseService<AssignedShift> {
     @Inject
     ConstraintService constraintService;
 
+    @Inject
+    AssignedShiftMapper assignedShiftMapper;
+
     @Override
     protected BaseDao<AssignedShift> getDao() {
         return assignedShiftDao;
+    }
+
+    @Override
+    protected CommandToEntityMapper<AssignedShift, AddShiftCommand, ?, ?> getMapper() {
+        return assignedShiftMapper;
     }
 
     @Transactional

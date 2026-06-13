@@ -1,7 +1,8 @@
 package services;
 
-import commands.ConstraintCommand;
+import commands.AddConstraintCommand;
 import commands.DeleteConstraintCommand;
+import daos.BaseDao;
 import daos.ConstraintDao;
 import daos.UserDao;
 import entities.Constraint;
@@ -11,18 +12,33 @@ import enums.ShiftType;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import mappers.CommandToEntityMapper;
+import mappers.ConstraintMapper;
 
 import java.time.LocalDate;
 import java.util.List;
 
 @ApplicationScoped
-public class ConstraintService {
+public class ConstraintService extends BaseService<Constraint, AddConstraintCommand> {
 
     @Inject
     ConstraintDao constraintDao;
 
     @Inject
     UserDao userDao;
+
+    @Inject
+    ConstraintMapper constraintMapper;
+
+    @Override
+    protected BaseDao<Constraint> getDao() {
+        return constraintDao;
+    }
+
+    @Override
+    protected CommandToEntityMapper<Constraint, AddConstraintCommand, ?, ?> getMapper() {
+        return constraintMapper;
+    }
 
     public List<Constraint> findAll() {
         return constraintDao.listAll();
@@ -33,7 +49,7 @@ public class ConstraintService {
     }
 
     @Transactional
-    public Constraint create(ConstraintCommand command) throws Exception {
+    public Constraint create(AddConstraintCommand command) throws Exception {
         User user = userDao.findById(command.userId);
         if (user == null) throw new Exception("User not found");
 

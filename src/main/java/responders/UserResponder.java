@@ -23,7 +23,7 @@ public class UserResponder extends BaseResponder<User, AddUserCommand, UpdateUse
     UserMapper userMapper;
 
     @Override
-    protected BaseService<User> getService() {
+    protected BaseService<User, AddUserCommand> getService() {
         return userService;
     }
 

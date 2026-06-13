@@ -28,7 +28,7 @@ public class ShiftWeightPresetResponder extends BaseResponder<ShiftWeightPreset,
     ShiftWeightSettingsService shiftWeightSettingsService;
 
     @Override
-    protected BaseService<ShiftWeightPreset> getService() {
+    protected BaseService<ShiftWeightPreset, AddShiftWeightPresetCommand> getService() {
         return shiftWeightPresetService;
     }
 
