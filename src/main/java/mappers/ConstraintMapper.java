@@ -15,9 +15,9 @@ public class ConstraintMapper {
         dto.userId = entity.user.name;
         ShiftDto shiftDto = new ShiftDto();
         shiftDto.date = entity.date;
-        shiftDto.type = entity.type;
+        shiftDto.type = entity.type.getHebrewRepresentation();
         dto.shift = shiftDto;
-        dto.constraintType = entity.constraintType;
+        dto.constraintType = entity.constraintType.getHebrewRepresentation();
         return dto;
     }
 

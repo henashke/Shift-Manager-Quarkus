@@ -14,7 +14,7 @@ public class ShiftWeightSettingsService {
     @Inject
     ShiftWeightPresetDao shiftWeightPresetDao;
 
-    @ConfigProperty(name = "app.current-preset", defaultValue = "default")
+    @ConfigProperty(name = "app.current-preset", defaultValue = "פלוס 60")
     String currentPreset;
 
     public ShiftWeightPreset getCurrentPreset() {

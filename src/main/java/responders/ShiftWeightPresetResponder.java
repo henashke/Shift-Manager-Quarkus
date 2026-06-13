@@ -39,7 +39,8 @@ public class ShiftWeightPresetResponder extends BaseResponder<ShiftWeightPreset,
 
     public Map<String, Object> getSettings() {
         Map<String, Object> settings = new HashMap<>();
-        settings.put("currentPreset", "פלוס 60"); // todo if we actually want this, need to add a settings table
+        ShiftWeightPreset currentPreset = shiftWeightSettingsService.getCurrentPreset();
+        settings.put("currentPresetObject", currentPreset != null ? shiftWeightPresetMapper.mapToDto(currentPreset) : null);
 
         Map<String, ShiftWeightPresetDto> presets = new HashMap<>();
         for (ShiftWeightPreset preset : shiftWeightSettingsService.getAllPresets()) {

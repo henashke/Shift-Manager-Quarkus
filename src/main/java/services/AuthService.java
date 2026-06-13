@@ -7,6 +7,7 @@ import daos.UserDao;
 import entities.User;
 import io.quarkus.security.AuthenticationFailedException;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.mindrot.jbcrypt.BCrypt;
@@ -15,8 +16,11 @@ import org.mindrot.jbcrypt.BCrypt;
 @RequiredArgsConstructor
 public class AuthService {
 
-    private final UserDao userDao;
-    private final JwtTokenProvider tokenProvider;
+    @Inject
+    UserDao userDao;
+
+    @Inject
+    JwtTokenProvider tokenProvider;
 
     @Transactional
     public void signup(SignupCommand command) throws Exception {

@@ -45,7 +45,7 @@ public class ShiftWeightPresetMapper implements CommandToEntityMapper<ShiftWeigh
     private ShiftWeightDto mapWeightToDto(ShiftWeight sw) {
         ShiftWeightDto dto = new ShiftWeightDto();
         dto.day = sw.day;
-        dto.shiftType = sw.shiftType;
+        dto.shiftType = sw.shiftType.getHebrewRepresentation();
         dto.weight = sw.weight;
         return dto;
     }

@@ -7,5 +7,5 @@ import lombok.EqualsAndHashCode;
 @Data
 public class AssignedShiftDto extends ShiftDto {
     public String assignedUsername;
-    public ShiftWeightPresetDto shiftWeightPreset;
+    public ShiftWeightPresetDto preset;
 }

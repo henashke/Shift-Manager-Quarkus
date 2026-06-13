@@ -47,9 +47,9 @@ public class AssignedShiftMapper implements CommandToEntityMapper<AssignedShift,
     public AssignedShiftDto mapToDto(AssignedShift entity) {
         AssignedShiftDto dto = new AssignedShiftDto();
         dto.date = entity.date;
-        dto.type = entity.type;
+        dto.type = entity.type.getHebrewRepresentation();
         dto.assignedUsername = entity.assignedUser != null ? entity.assignedUser.name : null;
-        dto.shiftWeightPreset = entity.shiftWeightPreset != null ? shiftWeightPresetMapper.mapToDto(entity.shiftWeightPreset) : null;
+        dto.preset = entity.shiftWeightPreset != null ? shiftWeightPresetMapper.mapToDto(entity.shiftWeightPreset) : null;
         return dto;
     }
 
