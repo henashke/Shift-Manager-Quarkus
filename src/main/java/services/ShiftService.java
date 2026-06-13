@@ -46,6 +46,11 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, Up
         return commandToEntityMapper;
     }
 
+    public AssignedShift overrideShift(AddShiftCommand command) {
+        getDao().deleteByDateAndType(command.date, command.type);
+        return super.create(command);
+    }
+
     @Transactional
     public void deleteShiftsForWeek(LocalDate weekStart) {
         LocalDate weekEnd = weekStart.plusDays(6);

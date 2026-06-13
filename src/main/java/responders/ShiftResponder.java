@@ -15,17 +15,17 @@ import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.core.Response;
 import mappers.DtoToCommandMapper;
 import mappers.shift.ShiftDtoToCommandMapper;
-import services.BaseService;
 import services.ShiftService;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @ApplicationScoped
 public class ShiftResponder extends BaseResponder<AssignedShift, AddShiftCommand, UpdateShiftCommand, AssignedShiftDto> {
 
     @Inject
-    ShiftService shiftService;
+    ShiftService service;
 
     @Inject
     ShiftDtoToCommandMapper shiftDtoToCommandMapper;
@@ -34,13 +34,24 @@ public class ShiftResponder extends BaseResponder<AssignedShift, AddShiftCommand
     UserDao userDao;
 
     @Override
-    protected BaseService<AssignedShift, AddShiftCommand, UpdateShiftCommand> getService() {
-        return shiftService;
+    protected ShiftService getService() {
+        return service;
     }
 
     @Override
     protected DtoToCommandMapper<AssignedShiftDto, AssignedShift, AddShiftCommand, UpdateShiftCommand> getDtoToCommandMapper() {
         return shiftDtoToCommandMapper;
+    }
+
+    @Override
+    @Transactional
+    public Response createAll(List<AssignedShiftDto> dtos) {
+        List<AssignedShift> savedShifts = new ArrayList<>();
+        for (AssignedShiftDto dto : dtos) {
+            savedShifts.add(getService().overrideShift(shiftDtoToCommandMapper.mapToAddCommand(dto)));
+        }
+
+        return ok(shiftDtoToCommandMapper.mapToDto(savedShifts));
     }
 
     @Transactional
@@ -54,29 +65,29 @@ public class ShiftResponder extends BaseResponder<AssignedShift, AddShiftCommand
         cmd.startDate = dto.startDate;
         cmd.endDate = dto.endDate;
 
-        List<AssignedShift> suggestions = shiftService.suggestAssignments(
+        List<AssignedShift> suggestions = service.suggestAssignments(
                 cmd.userIds, cmd.startDate, cmd.endDate);
         return ok(shiftDtoToCommandMapper.mapToDto(suggestions));
     }
 
     @Transactional
     public Response deleteShiftsForWeek(LocalDate weekStart) {
-        shiftService.deleteShiftsForWeek(weekStart);
+        service.deleteShiftsForWeek(weekStart);
         return ok();
     }
 
     @Transactional
     public Response deleteByDateAndType(LocalDate date, ShiftType type) {
-        AssignedShift found = shiftService.listAll().stream()
+        AssignedShift found = service.listAll().stream()
                 .filter(s -> s.date.equals(date) && s.type.equals(type))
                 .findFirst()
                 .orElseThrow(NotFoundException::new);
-        shiftService.deleteById(found.id);
+        service.deleteById(found.id);
         return ok();
     }
 
     public Response recalculateAllUsersScores() {
-        shiftService.recalculateAllUsersScores();
+        service.recalculateAllUsersScores();
         return ok();
     }
 }
