@@ -50,6 +50,10 @@ public class ConstraintService extends BaseService<Constraint, AddConstraintComm
         return dao.findByUserIdBetween(userId, window.start(), window.end());
     }
 
+    public List<Constraint> findByUserIdBetween(Long userId, LocalDate start, LocalDate end) {
+        return dao.findByUserIdBetween(userId, start, end);
+    }
+
     @Transactional
     public void delete(DeleteConstraintCommand command) {
         dao.deleteByUserIdDateAndType(command.userId, command.date, command.type);

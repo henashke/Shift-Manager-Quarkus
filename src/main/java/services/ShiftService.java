@@ -4,17 +4,17 @@ import commands.AddShiftCommand;
 import commands.UpdateShiftCommand;
 import daos.AssignedShiftDao;
 import daos.UserDao;
-import entities.AssignedShift;
-import entities.ShiftWeight;
-import entities.ShiftWeightPreset;
-import entities.User;
+import entities.*;
 import enums.Day;
 import enums.ShiftType;
+import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import mappers.CommandToEntityMapper;
 import mappers.shift.ShiftCommandToEntityMapper;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import util.WeekWindow;
 
 import java.time.LocalDate;
@@ -33,6 +33,15 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, Up
 
     @Inject
     ConstraintService constraintService;
+
+    @Inject
+    Instance<ShiftSuggester> suggesters;
+
+    @ConfigProperty(name = "suggestion.provider", defaultValue = "ollama")
+    String suggestionProvider;
+
+    @Inject
+    ShiftSuggestionValidator suggestionValidator;
 
     @Inject
     ShiftCommandToEntityMapper commandToEntityMapper;
@@ -65,7 +74,6 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, Up
 
     @Transactional
     public List<AssignedShift> suggestAssignments(List<Long> userIds, LocalDate startDate, LocalDate endDate) throws Exception {
-        List<AssignedShift> suggestions = new ArrayList<>();
         List<User> users = new ArrayList<>();
         for (Long userId : userIds) {
             User user = userDao.findById(userId);
@@ -76,6 +84,54 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, Up
             throw new Exception("No valid users provided");
         }
 
+        List<Constraint> constraints = new ArrayList<>();
+        for (User user : users) {
+            constraints.addAll(constraintService.findByUserIdBetween(user.id, startDate, endDate));
+        }
+
+        // Prefer the configured LLM's schedule, but only if it passes validation; otherwise fall back.
+        ShiftSuggester suggester = selectSuggester();
+        if (suggester != null && suggester.isEnabled()) {
+            try {
+                List<AssignedShift> llmSuggestions =
+                        suggester.suggest(users, constraints, startDate, endDate);
+                suggestionValidator.validate(llmSuggestions, users, constraints, startDate, endDate);
+                return llmSuggestions;
+            } catch (Exception e) {
+                Log.warnf(e, "'%s' shift suggestion unusable, falling back to offline algorithm: %s",
+                        suggester.name(), e.getMessage());
+            }
+        }
+
+        List<AssignedShift> offlineSuggestions = suggestAssignmentsOffline(users, startDate, endDate);
+        // Validate the fallback too. It is the last resort, so we only warn rather than fail the request.
+        try {
+            suggestionValidator.validate(offlineSuggestions, users, constraints, startDate, endDate);
+        } catch (ShiftSuggestionValidationException e) {
+            Log.warnf("Offline fallback schedule has issues: %s", e.getMessage());
+        }
+        return offlineSuggestions;
+    }
+
+    /**
+     * Picks the {@link ShiftSuggester} whose {@link ShiftSuggester#name()} matches {@code suggestion.provider}.
+     */
+    private ShiftSuggester selectSuggester() {
+        for (ShiftSuggester candidate : suggesters) {
+            if (candidate.name().equalsIgnoreCase(suggestionProvider)) {
+                return candidate;
+            }
+        }
+        Log.warnf("No shift suggestion provider named '%s' found; using offline algorithm", suggestionProvider);
+        return null;
+    }
+
+    /**
+     * Deterministic round-robin fallback used when the LLM is disabled or unreachable.
+     * Cycles through the users, skipping any with a CANT constraint for the slot.
+     */
+    private List<AssignedShift> suggestAssignmentsOffline(List<User> users, LocalDate startDate, LocalDate endDate) {
+        List<AssignedShift> suggestions = new ArrayList<>();
         ShiftType[] shiftTypes = {ShiftType.DAY, ShiftType.NIGHT};
         LocalDate currentDate = startDate;
         int userIndex = 0;
@@ -104,7 +160,7 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, Up
         }
 
         return suggestions;
-    } //todo doesn't work
+    }
 
     @Transactional
     public void recalculateAllUsersScores() {
