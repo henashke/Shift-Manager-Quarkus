@@ -113,7 +113,7 @@ public class ShiftSuggestionPromptBuilder {
     public List<AssignedShift> parseAssignments(String modelJson, List<User> users) throws Exception {
         Map<String, User> usersByName = new HashMap<>();
         for (User user : users) {
-            usersByName.put(user.name.toLowerCase(), user);
+            usersByName.put(user.name.trim().toLowerCase(), user);
         }
 
         JsonNode root = mapper.readTree(modelJson);
@@ -133,7 +133,7 @@ public class ShiftSuggestionPromptBuilder {
                 throw new IllegalStateException("Incomplete assignment from model: " + node);
             }
 
-            User user = usersByName.get(username.toLowerCase());
+            User user = usersByName.get(username.trim().toLowerCase());
             if (user == null) {
                 throw new IllegalStateException("Model assigned an unknown user: " + username);
             }
