@@ -23,7 +23,7 @@ mvn clean package -Dnative
 
 ## Prerequisites
 
-- PostgreSQL running on `localhost:5432`, database `shift-manager`, user `postgres`, password `admin`
+- PostgreSQL running on `localhost:5432`, default `postgres` database, user `postgres`, password `postgres`
 - `src/main/resources/privateKey.pem` and `publicKey.pem` must exist (RS256 keypair for JWT)
 - API available at `http://localhost:8080/api/`
 

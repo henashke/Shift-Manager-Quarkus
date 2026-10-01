@@ -166,7 +166,7 @@ public class BackupSqlGenerator {
         if (is == null) {
             // fallback to project resources path when running from IDE
             Path p = Path.of("src", "main", "resources", "backups", backupDirName, filename);
-            if (!Files.exists(p)) {
+                if (!Files.exists(p)) {
                 return new ArrayList<>();
             }
             byte[] bytes = Files.readAllBytes(p);
