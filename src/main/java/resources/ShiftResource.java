@@ -18,6 +18,7 @@ import java.util.List;
 @Path("/api/shifts")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@RolesAllowed({RoleConstants.USER, RoleConstants.ADMIN})
 public class ShiftResource {
 
     @Inject
