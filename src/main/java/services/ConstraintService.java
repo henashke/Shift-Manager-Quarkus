@@ -1,75 +1,66 @@
 package services;
 
-import commands.ConstraintCommand;
+import commands.AddConstraintCommand;
 import commands.DeleteConstraintCommand;
+import commands.UpdateConstraintCommand;
+import daos.BaseDao;
 import daos.ConstraintDao;
-import daos.UserDao;
 import entities.Constraint;
-import entities.User;
+import enums.ConstraintType;
 import enums.ShiftType;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+import mappers.constraint.ConstraintCommandToEntityMapper;
+import util.WeekWindow;
 
 import java.time.LocalDate;
 import java.util.List;
 
 @ApplicationScoped
-public class ConstraintService {
+public class ConstraintService extends BaseService<Constraint, AddConstraintCommand, UpdateConstraintCommand> {
 
     @Inject
-    ConstraintDao constraintDao;
+    ConstraintDao dao;
 
     @Inject
-    UserDao userDao;
+    ConstraintCommandToEntityMapper commandToEntityMapper;
+
+    @Override
+    protected BaseDao<Constraint> getDao() {
+        return dao;
+    }
+
+    @Override
+    protected ConstraintCommandToEntityMapper getMapper() {
+        return commandToEntityMapper;
+    }
 
     public List<Constraint> findByUserId(Long userId) {
-        return constraintDao.findByUserId(userId);
+        return dao.findByUserId(userId);
     }
 
-    public Constraint create(ConstraintCommand command) throws Exception {
-        User user = userDao.findById(command.userId);
-        if (user == null) {
-            throw new Exception("User not found");
-        }
-
-        // Check if constraint already exists
-        Constraint existing = constraintDao.findByUserIdAndDateAndType(
-                command.userId, command.date, command.type);
-        if (existing != null) {
-            return existing;
-        }
-
-        Constraint constraint = new Constraint();
-        constraint.user = user;
-        constraint.date = command.date;
-        constraint.type = command.type;
-        constraint.constraintType = command.constraintType;
-
-        constraintDao.persist(constraint);
-        return constraint;
+    public List<Constraint> listByWeekOffset(int weekOffset) {
+        WeekWindow window = WeekWindow.centeredOn(weekOffset);
+        return dao.findBetween(window.start(), window.end());
     }
 
-    public void delete(DeleteConstraintCommand command) throws Exception {
-        constraintDao.deleteByUserIdAndDateAndType(
-                command.userId, command.date, command.type);
+    public List<Constraint> findByUserIdAndWeekOffset(Long userId, int weekOffset) {
+        WeekWindow window = WeekWindow.centeredOn(weekOffset);
+        return dao.findByUserIdBetween(userId, window.start(), window.end());
+    }
+
+    public List<Constraint> findByUserIdBetween(Long userId, LocalDate start, LocalDate end) {
+        return dao.findByUserIdBetween(userId, start, end);
+    }
+
+    @Transactional
+    public void delete(DeleteConstraintCommand command) {
+        dao.deleteByUserIdDateAndType(command.userId, command.date, command.type);
     }
 
     public boolean hasCANTConstraint(Long userId, LocalDate date, ShiftType shiftType) {
-        Constraint constraint = constraintDao.findByUserIdAndDateAndType(userId, date, shiftType);
-        return constraint != null && constraint.constraintType.getValue().equals("CANT");
-    }
-
-    public List<Constraint> findAll() {
-        return constraintDao.listAll();
-    }
-
-    public Constraint findById(Long id) {
-        return constraintDao.findById(id);
-    }
-
-    public void deleteById(Long id) {
-        constraintDao.deleteById(id);
+        Constraint constraint = dao.findByUserIdAndDateAndType(userId, date, shiftType);
+        return constraint != null && constraint.constraintType == ConstraintType.CANT;
     }
 }
-
-

@@ -1,0 +1,97 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Commands
+
+```bash
+# Development (hot reload)
+mvn quarkus:dev
+
+# Build
+mvn clean package
+
+# Run tests
+mvn test # tests aren't relevant yet
+
+# Integration tests
+mvn verify
+
+# Build native image
+mvn clean package -Dnative
+```
+
+## Prerequisites
+
+- PostgreSQL running on `localhost:5432`, default `postgres` database, user `postgres`, password `postgres`
+- `src/main/resources/privateKey.pem` and `publicKey.pem` must exist (RS256 keypair for JWT)
+- API available at `http://localhost:8080/api/`
+
+## Architecture
+
+**Shift Manager** is a Quarkus 3 REST API for employee shift scheduling. It assigns DAY/NIGHT shifts, tracks user
+constraints, and applies weight-based fairness scoring across a week.
+
+### Stack
+
+- **Quarkus 3** + Java 21, JAX-RS REST, Jackson
+- **Hibernate ORM Panache** (active record pattern)
+- **PostgreSQL** + **Flyway** (auto-migrates on startup from `src/main/resources/db/migration/`)
+- **SmallRye JWT** with RS256 for auth, jBCrypt for password hashing
+- **Lombok** for boilerplate reduction
+
+### Domain Entities
+
+| Entity              | Purpose                                                     |
+|---------------------|-------------------------------------------------------------|
+| `User`              | Employee with hashed password, cumulative score, and role   |
+| `AssignedShift`     | Links User → date + ShiftType + ShiftWeightPreset           |
+| `Shift`             | Base shift by date and ShiftType (DAY/NIGHT)                |
+| `Constraint`        | User's availability for a date: CANT / PREFER / PREFERS_NOT |
+| `ShiftWeightPreset` | Named set of per-day-of-week weights for fairness scoring   |
+| `ShiftWeight`       | Single weight entry within a preset (day + shift type)      |
+
+### Layer Pattern
+
+Each feature follows the same layered pattern:
+
+```
+resources/ (JAX-RS endpoint)
+  → responders/ (DTO ↔ entity conversion, owns the mapper)
+    → services/ (business logic, entity operations only)
+      → daos/ (Panache repository, extends BaseDao<T>)
+        → entities/ (JPA entity, extends BaseEntity)
+```
+
+**Commands** (`commands/`) are the POST/PUT request bodies.
+
+**Mappers** (`mappers/`, implement `CommandToEntityMapper<T, AC, UC, D>`) handle two conversions:
+
+- `mapToEntity(command)` — command → entity (inbound)
+- `mapToDto(entity)` → DTO (outbound)
+
+**Responders** (`responders/`) sit between resources and services. They are the only layer that knows about mappers and
+DTOs. `BaseResponder<T, AC, UC, D>` provides generic CRUD methods; concrete responders add domain-specific logic.
+
+**Services** (`services/`, extend `BaseService<T>`) contain business logic and operate exclusively on entities. They
+have no knowledge of DTOs or mappers.
+
+**DTOs** (`dto/`) are the API response types. They never expose internal entity fields (e.g., hashed passwords,
+back-references).
+
+### General Code Preferences
+
+- Instead of @Inject-ing, use @RequiredArgsConstructor + making the fields private-final for @ApplicationScoped to
+  auto-inject them.
+- Resource functions should be one-liners. All logic goes in responders/services.
+
+### Auth Flow
+
+- `POST /api/auth/signup` and `POST /api/auth/login` are public
+- Login returns a JWT; all other endpoints require `Authorization: Bearer <token>`
+- Roles are enforced via `@RolesAllowed` on resource methods; role constants in `auth/`
+
+### Backup Feature
+
+`BackupResource` / `BackupService` can export the current DB state to JSON files (under `src/main/resources/backups/`)
+and generate Flyway SQL migration files from those snapshots.

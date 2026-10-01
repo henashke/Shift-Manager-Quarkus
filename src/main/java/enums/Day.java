@@ -3,6 +3,8 @@ package enums;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
+import java.time.LocalDate;
+
 public enum Day {
     SUNDAY("ראשון"),
     MONDAY("שני"),
@@ -16,6 +18,10 @@ public enum Day {
 
     Day(String hebrewName) {
         this.hebrewName = hebrewName;
+    }
+
+    public static Day fromDate(LocalDate date) {
+        return values()[date.getDayOfWeek().getValue() % 7];
     }
 
     @JsonCreator

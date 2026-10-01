@@ -1,26 +1,31 @@
 package enums;
 
 public enum ConstraintType {
-    CANT("CANT"),
-    PREFER("PREFER");
+    CANT("לא יכול"),
+    PREFER("מעדיף"),
+    PREFERS_NOT("מעדיף שלא");
 
-    private final String value;
+    private final String hebrewRepresentation;
 
-    ConstraintType(String value) {
-        this.value = value;
+    ConstraintType(String hebrewRepresentation) {
+        this.hebrewRepresentation = hebrewRepresentation;
     }
 
     public static ConstraintType fromValue(String value) {
         for (ConstraintType type : ConstraintType.values()) {
-            if (type.value.equalsIgnoreCase(value)) {
+            if (type.hebrewRepresentation.equalsIgnoreCase(value)) {
                 return type;
             }
         }
         throw new IllegalArgumentException("Invalid constraint type: " + value);
     }
 
+    public String getHebrewRepresentation() {
+        return hebrewRepresentation;
+    }
+
     public String getValue() {
-        return value;
+        return hebrewRepresentation;
     }
 }
 

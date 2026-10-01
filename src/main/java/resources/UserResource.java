@@ -1,13 +1,11 @@
 package resources;
 
-import commands.AddUserCommand;
-import commands.UpdateUserCommand;
-import entities.User;
+import dto.UserDto;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import services.UserService;
+import responders.UserResponder;
 
 import java.util.List;
 
@@ -17,44 +15,27 @@ import java.util.List;
 public class UserResource {
 
     @Inject
-    UserService userService;
+    UserResponder userResponder;
 
     @GET
-    public List<User> list() {
-        return userService.listAll();
-    }
-
-    @GET
-    @Path("/{id}")
-    public User get(@PathParam("id") Long id) {
-        User user = userService.findById(id);
-        if (user == null) {
-            throw new NotFoundException();
-        }
-        return user;
+    public List<UserDto> list() {
+        return userResponder.listAll();
     }
 
     @POST
-    public Response create(AddUserCommand command) {
-        User user = userService.create(command);
-        return Response.status(Response.Status.CREATED).entity(user).build();
+    public Response create(UserDto dto) {
+        return userResponder.create(dto);
     }
 
     @PUT
-    @Path("/{id}")
-    public User update(@PathParam("id") Long id, UpdateUserCommand command) {
-        command.id = id;
-        User user = userService.update(command);
-        if (user == null) {
-            throw new NotFoundException();
-        }
-        return user;
+    @Path("/{username}")
+    public Response update(@PathParam("username") String username, UserDto dto) { // TODO change password feature
+        return userResponder.updateByUsername(username, dto);
     }
 
     @DELETE
-    @Path("/{id}")
-    public Response delete(@PathParam("id") Long id) {
-        userService.deleteById(id);
-        return Response.noContent().build();
+    @Path("/{username}")
+    public Response delete(@PathParam("username") String username) {
+        return userResponder.deleteByUsername(username);
     }
 }

@@ -1,17 +1,19 @@
 package resources;
 
-import commands.ConstraintCommand;
-import commands.DeleteConstraintCommand;
-import entities.Constraint;
+import auth.JwtClaims;
+import auth.RoleConstants;
+import dto.ConstraintDto;
+import dto.DeleteConstraintDto;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import services.ConstraintService;
+import org.eclipse.microprofile.jwt.JsonWebToken;
+import responders.ConstraintResponder;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Objects;
+import java.util.function.BiPredicate;
 
 @Path("/api/constraints")
 @Produces(MediaType.APPLICATION_JSON)
@@ -19,59 +21,39 @@ import java.util.Map;
 public class ConstraintResource {
 
     @Inject
-    ConstraintService constraintService;
+    ConstraintResponder constraintResponder;
+
+    @Inject
+    JsonWebToken jwt;
 
     @GET
-    public List<Constraint> listConstraints() {
-        return constraintService.findAll();
-    }
-
-    @GET
-    @Path("/user/{userId}")
-    public List<Constraint> getConstraintsByUser(@PathParam("userId") Long userId) {
-        return constraintService.findByUserId(userId);
+    public List<ConstraintDto> listConstraints(@QueryParam("weekOffset") Integer weekOffset) {
+        String username = jwt.getClaim(JwtClaims.USERNAME);
+        boolean isAdmin = jwt.getGroups().contains(RoleConstants.ADMIN);
+        return constraintResponder.listByUser(username, isAdmin, weekOffset);
     }
 
     @POST
-    public Response createConstraints(Object payload) {
-        try {
-            if (payload instanceof java.util.List) {
-                List<ConstraintCommand> commands = (List<ConstraintCommand>) payload;
-                for (ConstraintCommand command : commands) {
-                    constraintService.create(command);
-                }
-            } else if (payload instanceof ConstraintCommand) {
-                constraintService.create((ConstraintCommand) payload);
-            }
-            Map<String, String> response = new HashMap<>();
-            response.put("message", "Constraint(s) created successfully");
-            return Response.status(Response.Status.CREATED).entity(response).build();
-        } catch (Exception e) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(new ErrorResponse(e.getMessage())).build();
-        }
+    public Response createConstraints(List<ConstraintDto> dtos) {
+        throwIfTriedToPerformActionOnOtherUser(dtos, (payload, username) ->
+                payload.stream().anyMatch(constraint -> !Objects.equals(constraint.userId, username)));
+        return constraintResponder.createAll(dtos);
     }
 
     @DELETE
-    public Response deleteConstraint(DeleteConstraintCommand command) {
-        try {
-            constraintService.delete(command);
-            Map<String, String> response = new HashMap<>();
-            response.put("message", "Constraint deleted successfully");
-            return Response.ok(response).build();
-        } catch (Exception e) {
-            return Response.status(Response.Status.NOT_FOUND)
-                    .entity(new ErrorResponse(e.getMessage())).build();
-        }
+    public Response deleteConstraint(DeleteConstraintDto dto) {
+        throwIfTriedToPerformActionOnOtherUser(dto, (payload, username) ->
+                !Objects.equals(payload.userId, username));
+        return constraintResponder.delete(dto);
     }
 
-    public static class ErrorResponse {
-        public String message;
+    private <T> void throwIfTriedToPerformActionOnOtherUser(T payload, BiPredicate<T, String> isOtherUserPresentInPayload) {
+        String username = jwt.getClaim(JwtClaims.USERNAME);
+        boolean isAdmin = jwt.getGroups().contains(RoleConstants.ADMIN);
+        boolean constraintForOtherUserExists = isOtherUserPresentInPayload.test(payload, username);
 
-        public ErrorResponse(String message) {
-            this.message = message;
+        if (!isAdmin && constraintForOtherUserExists) {
+            throw new BadRequestException("Creating requests for other users is not allowed.");
         }
     }
 }
-
-

@@ -1,14 +1,19 @@
 package services;
 
+import auth.JwtTokenProvider;
 import commands.LoginCommand;
 import commands.SignupCommand;
 import daos.UserDao;
 import entities.User;
+import io.quarkus.security.AuthenticationFailedException;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 import org.mindrot.jbcrypt.BCrypt;
 
 @ApplicationScoped
+@RequiredArgsConstructor
 public class AuthService {
 
     @Inject
@@ -17,13 +22,12 @@ public class AuthService {
     @Inject
     JwtTokenProvider tokenProvider;
 
-    public User signup(SignupCommand command) throws Exception {
-        // Check if user already exists
+    @Transactional
+    public void signup(SignupCommand command) throws Exception {
         if (userDao.findByUsername(command.name).isPresent()) {
-            throw new Exception("User already exists");
+            throw new Exception("User already exists with this username");
         }
 
-        // Create new user with hashed password
         User user = new User();
         user.name = command.name;
         user.password = BCrypt.hashpw(command.password, BCrypt.gensalt());
@@ -31,24 +35,28 @@ public class AuthService {
         user.score = 0;
 
         userDao.persist(user);
-        return user;
     }
 
-    public AuthResponse login(LoginCommand command) throws Exception {
-        User user = userDao.findByUsername(command.name)
-                .orElseThrow(() -> new Exception("Invalid credentials"));
-
-        if (!BCrypt.checkpw(command.password, user.password)) {
-            throw new Exception("Invalid credentials");
-        }
-
+    public AuthResponse login(LoginCommand command) throws AuthenticationFailedException {
+        User user = authenticate(command.name, command.password);
         String token = tokenProvider.generateToken(user.name, user.role);
+
         return new AuthResponse(
                 "Login successful",
                 user.name,
                 user.role,
                 token
         );
+    }
+
+    private User authenticate(String username, String password) throws AuthenticationFailedException {
+        User user = userDao.findByUsername(username).orElse(null);
+        if (user == null) throw new AuthenticationFailedException();
+        if (BCrypt.checkpw(password, user.password)) {
+            return user;
+        } else {
+            throw new AuthenticationFailedException();
+        }
     }
 
     public static class AuthResponse {

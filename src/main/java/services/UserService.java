@@ -7,32 +7,35 @@ import daos.UserDao;
 import entities.User;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
 import mappers.CommandToEntityMapper;
-import mappers.UserMapper;
-import org.mindrot.jbcrypt.BCrypt;
+import mappers.user.UserCommandToEntityMapper;
 
 @ApplicationScoped
 public class UserService extends BaseService<User, AddUserCommand, UpdateUserCommand> {
 
     @Inject
-    UserDao userDao;
+    UserDao dao;
 
     @Inject
-    UserMapper userMapper;
+    UserCommandToEntityMapper commandToEntityMapper;
 
     @Override
     protected BaseDao<User> getDao() {
-        return userDao;
+        return dao;
     }
 
     @Override
     protected CommandToEntityMapper<User, AddUserCommand, UpdateUserCommand> getMapper() {
-        return userMapper;
+        return commandToEntityMapper;
     }
 
-    public boolean authenticate(String username, String password) {
-        return userDao.findByUsername(username)
-                .map(user -> BCrypt.checkpw(password, user.password))
-                .orElse(false);
+    public User findByUsername(String username) {
+        return dao.findByUsername(username).orElse(null);
+    }
+
+    @Transactional
+    public void deleteByUsername(String username) {
+        dao.deleteByUsername(username);
     }
 }

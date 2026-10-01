@@ -11,4 +11,8 @@ public class UserDao implements BaseDao<User> {
     public Optional<User> findByUsername(String username) {
         return find("name", username).firstResultOptional();
     }
+
+    public void deleteByUsername(String username) {
+        delete("name", username);
+    }
 }
