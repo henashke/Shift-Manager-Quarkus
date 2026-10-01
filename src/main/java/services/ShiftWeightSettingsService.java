@@ -32,16 +32,5 @@ public class ShiftWeightSettingsService {
     public List<ShiftWeightPreset> getAllPresets() {
         return shiftWeightPresetDao.listAll();
     }
-
-    public ShiftWeightPreset savePreset(ShiftWeightPreset preset) {
-        ShiftWeightPreset existing = shiftWeightPresetDao.findByName(preset.name);
-        if (existing != null) {
-            existing.shiftWeights = preset.shiftWeights;
-            shiftWeightPresetDao.persist(existing);
-            return existing;
-        }
-        shiftWeightPresetDao.persist(preset);
-        return preset;
-    }
 }
 

@@ -13,8 +13,9 @@ public class ShiftWeightPresetCommandToEntityMapper implements CommandToEntityMa
     public ShiftWeightPreset mapToEntity(AddShiftWeightPresetCommand addCommand) {
         ShiftWeightPreset preset = new ShiftWeightPreset();
         preset.name = addCommand.name;
-        preset.shiftWeights = addCommand.shiftWeights;
-        if (preset.shiftWeights != null) {
+        // Copy into the entity's own mutable list (the command's list may be immutable)
+        if (addCommand.shiftWeights != null) {
+            preset.shiftWeights.addAll(addCommand.shiftWeights);
             preset.shiftWeights.forEach(sw -> sw.preset = preset);
         }
         return preset;

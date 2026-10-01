@@ -11,15 +11,18 @@ import enums.ShiftType;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.core.Response;
 import mappers.DtoToCommandMapper;
 import mappers.shift.ShiftDtoToCommandMapper;
+import services.ShiftConstraintViolationException;
 import services.ShiftService;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
+
+import static responders.ErrorResponses.error;
 
 @ApplicationScoped
 public class ShiftResponder extends BaseResponder<AssignedShift, AddShiftCommand, UpdateShiftCommand, AssignedShiftDto> {
@@ -50,12 +53,15 @@ public class ShiftResponder extends BaseResponder<AssignedShift, AddShiftCommand
     @Override
     @Transactional
     public Response createAll(List<AssignedShiftDto> dtos) {
-        List<AssignedShift> savedShifts = new ArrayList<>();
-        for (AssignedShiftDto dto : dtos) {
-            savedShifts.add(getService().overrideShift(shiftDtoToCommandMapper.mapToAddCommand(dto)));
+        List<AddShiftCommand> commands = dtos.stream()
+                .map(shiftDtoToCommandMapper::mapToAddCommand)
+                .toList();
+        try {
+            return ok(shiftDtoToCommandMapper.mapToDto(service.overrideShifts(commands)));
+        } catch (ShiftConstraintViolationException e) {
+            // Rethrown (not returned) so the transaction is rolled back
+            throw new BadRequestException(error(Response.Status.BAD_REQUEST, e.getMessage()));
         }
-
-        return ok(shiftDtoToCommandMapper.mapToDto(savedShifts));
     }
 
     @Transactional

@@ -26,7 +26,7 @@ public class ShiftWeightPresetResource {
     @POST
     @Path("/preset")
     public Response savePreset(ShiftWeightPresetDto shiftWeightPresetDto) {
-        return shiftWeightPresetResponder.create(shiftWeightPresetDto);
+        return shiftWeightPresetResponder.saveByName(shiftWeightPresetDto);
     }
 
     @POST

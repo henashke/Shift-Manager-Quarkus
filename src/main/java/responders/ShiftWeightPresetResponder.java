@@ -6,6 +6,7 @@ import dto.ShiftWeightPresetDto;
 import entities.ShiftWeightPreset;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
 import jakarta.ws.rs.core.Response;
 import mappers.DtoToCommandMapper;
 import mappers.shiftWeightPreset.ShiftWeightPresetDtoToCommandMapper;
@@ -50,6 +51,18 @@ public class ShiftWeightPresetResponder extends BaseResponder<ShiftWeightPreset,
         settings.put("presets", presets);
 
         return settings;
+    }
+
+    /**
+     * Upsert by name: replaces the weights of an existing preset with the same name, otherwise creates it.
+     */
+    @Transactional
+    public Response saveByName(ShiftWeightPresetDto dto) {
+        ShiftWeightPreset existing = shiftWeightPresetService.findByName(dto.name);
+        ShiftWeightPreset saved = existing == null
+                ? shiftWeightPresetService.create(shiftWeightPresetDtoToCommandMapper.mapToAddCommand(dto))
+                : shiftWeightPresetService.update(existing.id, shiftWeightPresetDtoToCommandMapper.mapToUpdateCommand(dto));
+        return ok(shiftWeightPresetDtoToCommandMapper.mapToDto(saved));
     }
 
     public Response setCurrentPreset(String presetName) throws Exception {

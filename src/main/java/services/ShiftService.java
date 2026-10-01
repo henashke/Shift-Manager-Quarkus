@@ -56,6 +56,21 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, Up
         return commandToEntityMapper;
     }
 
+    /**
+     * Overrides all given shifts. Validates every shift first, so nothing is written if any assigned user has a
+     * CANT constraint on their shift.
+     */
+    public List<AssignedShift> overrideShifts(List<AddShiftCommand> commands) {
+        commands.forEach(this::throwIfUserCantWorkShift);
+        return commands.stream().map(this::overrideShift).toList();
+    }
+
+    private void throwIfUserCantWorkShift(AddShiftCommand command) {
+        if (command.userId != null && constraintService.hasCANTConstraint(command.userId, command.date, command.type)) {
+            throw new ShiftConstraintViolationException(userDao.findById(command.userId).name);
+        }
+    }
+
     public AssignedShift overrideShift(AddShiftCommand command) {
         getDao().deleteByDateAndType(command.date, command.type);
         return super.create(command);
