@@ -4,6 +4,7 @@ import auth.JwtClaims;
 import auth.RoleConstants;
 import dto.ConstraintDto;
 import dto.DeleteConstraintDto;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -18,6 +19,7 @@ import java.util.function.BiPredicate;
 @Path("/api/constraints")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@RolesAllowed({RoleConstants.USER, RoleConstants.ADMIN})
 public class ConstraintResource {
 
     @Inject

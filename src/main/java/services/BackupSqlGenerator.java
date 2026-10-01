@@ -17,6 +17,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -32,6 +33,8 @@ public class BackupSqlGenerator {
 
     private final Map<String, Long> usernameToIdMap = new HashMap<>();
     private final Map<String, Long> presetNameToIdMap = new HashMap<>();
+    private static final String BACKUP_DIR = "backup";
+
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
@@ -63,7 +66,7 @@ public class BackupSqlGenerator {
                 generateAssignedShiftsInserts(shifts) + "\n\n" +
                 "COMMIT;\n";
 
-        Path outPath = Path.of("src", "main", "resources", "backup", "results", backupDirName, "backup.sql");
+        Path outPath = Path.of("src", "main", "resources", BACKUP_DIR, "results", backupDirName, "backup.sql");
         Files.createDirectories(outPath.getParent());
         Files.writeString(outPath, sb);
     }
@@ -96,8 +99,8 @@ public class BackupSqlGenerator {
     }
 
     public String generateConstraintsInserts(List<Map<String, Object>> constraints) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("-- constraints inserts\n");
+        // The old backend could store the same constraint more than once; keep only the last one per user + shift
+        Map<String, String> insertsByUserAndShift = new LinkedHashMap<>();
 
         for (Map<String, Object> c : constraints) {
             // backup format: { "shift": { "date": <millis>, "type": "..." }, "constraintType": "...", "userId": "username" }
@@ -114,14 +117,16 @@ public class BackupSqlGenerator {
             }
             long userIdVal = usernameToIdMap.get(userName);
 
-            sb.append("INSERT INTO constraints (user_id, shift_date, shift_type, constraint_type) VALUES (")
-                    .append(userIdVal).append(", ")
-                    .append(sqlString(dateStr)).append(", ")
-                    .append(sqlString(shiftType)).append(", ")
-                    .append(sqlString(constraintType)).append(");\n");
+            String key = userIdVal + "|" + dateStr + "|" + shiftType;
+            insertsByUserAndShift.remove(key); // re-insert so the order follows the last occurrence
+            insertsByUserAndShift.put(key, "INSERT INTO constraints (user_id, shift_date, shift_type, constraint_type) VALUES ("
+                    + userIdVal + ", "
+                    + sqlString(dateStr) + ", "
+                    + sqlString(shiftType) + ", "
+                    + sqlString(constraintType) + ");\n");
         }
 
-        return sb.toString();
+        return "-- constraints inserts\n" + String.join("", insertsByUserAndShift.values());
     }
 
     public String generateAssignedShiftsInserts(List<Map<String, Object>> shifts) {
@@ -160,23 +165,19 @@ public class BackupSqlGenerator {
 
     // --- helpers ---
 
+    /**
+     * Whether a backup directory exists, either on the classpath or under src/main/resources (when running from the
+     * project).
+     */
+    public boolean backupExists(String backupDirName) {
+        return Thread.currentThread().getContextClassLoader().getResource(BACKUP_DIR + "/" + backupDirName) != null
+                || Files.isDirectory(Path.of("src", "main", "resources", BACKUP_DIR, backupDirName));
+    }
+
     private List<Map<String, Object>> readJsonArray(String backupDirName, String filename) throws IOException {
-        String resourcePath = "backup/" + backupDirName + "/" + filename;
-        InputStream is = Thread.currentThread().getContextClassLoader().getResourceAsStream(resourcePath);
-        if (is == null) {
-            // fallback to project resources path when running from IDE
-            Path p = Path.of("src", "main", "resources", "backups", backupDirName, filename);
-                if (!Files.exists(p)) {
-                return new ArrayList<>();
-            }
-            byte[] bytes = Files.readAllBytes(p);
-            return objectMapper.readValue(bytes, new TypeReference<>() {
-            });
-        }
-        try (InputStream eis = is) {
-            return objectMapper.readValue(eis, new TypeReference<>() {
-            });
-        }
+        List<Map<String, Object>> result = readJson(backupDirName, filename, new TypeReference<>() {
+        });
+        return result != null ? result : new ArrayList<>();
     }
 
     public String generatePresetsAndWeightsInserts(String backupDirName) throws IOException {
@@ -235,21 +236,27 @@ public class BackupSqlGenerator {
     }
 
     private Map<String, Object> readJsonObject(String backupDirName, String filename) throws IOException {
-        String resourcePath = "backups/" + backupDirName + "/" + filename;
+        Map<String, Object> result = readJson(backupDirName, filename, new TypeReference<>() {
+        });
+        return result != null ? result : new HashMap<>();
+    }
+
+    /**
+     * Reads backup/&lt;backupDirName&gt;/&lt;filename&gt; from the classpath, falling back to src/main/resources when
+     * running from the project. Returns null if the file doesn't exist.
+     */
+    private <T> T readJson(String backupDirName, String filename, TypeReference<T> type) throws IOException {
+        String resourcePath = BACKUP_DIR + "/" + backupDirName + "/" + filename;
         InputStream is = Thread.currentThread().getContextClassLoader().getResourceAsStream(resourcePath);
         if (is == null) {
-            // fallback to project resources path when running from IDE
-            Path p = Path.of("src", "main", "resources", "backups", backupDirName, filename);
+            Path p = Path.of("src", "main", "resources", BACKUP_DIR, backupDirName, filename);
             if (!Files.exists(p)) {
-                return new HashMap<>();
+                return null;
             }
-            byte[] bytes = Files.readAllBytes(p);
-            return objectMapper.readValue(bytes, new TypeReference<>() {
-            });
+            return objectMapper.readValue(Files.readAllBytes(p), type);
         }
         try (InputStream eis = is) {
-            return objectMapper.readValue(eis, new TypeReference<>() {
-            });
+            return objectMapper.readValue(eis, type);
         }
     }
 
