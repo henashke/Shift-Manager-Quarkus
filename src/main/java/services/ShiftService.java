@@ -1,5 +1,6 @@
 package services;
 
+import auth.RoleConstants;
 import commands.AddShiftCommand;
 import commands.UpdateShiftCommand;
 import daos.AssignedShiftDao;
@@ -19,8 +20,10 @@ import util.WeekWindow;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 
 @ApplicationScoped
 public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, UpdateShiftCommand> {
@@ -33,6 +36,9 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, Up
 
     @Inject
     ConstraintService constraintService;
+
+    @Inject
+    ShiftWeightSettingsService shiftWeightSettingsService;
 
     @Inject
     Instance<ShiftSuggester> suggesters;
@@ -62,6 +68,9 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, Up
      */
     public List<AssignedShift> overrideShifts(List<AddShiftCommand> commands) {
         commands.forEach(this::throwIfUserCantWorkShift);
+        commands.stream()
+                .filter(command -> command.shiftWeightPresetId == null)
+                .forEach(command -> command.shiftWeightPresetId = currentPreset().id);
         return commands.stream().map(this::overrideShift).toList();
     }
 
@@ -111,7 +120,7 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, Up
                 List<AssignedShift> llmSuggestions =
                         suggester.suggest(users, constraints, startDate, endDate);
                 suggestionValidator.validate(llmSuggestions, users, constraints, startDate, endDate);
-                return llmSuggestions;
+                return withCurrentPresetIfMissing(llmSuggestions);
             } catch (Exception e) {
                 Log.warnf(e, "'%s' shift suggestion unusable, falling back to offline algorithm: %s",
                         suggester.name(), e.getMessage());
@@ -125,7 +134,27 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, Up
         } catch (ShiftSuggestionValidationException e) {
             Log.warnf("Offline fallback schedule has issues: %s", e.getMessage());
         }
-        return offlineSuggestions;
+        return withCurrentPresetIfMissing(offlineSuggestions);
+    }
+
+    /**
+     * Every assigned shift needs a preset (the client reads it, and scores are calculated from it). Like the old
+     * backend, shifts without one get the current preset.
+     */
+    private List<AssignedShift> withCurrentPresetIfMissing(List<AssignedShift> shifts) {
+        ShiftWeightPreset currentPreset = currentPreset();
+        shifts.stream()
+                .filter(shift -> shift.shiftWeightPreset == null)
+                .forEach(shift -> shift.shiftWeightPreset = currentPreset);
+        return shifts;
+    }
+
+    private ShiftWeightPreset currentPreset() {
+        ShiftWeightPreset currentPreset = shiftWeightSettingsService.getCurrentPreset();
+        if (currentPreset == null) {
+            throw new IllegalStateException("The current shift weight preset doesn't exist");
+        }
+        return currentPreset;
     }
 
     /**
@@ -177,28 +206,48 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, Up
         return suggestions;
     }
 
+    /**
+     * Replays all assigned shifts in chronological order. A user's starting score is the average score of the users
+     * who already worked at the time of their first shift (instead of 0), so latecomers don't end up far below
+     * everyone else. Users with no shifts yet get the current average (admins without shifts stay at 0).
+     */
     @Transactional
     public void recalculateAllUsersScores() {
-        List<User> users = userDao.listAll();
-        for (User user : users) {
-            int score = 0;
-            List<AssignedShift> shifts = dao.find("assignedUser.id", user.id).list();
-            for (AssignedShift shift : shifts) {
-                ShiftWeightPreset shiftWeightPreset = shift.shiftWeightPreset;
-                Day dayOfWeak = Day.fromDate(shift.date);
-                ShiftType shiftType = shift.type;
-                Optional<ShiftWeight> shiftWeight = shiftWeightPreset.shiftWeights
-                        .stream()
-                        .filter(w -> w.day == dayOfWeak && w.shiftType == shiftType)
-                        .findFirst();
-                if (shiftWeight.isEmpty()) {
-                    throw new RuntimeException("Malformed Shift weight preset. Could not find weight for shift on %s of type %s".formatted(dayOfWeak, shiftType));
-                }
-                int scoreToAdd = shiftWeight.get().weight;
-                score += scoreToAdd;
+        List<AssignedShift> shifts = dao.listAll().stream()
+                .filter(shift -> shift.assignedUser != null)
+                .sorted(Comparator.comparing((AssignedShift shift) -> shift.date).thenComparing(shift -> shift.type))
+                .toList();
+
+        // Users who already had their first shift, by id
+        Map<Long, Integer> scores = new HashMap<>();
+        for (AssignedShift shift : shifts) {
+            Long userId = shift.assignedUser.id;
+            if (!scores.containsKey(userId)) {
+                scores.put(userId, averageScore(scores));
             }
-            user.score = score;
-            userDao.persist(user);
+            scores.merge(userId, weightOf(shift), Integer::sum);
         }
+
+        int average = averageScore(scores);
+        for (User user : userDao.listAll()) {
+            if (scores.containsKey(user.id)) {
+                user.score = scores.get(user.id);
+            } else {
+                user.score = RoleConstants.ADMIN.equals(user.role) ? 0 : average;
+            }
+        }
+    }
+
+    private static int averageScore(Map<Long, Integer> scores) {
+        return (int) Math.round(scores.values().stream().mapToInt(Integer::intValue).average().orElse(0));
+    }
+
+    private static int weightOf(AssignedShift shift) {
+        Day dayOfWeek = Day.fromDate(shift.date);
+        return shift.shiftWeightPreset.shiftWeights.stream()
+                .filter(w -> w.day == dayOfWeek && w.shiftType == shift.type)
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Malformed Shift weight preset. Could not find weight for shift on %s of type %s".formatted(dayOfWeek, shift.type)))
+                .weight;
     }
 }

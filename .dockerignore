@@ -1,0 +1,10 @@
+.git
+.idea
+target
+todo
+migration
+**/node_modules
+src/main/webui/build
+src/main/webui/.quinoa
+# Backup snapshots contain user data (including password hashes); never bake them into an image
+src/main/resources/backup*

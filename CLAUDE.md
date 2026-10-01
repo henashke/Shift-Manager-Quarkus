@@ -25,11 +25,12 @@ mvn clean package -Dnative
 
 - PostgreSQL running on `localhost:5432`, default `postgres` database, user `postgres`, password `postgres`
 - `src/main/resources/privateKey.pem` and `publicKey.pem` must exist (RS256 keypair for JWT)
-- API available at `http://localhost:8080/api/`
+- API available at `http://localhost:8080/api/`, frontend at `http://localhost:8080/`
+- Node.js + npm (Quinoa installs and builds the frontend)
 
 ## Architecture
 
-**Shift Manager** is a Quarkus 3 REST API for employee shift scheduling. It assigns DAY/NIGHT shifts, tracks user
+**Shift Manager** is a Quarkus 3 REST API (plus its React frontend) for employee shift scheduling. It assigns DAY/NIGHT shifts, tracks user
 constraints, and applies weight-based fairness scoring across a week.
 
 ### Stack
@@ -39,6 +40,9 @@ constraints, and applies weight-based fairness scoring across a week.
 - **PostgreSQL** + **Flyway** (auto-migrates on startup from `src/main/resources/db/migration/`)
 - **SmallRye JWT** with RS256 for auth, jBCrypt for password hashing
 - **Lombok** for boilerplate reduction
+- **React** frontend (Create React App, MobX, MUI) in `src/main/webui`, built and served by **Quinoa**. In dev mode
+  Quinoa runs the React dev server (port 3000) and proxies it through `:8080`; SPA routes fall back to `index.html`,
+  `/api` is excluded. Authenticated frontend calls go through `authFetch` (`src/main/webui/src/api.ts`).
 
 ### Domain Entities
 
@@ -87,11 +91,14 @@ back-references).
 
 ### Auth Flow
 
-- `POST /api/auth/signup` and `POST /api/auth/login` are public
-- Login returns a JWT; all other endpoints require `Authorization: Bearer <token>`
+- `POST /api/auth/signup`, `/login`, `/refresh` and `/logout` are public
+- Login returns a 1-hour access JWT plus a refresh token; all other endpoints require `Authorization: Bearer <token>`
+- `POST /api/auth/refresh` exchanges a refresh token (single-use, rotated, stored SHA-256 hashed in `refresh_tokens`)
+  for a new pair; `POST /api/auth/logout` revokes it
 - Roles are enforced via `@RolesAllowed` on resource methods; role constants in `auth/`
 
 ### Backup Feature
 
-`BackupResource` / `BackupService` can export the current DB state to JSON files (under `src/main/resources/backups/`)
-and generate Flyway SQL migration files from those snapshots.
+`GET /api/backup` exports the DB as a zip of JSON files in the old (pre-Quarkus) backup format. Unzipped under
+`src/main/resources/backup/<name>/`, `POST /api/backup/generate-sql` turns it into
+`src/main/resources/backup/results/<name>/backup.sql`.

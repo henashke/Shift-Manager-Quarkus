@@ -2,6 +2,7 @@ package resources;
 
 import auth.RoleConstants;
 import commands.LoginCommand;
+import commands.RefreshTokenCommand;
 import commands.SignupCommand;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
@@ -35,6 +36,18 @@ public class AuthResource {
     @Path("/login")
     public Response login(LoginCommand command) {
         return authResponder.login(command);
+    }
+
+    @POST
+    @Path("/refresh")
+    public Response refresh(RefreshTokenCommand command) {
+        return authResponder.refresh(command);
+    }
+
+    @POST
+    @Path("/logout")
+    public Response logout(RefreshTokenCommand command) {
+        return authResponder.logout(command);
     }
 
     @POST
