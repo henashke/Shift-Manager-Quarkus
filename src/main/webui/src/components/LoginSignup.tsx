@@ -40,7 +40,7 @@ const LoginSignup: React.FC = observer(() => {
       
       if (tab === 0) {
         if (data.token && data.username && data.role) {
-          authStore.setAuth(data.username, data.token, data.role);
+          authStore.setAuth(data.username, data.token, data.role, data.refreshToken);
           navigate('/');
         } else {
           throw new Error('Invalid login response');

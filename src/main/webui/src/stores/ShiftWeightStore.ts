@@ -1,4 +1,5 @@
 import {makeAutoObservable, runInAction} from 'mobx';
+import {authFetch} from '../api';
 import config from '../config';
 import {ShiftType} from './ShiftStore';
 import authStore from './AuthStore';
@@ -34,7 +35,7 @@ class ShiftWeightStore {
 
         this.loading = true;
         try {
-            const res = await fetch(`${config.API_BASE_URL}/shift-weight-settings`, {
+            const res = await authFetch(`${config.API_BASE_URL}/shift-weight-settings`, {
                 headers: authStore.getAuthHeaders()
             });
             if (!res.ok) throw new Error('Failed to fetch shift weight presets');
@@ -54,7 +55,7 @@ class ShiftWeightStore {
 
     async savePreset(preset: ShiftWeightPreset) {
         try {
-            const res = await fetch(`${config.API_BASE_URL}/shift-weight-settings/preset`, {
+            const res = await authFetch(`${config.API_BASE_URL}/shift-weight-settings/preset`, {
                 method: 'POST',
                 headers: authStore.getAuthHeaders(),
                 body: JSON.stringify(preset)
@@ -79,7 +80,7 @@ class ShiftWeightStore {
             if (!this.presets.has(presetName)) {
                 return
             }
-            const res = await fetch(`${config.API_BASE_URL}/shift-weight-settings/current-preset`, {
+            const res = await authFetch(`${config.API_BASE_URL}/shift-weight-settings/current-preset`, {
                 method: 'POST',
                 headers: authStore.getAuthHeaders(),
                 body: JSON.stringify({currentPreset: presetName})
@@ -113,7 +114,7 @@ class ShiftWeightStore {
 
     async backupSystemData() {
         try {
-            const res = await fetch(`${config.API_BASE_URL}/backup`, {
+            const res = await authFetch(`${config.API_BASE_URL}/backup`, {
                 method: 'GET',
                 headers: authStore.getAuthHeaders()
             });

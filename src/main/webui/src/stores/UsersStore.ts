@@ -1,4 +1,5 @@
 import {makeAutoObservable, runInAction} from 'mobx';
+import {authFetch} from '../api';
 import config from '../config';
 import authStore from './AuthStore';
 import notificationStore from "./NotificationStore";
@@ -19,7 +20,7 @@ class UserStore {
     
     this.loading = true;
     try {
-      const res = await fetch(`${config.API_BASE_URL}/users`, {
+      const res = await authFetch(`${config.API_BASE_URL}/users`, {
         headers: authStore.getAuthHeaders()
       });
       if (!res.ok) {
@@ -44,7 +45,7 @@ class UserStore {
     }
 
     try {
-      const res = await fetch(`${config.API_BASE_URL}/users/${user.name}`, {
+      const res = await authFetch(`${config.API_BASE_URL}/users/${user.name}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -73,7 +74,7 @@ class UserStore {
     }
 
     try {
-      const res = await fetch(`${config.API_BASE_URL}/users/${username}`, {
+      const res = await authFetch(`${config.API_BASE_URL}/users/${username}`, {
         method: 'DELETE',
         headers: {
           ...authStore.getAuthHeaders()

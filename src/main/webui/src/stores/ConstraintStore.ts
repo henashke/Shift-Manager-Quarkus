@@ -1,5 +1,6 @@
 import {makeAutoObservable, reaction} from 'mobx';
 import {sameShift, Shift} from "./ShiftStore";
+import {authFetch} from "../api";
 import config from "../config";
 import authStore from "./AuthStore";
 import notificationStore from "./NotificationStore";
@@ -80,7 +81,7 @@ class ConstraintStore {
         if (this.pendingConstraints.length === 0) return;
         const url = `${config.API_BASE_URL}/constraints`;
         try {
-            const res = await fetch(url, {
+            const res = await authFetch(url, {
                 method: 'POST',
                 headers: authStore.getAuthHeaders(),
                 body: JSON.stringify(this.pendingConstraints)
@@ -126,7 +127,7 @@ class ConstraintStore {
         }
         const url = `${config.API_BASE_URL}/constraints`;
         try {
-            const res = await fetch(url, {
+            const res = await authFetch(url, {
                 method: 'DELETE',
                 headers: authStore.getAuthHeaders(),
                 body: JSON.stringify({
@@ -165,7 +166,7 @@ class ConstraintStore {
         }
 
         const url = `${config.API_BASE_URL}/constraints`;
-        const res = await fetch(url, {
+        const res = await authFetch(url, {
             headers: authStore.getAuthHeaders()
         });
         if (!res.ok) throw new Error('Failed to fetch constraints');

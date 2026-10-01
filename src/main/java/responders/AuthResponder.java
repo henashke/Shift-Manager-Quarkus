@@ -1,6 +1,7 @@
 package responders;
 
 import commands.LoginCommand;
+import commands.RefreshTokenCommand;
 import commands.SignupCommand;
 import io.quarkus.security.AuthenticationFailedException;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -44,5 +45,20 @@ public class AuthResponder {
         } catch (Exception e) {
             return error(Response.Status.INTERNAL_SERVER_ERROR, e.getMessage());
         }
+    }
+
+    public Response refresh(RefreshTokenCommand command) {
+        try {
+            return Response.ok(authService.refresh(command)).build();
+        } catch (AuthenticationFailedException e) {
+            return error(Response.Status.UNAUTHORIZED, "Invalid or expired refresh token");
+        } catch (Exception e) {
+            return error(Response.Status.INTERNAL_SERVER_ERROR, e.getMessage());
+        }
+    }
+
+    public Response logout(RefreshTokenCommand command) {
+        authService.logout(command);
+        return Response.noContent().build();
     }
 }

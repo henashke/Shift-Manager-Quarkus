@@ -1,4 +1,5 @@
 import {makeAutoObservable, reaction, runInAction} from "mobx";
+import {authFetch} from "../api";
 import config from "../config";
 import authStore from "./AuthStore";
 import notificationStore from "./NotificationStore";
@@ -70,7 +71,7 @@ export class ShiftStore {
 
         this.loading = true;
         try {
-            const response = await fetch(`${config.API_BASE_URL}/shifts`, {
+            const response = await authFetch(`${config.API_BASE_URL}/shifts`, {
                 method: 'GET',
                 headers: authStore.getAuthHeaders(),
             });
@@ -99,7 +100,7 @@ export class ShiftStore {
         }
         this.loading = true;
         try {
-            const response = await fetch(`${config.API_BASE_URL}/shifts`, {
+            const response = await authFetch(`${config.API_BASE_URL}/shifts`, {
                 method: 'DELETE',
                 headers: authStore.getAuthHeaders(),
                 body: JSON.stringify(shift),
@@ -147,7 +148,7 @@ export class ShiftStore {
     savePendingAssignments = async () => {
         this.loading = true;
         try {
-            const response = await fetch(`${config.API_BASE_URL}/shifts`, {
+            const response = await authFetch(`${config.API_BASE_URL}/shifts`, {
                 method: 'POST',
                 headers: authStore.getAuthHeaders(),
                 body: JSON.stringify(this.pendingAssignedShifts),
@@ -182,7 +183,7 @@ export class ShiftStore {
     async suggestShiftAssignments(userIds: string[], startDate: Date, endDate: Date) {
         this.loading = true;
         try {
-            const response = await fetch(`${config.API_BASE_URL}/shifts/suggest`, {
+            const response = await authFetch(`${config.API_BASE_URL}/shifts/suggest`, {
                 method: 'POST',
                 headers: authStore.getAuthHeaders(),
                 body: JSON.stringify({userIds, startDate, endDate}),
@@ -221,7 +222,7 @@ export class ShiftStore {
         this.loading = true;
         try {
             const weekStart = this.weekDates[0];
-            const response = await fetch(`${config.API_BASE_URL}/shifts/week`, {
+            const response = await authFetch(`${config.API_BASE_URL}/shifts/week`, {
                 method: 'DELETE',
                 headers: authStore.getAuthHeaders(),
                 body: JSON.stringify({weekStart: weekStart.toISOString().slice(0, 10)})
@@ -251,7 +252,7 @@ export class ShiftStore {
     recalculateScores = async (): Promise<'success' | 'error'> => {
         this.loading = true;
         try {
-            const response = await fetch(`${config.API_BASE_URL}/shifts/recalculateAllUsersScores`, {
+            const response = await authFetch(`${config.API_BASE_URL}/shifts/recalculateAllUsersScores`, {
                 method: 'POST',
                 headers: authStore.getAuthHeaders(),
             });

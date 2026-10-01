@@ -1,12 +1,10 @@
 // src/config.ts
 
-// Determine the API base URL
-let apiBaseUrl = 'http://localhost:8080/api'; // Default for development
+// The frontend is served by the Quarkus backend (Quinoa), so the API is on the same origin.
+// In dev, the React dev server proxies /api to the backend (see "proxy" in package.json).
+let apiBaseUrl = '/api';
 
-if (process.env.NODE_ENV === 'production') {
-  // In production, use relative URLs (empty string)
-  apiBaseUrl = '' + '/api';
-} else if (process.env.REACT_APP_API_BASE_URL !== undefined) {
+if (process.env.REACT_APP_API_BASE_URL) {
   // Use custom API URL if provided
   apiBaseUrl = process.env.REACT_APP_API_BASE_URL + '/api';
 }

@@ -2,6 +2,7 @@ package services;
 
 import auth.JwtTokenProvider;
 import commands.LoginCommand;
+import commands.RefreshTokenCommand;
 import commands.SignupCommand;
 import daos.UserDao;
 import entities.User;
@@ -22,6 +23,9 @@ public class AuthService {
     @Inject
     JwtTokenProvider tokenProvider;
 
+    @Inject
+    RefreshTokenService refreshTokenService;
+
     @Transactional
     public void signup(SignupCommand command) {
         requireCredentials(command.name, command.password);
@@ -41,13 +45,29 @@ public class AuthService {
     public AuthResponse login(LoginCommand command) throws AuthenticationFailedException {
         requireCredentials(command.name, command.password);
         User user = authenticate(command.name, command.password);
-        String token = tokenProvider.generateToken(user.name, user.role);
+        return issueTokens(user, "Login successful");
+    }
 
+    /**
+     * Exchanges a refresh token for a new access token and a new refresh token (the used one is invalidated).
+     */
+    @Transactional(dontRollbackOn = AuthenticationFailedException.class)
+    public AuthResponse refresh(RefreshTokenCommand command) throws AuthenticationFailedException {
+        User user = refreshTokenService.consume(command.refreshToken);
+        return issueTokens(user, "Token refreshed");
+    }
+
+    public void logout(RefreshTokenCommand command) {
+        refreshTokenService.revoke(command.refreshToken);
+    }
+
+    private AuthResponse issueTokens(User user, String message) {
         return new AuthResponse(
-                "Login successful",
+                message,
                 user.name,
                 user.role,
-                token
+                tokenProvider.generateToken(user.name, user.role),
+                refreshTokenService.issue(user)
         );
     }
 
@@ -72,12 +92,14 @@ public class AuthService {
         public String username;
         public String role;
         public String token;
+        public String refreshToken;
 
-        public AuthResponse(String message, String username, String role, String token) {
+        public AuthResponse(String message, String username, String role, String token, String refreshToken) {
             this.message = message;
             this.username = username;
             this.role = role;
             this.token = token;
+            this.refreshToken = refreshToken;
         }
     }
 }
