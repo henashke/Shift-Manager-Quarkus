@@ -53,7 +53,7 @@ public class ConstraintResource {
         boolean constraintForOtherUserExists = isOtherUserPresentInPayload.test(payload, username);
 
         if (!isAdmin && constraintForOtherUserExists) {
-            throw new BadRequestException("Creating requests for other users is not allowed.");
+            throw new ForbiddenException("Performing actions on other users' constraints is not allowed.");
         }
     }
 }

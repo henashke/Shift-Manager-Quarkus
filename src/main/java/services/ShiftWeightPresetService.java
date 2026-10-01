@@ -27,4 +27,8 @@ public class ShiftWeightPresetService extends BaseService<ShiftWeightPreset, Add
     protected ShiftWeightPresetCommandToEntityMapper getMapper() {
         return commandToEntityMapper;
     }
+
+    public ShiftWeightPreset findByName(String name) {
+        return dao.findByName(name);
+    }
 }

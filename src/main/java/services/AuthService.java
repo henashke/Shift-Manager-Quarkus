@@ -23,9 +23,10 @@ public class AuthService {
     JwtTokenProvider tokenProvider;
 
     @Transactional
-    public void signup(SignupCommand command) throws Exception {
+    public void signup(SignupCommand command) {
+        requireCredentials(command.name, command.password);
         if (userDao.findByUsername(command.name).isPresent()) {
-            throw new Exception("User already exists with this username");
+            throw new UserAlreadyExistsException(command.name);
         }
 
         User user = new User();
@@ -38,6 +39,7 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginCommand command) throws AuthenticationFailedException {
+        requireCredentials(command.name, command.password);
         User user = authenticate(command.name, command.password);
         String token = tokenProvider.generateToken(user.name, user.role);
 
@@ -51,11 +53,17 @@ public class AuthService {
 
     private User authenticate(String username, String password) throws AuthenticationFailedException {
         User user = userDao.findByUsername(username).orElse(null);
-        if (user == null) throw new AuthenticationFailedException();
+        if (user == null || user.password == null) throw new AuthenticationFailedException();
         if (BCrypt.checkpw(password, user.password)) {
             return user;
         } else {
             throw new AuthenticationFailedException();
+        }
+    }
+
+    private void requireCredentials(String username, String password) {
+        if (username == null || username.isBlank() || password == null || password.isBlank()) {
+            throw new IllegalArgumentException("Username and password are required");
         }
     }
 

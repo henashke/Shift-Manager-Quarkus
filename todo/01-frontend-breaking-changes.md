@@ -10,9 +10,9 @@ Differences from the old Vert.x backend (`../Shift-Manager/backend`) that break 
   user can no longer log in. A missing `score` is also nulled.
 - **Old behavior:** only `name` and `score` are updated, and only when present in the request body.
 - **To do:**
-  - [ ] In `updateEntity`, only apply fields that are non-null in the command.
-  - [ ] Never touch `password` from this route (password change is a separate, future feature).
-  - [ ] Keep 404 when the user doesn't exist.
+  - [x] In `updateEntity`, only apply fields that are non-null in the command.
+  - [x] Never touch `password` from this route (password change is a separate, future feature).
+  - [x] Keep 404 when the user doesn't exist.
 
 ## 2. `POST /api/shift-weight-settings/preset` duplicates presets instead of upserting
 
@@ -21,12 +21,12 @@ Differences from the old Vert.x backend (`../Shift-Manager/backend`) that break 
   `ShiftWeightPresetDao.findByName(...).firstResult()` returns an arbitrary one.
 - **Old behavior:** a preset with the same name is replaced.
 - **To do:**
-  - [ ] Make the route upsert by name: replace the weights of the existing preset, or create one if none exists.
+  - [x] Make the route upsert by name: replace the weights of the existing preset, or create one if none exists.
     `ShiftWeightSettingsService.savePreset` already does this but is unused; route through it or move the logic
     into `ShiftWeightPresetService`.
-  - [ ] When replacing weights, use the orphan-removal-friendly path (`clear()` + `addAll()` and set
+  - [x] When replacing weights, use the orphan-removal-friendly path (`clear()` + `addAll()` and set
     `sw.preset`, like `ShiftWeightPresetCommandToEntityMapper.updateEntity`) rather than reassigning the list.
-  - [ ] Consider a unique constraint on `shift_weight_presets.name` (new Flyway migration). Clean up existing
+  - [x] Consider a unique constraint on `shift_weight_presets.name` (new Flyway migration). Clean up existing
     duplicates first, if any.
 
 ## 3. `POST /api/shifts` doesn't check CANT constraints
@@ -36,7 +36,7 @@ Differences from the old Vert.x backend (`../Shift-Manager/backend`) that break 
   request with
   `400 {"error": "יש ל\"<username>\" אילוץ במשמרת הזו"}`. The frontend displays `data.error`.
 - **To do:**
-  - [ ] Before saving, check every shift with `ConstraintService.hasCANTConstraint`. If any fails, return the 400
+  - [x] Before saving, check every shift with `ConstraintService.hasCANTConstraint`. If any fails, return the 400
     above and save nothing; validate everything first, before any delete/insert.
 
 ## 4. `POST /api/shifts` rejects shifts with no assigned user
@@ -55,12 +55,13 @@ Differences from the old Vert.x backend (`../Shift-Manager/backend`) that break 
   | Login, bad credentials       | 401    | `{"error": "Invalid username or password"}`       |
   | Unexpected error             | 500    | `{"error": "<message>"}`                          |
 - **To do:**
-  - [ ] Return the bodies above. Move the logic out of `AuthResource` into a responder so the resource
+  - [x] Return the bodies above. Move the logic out of `AuthResource` into a responder so the resource
     methods are one-liners.
-  - [ ] Add the blank name/password validation to signup and login. Today a null password causes an NPE in
+  - [x] Add the blank name/password validation to signup and login. Today a null password causes an NPE in
     BCrypt, then another NPE on `e.getMessage().contains(...)`.
-  - [ ] Optionally add a shared `{"error": ...}` error body (e.g. an `ExceptionMapper`) so other routes are
-    consistent too.
+  - [x] Shared `{"error": ...}` error body: `dto/ErrorDto` + `responders/ErrorResponses.error(...)`, used by auth and
+    `POST /api/shifts`.
+  - [ ] Optionally add a global `ExceptionMapper` so every other route's errors use that body too.
 
 ## 6. Constraint permission errors return 400 instead of 403
 
@@ -68,4 +69,4 @@ Differences from the old Vert.x backend (`../Shift-Manager/backend`) that break 
   frontend checks for `403` to show its "not allowed" message.
 - **Old behavior:** `403` when a non-admin creates or deletes constraints for another user.
 - **To do:**
-  - [ ] Throw `ForbiddenException` (403) instead.
+  - [x] Throw `ForbiddenException` (403) instead.

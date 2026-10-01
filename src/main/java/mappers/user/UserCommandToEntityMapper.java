@@ -20,8 +20,8 @@ public class UserCommandToEntityMapper implements CommandToEntityMapper<User, Ad
 
     @Override
     public void updateEntity(User entity, UpdateUserCommand updateCommand) {
-        entity.name = updateCommand.name;
-        entity.password = updateCommand.password;
-        entity.score = updateCommand.score;
+        // Partial update: only fields present in the request are applied. Password is never changed here.
+        if (updateCommand.name != null) entity.name = updateCommand.name;
+        if (updateCommand.score != null) entity.score = updateCommand.score;
     }
 }
