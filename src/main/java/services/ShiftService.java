@@ -38,6 +38,9 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, Up
     ConstraintService constraintService;
 
     @Inject
+    ShiftWeightSettingsService shiftWeightSettingsService;
+
+    @Inject
     Instance<ShiftSuggester> suggesters;
 
     @ConfigProperty(name = "suggestion.provider", defaultValue = "ollama")
@@ -65,6 +68,9 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, Up
      */
     public List<AssignedShift> overrideShifts(List<AddShiftCommand> commands) {
         commands.forEach(this::throwIfUserCantWorkShift);
+        commands.stream()
+                .filter(command -> command.shiftWeightPresetId == null)
+                .forEach(command -> command.shiftWeightPresetId = currentPreset().id);
         return commands.stream().map(this::overrideShift).toList();
     }
 
@@ -114,7 +120,7 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, Up
                 List<AssignedShift> llmSuggestions =
                         suggester.suggest(users, constraints, startDate, endDate);
                 suggestionValidator.validate(llmSuggestions, users, constraints, startDate, endDate);
-                return llmSuggestions;
+                return withCurrentPresetIfMissing(llmSuggestions);
             } catch (Exception e) {
                 Log.warnf(e, "'%s' shift suggestion unusable, falling back to offline algorithm: %s",
                         suggester.name(), e.getMessage());
@@ -128,7 +134,27 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, Up
         } catch (ShiftSuggestionValidationException e) {
             Log.warnf("Offline fallback schedule has issues: %s", e.getMessage());
         }
-        return offlineSuggestions;
+        return withCurrentPresetIfMissing(offlineSuggestions);
+    }
+
+    /**
+     * Every assigned shift needs a preset (the client reads it, and scores are calculated from it). Like the old
+     * backend, shifts without one get the current preset.
+     */
+    private List<AssignedShift> withCurrentPresetIfMissing(List<AssignedShift> shifts) {
+        ShiftWeightPreset currentPreset = currentPreset();
+        shifts.stream()
+                .filter(shift -> shift.shiftWeightPreset == null)
+                .forEach(shift -> shift.shiftWeightPreset = currentPreset);
+        return shifts;
+    }
+
+    private ShiftWeightPreset currentPreset() {
+        ShiftWeightPreset currentPreset = shiftWeightSettingsService.getCurrentPreset();
+        if (currentPreset == null) {
+            throw new IllegalStateException("The current shift weight preset doesn't exist");
+        }
+        return currentPreset;
     }
 
     /**
