@@ -10,8 +10,10 @@
 6. **Import the data:** truncate the tables, then run the generated `backup.sql` with `psql`.
 7. **Smoke-test:** log in, open every page, check the logs.
 
-The `Dockerfile` already exists and was tested locally on 2026-10-01: the image builds, starts, serves every page and
-API route, issues and refreshes tokens, and rejects requests without a token.
+The `Dockerfile` builds a GraalVM native executable (Mandrel builder, `ubi9-quarkus-micro-image` runtime). Tested
+locally on 2026-10-02 against a fresh Postgres: the image builds, migrates the schema, serves every page (including SPA
+refresh) and API route, issues and refreshes tokens, rejects requests without a token, downloads a backup, and reaches
+Gemini over HTTPS. It starts in ~0.1s and uses ~55MB of RAM.
 
 ---
 
@@ -67,37 +69,33 @@ including the real `gemini.api-key`. Don't push an image built that way anywhere
 - [ ] Create a project, add a **PostgreSQL** service.
 - [ ] Add the app service from the GitHub repo. Railway detects the `Dockerfile` and builds with it (Quinoa downloads
   Node during the build; no extra setup).
+- [ ] The native build is the heavy part: locally it peaked at ~3GB of RAM and took a few minutes (the
+  `native-image` step itself ~1-2 min). If Railway's build fails with an out-of-memory / exit code 137 error, cap
+  the build's heap by adding `-Dquarkus.native.native-image-xmx=3g` to the `mvnw package` line in the `Dockerfile`.
 - [ ] Generate a public domain for the app service (Settings → Networking).
 
 ## 4. App service variables
 
-Quarkus maps env vars to config automatically (`quarkus.datasource.jdbc.url` → `QUARKUS_DATASOURCE_JDBC_URL`). With
-the properties from step 1:
+Quarkus maps env vars to config automatically (`quarkus.datasource.jdbc.url` → `QUARKUS_DATASOURCE_JDBC_URL`), so
+these override the local defaults in the committed `application.properties`:
 
 | Variable | Value |
 |---|---|
-| `DB_JDBC_URL` | `jdbc:postgresql://${{Postgres.PGHOST}}:${{Postgres.PGPORT}}/${{Postgres.PGDATABASE}}` |
-| `DB_USERNAME` | `${{Postgres.PGUSER}}` |
-| `DB_PASSWORD` | `${{Postgres.PGPASSWORD}}` |
+| `QUARKUS_DATASOURCE_JDBC_URL` | `jdbc:postgresql://${{Postgres.PGHOST}}:${{Postgres.PGPORT}}/${{Postgres.PGDATABASE}}` |
+| `QUARKUS_DATASOURCE_USERNAME` | `${{Postgres.PGUSER}}` |
+| `QUARKUS_DATASOURCE_PASSWORD` | `${{Postgres.PGPASSWORD}}` |
 | `SMALLRYE_JWT_SIGN_KEY` | contents of `privateKey.pem` (the whole PEM, inline; tested) |
 | `MP_JWT_VERIFY_PUBLICKEY` | contents of `publicKey.pem` (tested) |
-| `MP_JWT_VERIFY_ISSUER` | `my-app` (must match what `JwtTokenProvider` signs; not needed if set in the properties) |
+| `GEMINI_API_KEY` | the (rotated) key. **Required:** the app doesn't start without it |
 
-`PORT` is set by Railway automatically; `quarkus.http.port=${PORT:8080}` picks it up.
+`PORT` is set by Railway automatically; `quarkus.http.port=${PORT:8080}` picks it up. The JWT issuer defaults to
+`my-app` on both the signing and the verifying side, so it needs no variable.
 
 Don't use Railway's `DATABASE_URL`: it's in `postgres://user:pass@host/db` form, which JDBC doesn't accept.
 
-**Optional: AI shift suggestions.** The default `suggestion.provider=ollama` points at `localhost:11434`, which
-doesn't exist on Railway. Suggestions still work: it times out after ~5s and falls back to the built-in scheduler.
-To use Gemini instead:
-
-| Variable | Value |
-|---|---|
-| `SUGGESTION_PROVIDER` | `gemini` |
-| `GEMINI_ENABLED` | `true` |
-| `GEMINI_API_KEY` | the (rotated) key |
-
-To skip the 5s wait without Gemini: `OLLAMA_ENABLED=false`.
+**AI shift suggestions** use Gemini by default (`suggestion.provider=gemini`, `gemini.enabled=true`). If the call
+fails, suggestions fall back to the built-in scheduler. To run without Gemini, set `GEMINI_ENABLED=false` (and any
+dummy `GEMINI_API_KEY`).
 
 ## 5. Deploy
 
@@ -131,7 +129,8 @@ emptied first or the import fails.
   (accepted, see 03 #1).
 - **`generate-sql` is local-only:** it reads and writes under `src/main/resources/backup/`, which doesn't exist in
   the container. Use it locally only.
-- **Image size:** ~560MB (JRE 21 base). Fine for Railway; a smaller base (e.g. `ubi9/openjdk-21-runtime`) or a native
-  build could shrink it later.
+- **Image size:** ~190MB (native executable on a micro base; the earlier JVM image was ~560MB).
+- **`GEMINI_API_KEY` must be set** (even to a dummy value when Gemini is disabled): `gemini.api-key=${GEMINI_API_KEY}`
+  has no default, so the app refuses to start without it.
 - **Backups stay out of the image:** `.dockerignore` excludes `src/main/resources/backup*`, so backup snapshots (with
   password hashes) never end up in an image.

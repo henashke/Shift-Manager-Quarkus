@@ -2,9 +2,11 @@ package enums;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 
 import java.time.LocalDate;
 
+@RegisterForReflection
 public enum Day {
     SUNDAY("ראשון"),
     MONDAY("שני"),

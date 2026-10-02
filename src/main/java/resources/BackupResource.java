@@ -1,22 +1,20 @@
 package resources;
 
 import auth.RoleConstants;
+import io.quarkus.logging.Log;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.StreamingOutput;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import services.BackupNotFoundException;
 import services.BackupService;
 
 @Path("/api/backup")
 @RolesAllowed({RoleConstants.USER, RoleConstants.ADMIN})
 public class BackupResource {
-
-    Logger log = LogManager.getLogger(BackupResource.class);
 
     @Inject
     BackupService backupService;
@@ -47,7 +45,7 @@ public class BackupResource {
     public Response generateSqlFromBackup(String backupDirName) {
         try {
             backupService.generateSqlFromBackupDir(backupDirName);
-            log.info("SQL generated successfully for backup '{}'. Output file created under resources/backup/results/{}", backupDirName, backupDirName);
+            Log.infof("SQL generated successfully for backup '%s'. Output file created under resources/backup/results/%s", backupDirName, backupDirName);
             return Response.noContent().build();
         } catch (IllegalArgumentException e) {
             return error(Response.Status.BAD_REQUEST, e.getMessage());
@@ -65,6 +63,7 @@ public class BackupResource {
                 .build();
     }
 
+    @RegisterForReflection
     public static class ErrorResponse {
         public String message;
 
