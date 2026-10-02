@@ -60,5 +60,5 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-/src/main/resources/application.properties
+/src/main/resources/keys/
 /src/main/resources/backup*
