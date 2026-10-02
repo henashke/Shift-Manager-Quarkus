@@ -24,7 +24,8 @@ mvn clean package -Dnative
 ## Prerequisites
 
 - PostgreSQL running on `localhost:5432`, default `postgres` database, user `postgres`, password `postgres`
-- `src/main/resources/privateKey.pem` and `publicKey.pem` must exist (RS256 keypair for JWT)
+- `src/main/resources/keys/privateKey.pem` and `publicKey.pem` must exist (RS256 keypair for JWT, gitignored)
+- `.env` in the project root with `GEMINI_API_KEY=...` (gitignored; Quarkus loads it in dev mode)
 - API available at `http://localhost:8080/api/`, frontend at `http://localhost:8080/`
 - Node.js + npm (Quinoa installs and builds the frontend)
 
