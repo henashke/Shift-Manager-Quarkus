@@ -17,8 +17,11 @@ mvn test # tests aren't relevant yet
 # Integration tests
 mvn verify
 
-# Build native image
+# Build native image (needs GraalVM/Mandrel locally; or add -Dquarkus.native.container-build=true to use Docker)
 mvn clean package -Dnative
+
+# Production image (native, what Railway builds)
+docker build -t shift-manager .
 ```
 
 ## Prerequisites
@@ -89,6 +92,9 @@ back-references).
 - Instead of @Inject-ing, use @RequiredArgsConstructor + making the fields private-final for @ApplicationScoped to
   auto-inject them.
 - Resource functions should be one-liners. All logic goes in responders/services.
+- Production runs as a GraalVM native image. Any class Jackson (de)serializes that isn't a resource method's declared
+  parameter/return type (e.g. wrapped in a `Response`, put in a `Map`) needs `@RegisterForReflection`; all DTOs have
+  it. Log with `io.quarkus.logging.Log`. Avoid other reflection, and new libraries without a Quarkus extension.
 
 ### Auth Flow
 

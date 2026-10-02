@@ -6,6 +6,7 @@ import commands.RefreshTokenCommand;
 import commands.SignupCommand;
 import daos.UserDao;
 import entities.User;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.quarkus.security.AuthenticationFailedException;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -87,6 +88,8 @@ public class AuthService {
         }
     }
 
+    // Returned wrapped in a Response, so the native build can't infer that Jackson serializes it
+    @RegisterForReflection
     public static class AuthResponse {
         public String message;
         public String username;

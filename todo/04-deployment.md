@@ -10,8 +10,10 @@
 6. **Import the data:** truncate the tables, then run the generated `backup.sql` with `psql`.
 7. **Smoke-test:** log in, open every page, check the logs.
 
-The `Dockerfile` already exists and was tested locally on 2026-10-01: the image builds, starts, serves every page and
-API route, issues and refreshes tokens, and rejects requests without a token.
+The `Dockerfile` builds a GraalVM native executable (Mandrel builder, `ubi9-quarkus-micro-image` runtime). Tested
+locally on 2026-10-02 against a fresh Postgres: the image builds, migrates the schema, serves every page (including SPA
+refresh) and API route, issues and refreshes tokens, rejects requests without a token, downloads a backup, and reaches
+Gemini over HTTPS. It starts in ~0.1s and uses ~55MB of RAM.
 
 ---
 
@@ -67,6 +69,9 @@ including the real `gemini.api-key`. Don't push an image built that way anywhere
 - [ ] Create a project, add a **PostgreSQL** service.
 - [ ] Add the app service from the GitHub repo. Railway detects the `Dockerfile` and builds with it (Quinoa downloads
   Node during the build; no extra setup).
+- [ ] The native build is the heavy part: locally it peaked at ~3GB of RAM and took a few minutes (the
+  `native-image` step itself ~1-2 min). If Railway's build fails with an out-of-memory / exit code 137 error, cap
+  the build's heap by adding `-Dquarkus.native.native-image-xmx=3g` to the `mvnw package` line in the `Dockerfile`.
 - [ ] Generate a public domain for the app service (Settings → Networking).
 
 ## 4. App service variables
@@ -131,7 +136,8 @@ emptied first or the import fails.
   (accepted, see 03 #1).
 - **`generate-sql` is local-only:** it reads and writes under `src/main/resources/backup/`, which doesn't exist in
   the container. Use it locally only.
-- **Image size:** ~560MB (JRE 21 base). Fine for Railway; a smaller base (e.g. `ubi9/openjdk-21-runtime`) or a native
-  build could shrink it later.
+- **Image size:** ~190MB (native executable on a micro base; the earlier JVM image was ~560MB).
+- **`GEMINI_API_KEY` must be set** (even to a dummy value when Gemini is disabled): `gemini.api-key=${GEMINI_API_KEY}`
+  has no default, so the app refuses to start without it.
 - **Backups stay out of the image:** `.dockerignore` excludes `src/main/resources/backup*`, so backup snapshots (with
   password hashes) never end up in an image.

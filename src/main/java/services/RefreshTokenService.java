@@ -27,7 +27,8 @@ import java.util.HexFormat;
 @RequiredArgsConstructor
 public class RefreshTokenService {
 
-    private static final SecureRandom RANDOM = new SecureRandom();
+    // Not static: a static instance would be created during the native build and baked into the image with a fixed seed
+    private final SecureRandom random = new SecureRandom();
 
     private final RefreshTokenDao dao;
 
@@ -43,7 +44,7 @@ public class RefreshTokenService {
         dao.deleteExpiredForUser(user, now);
 
         byte[] bytes = new byte[32];
-        RANDOM.nextBytes(bytes);
+        random.nextBytes(bytes);
         String rawToken = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
 
         RefreshToken refreshToken = new RefreshToken();
