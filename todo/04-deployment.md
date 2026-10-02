@@ -76,33 +76,26 @@ including the real `gemini.api-key`. Don't push an image built that way anywhere
 
 ## 4. App service variables
 
-Quarkus maps env vars to config automatically (`quarkus.datasource.jdbc.url` → `QUARKUS_DATASOURCE_JDBC_URL`). With
-the properties from step 1:
+Quarkus maps env vars to config automatically (`quarkus.datasource.jdbc.url` → `QUARKUS_DATASOURCE_JDBC_URL`), so
+these override the local defaults in the committed `application.properties`:
 
 | Variable | Value |
 |---|---|
-| `DB_JDBC_URL` | `jdbc:postgresql://${{Postgres.PGHOST}}:${{Postgres.PGPORT}}/${{Postgres.PGDATABASE}}` |
-| `DB_USERNAME` | `${{Postgres.PGUSER}}` |
-| `DB_PASSWORD` | `${{Postgres.PGPASSWORD}}` |
+| `QUARKUS_DATASOURCE_JDBC_URL` | `jdbc:postgresql://${{Postgres.PGHOST}}:${{Postgres.PGPORT}}/${{Postgres.PGDATABASE}}` |
+| `QUARKUS_DATASOURCE_USERNAME` | `${{Postgres.PGUSER}}` |
+| `QUARKUS_DATASOURCE_PASSWORD` | `${{Postgres.PGPASSWORD}}` |
 | `SMALLRYE_JWT_SIGN_KEY` | contents of `privateKey.pem` (the whole PEM, inline; tested) |
 | `MP_JWT_VERIFY_PUBLICKEY` | contents of `publicKey.pem` (tested) |
-| `MP_JWT_VERIFY_ISSUER` | `my-app` (must match what `JwtTokenProvider` signs; not needed if set in the properties) |
+| `GEMINI_API_KEY` | the (rotated) key. **Required:** the app doesn't start without it |
 
-`PORT` is set by Railway automatically; `quarkus.http.port=${PORT:8080}` picks it up.
+`PORT` is set by Railway automatically; `quarkus.http.port=${PORT:8080}` picks it up. The JWT issuer defaults to
+`my-app` on both the signing and the verifying side, so it needs no variable.
 
 Don't use Railway's `DATABASE_URL`: it's in `postgres://user:pass@host/db` form, which JDBC doesn't accept.
 
-**Optional: AI shift suggestions.** The default `suggestion.provider=ollama` points at `localhost:11434`, which
-doesn't exist on Railway. Suggestions still work: it times out after ~5s and falls back to the built-in scheduler.
-To use Gemini instead:
-
-| Variable | Value |
-|---|---|
-| `SUGGESTION_PROVIDER` | `gemini` |
-| `GEMINI_ENABLED` | `true` |
-| `GEMINI_API_KEY` | the (rotated) key |
-
-To skip the 5s wait without Gemini: `OLLAMA_ENABLED=false`.
+**AI shift suggestions** use Gemini by default (`suggestion.provider=gemini`, `gemini.enabled=true`). If the call
+fails, suggestions fall back to the built-in scheduler. To run without Gemini, set `GEMINI_ENABLED=false` (and any
+dummy `GEMINI_API_KEY`).
 
 ## 5. Deploy
 
