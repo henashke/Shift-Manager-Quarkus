@@ -1,7 +1,6 @@
 import React, {useState} from 'react';
 import {Box, Menu, MenuItem, Paper} from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import {stringToColor} from "../shiftTable/ShiftTable";
 
 interface DraggableListProps<T> {
     items: T[];
@@ -13,7 +12,7 @@ interface DraggableListProps<T> {
     onItemClick?: (item: T) => void;
     renderAdditionalComponent?: JSX.Element;
     isDragged?: boolean;
-    colorful?: boolean;
+    renderItem?: (item: T) => JSX.Element;
 }
 
 function DraggableList<T>({
@@ -25,7 +24,7 @@ function DraggableList<T>({
                               contextMenuItems,
                               renderAdditionalComponent,
                               isDragged,
-                              colorful
+                              renderItem
                           }: DraggableListProps<T>) {
     const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
     const [selectedItem, setSelectedItem] = useState<T | null>(null);
@@ -70,7 +69,12 @@ function DraggableList<T>({
                                 onDragStart={e => onDragStart(e, item)}
                                 onClick={contextMenuItems ? e => handleContextMenu(e, item) : undefined}
                                 onContextMenu={contextMenuItems ? e => handleContextMenu(e, item) : undefined}
-                                sx={{
+                                sx={renderItem ? {
+                                    cursor: 'grab',
+                                    transition: 'transform 0.2s',
+                                    '&:active': {transform: 'scale(0.97)'},
+                                    '&:hover': {transform: 'scale(1.04)', cursor: 'pointer'},
+                                } : {
                                     background: theme => theme.palette.primary.main,
                                     color: 'common.white',
                                     px: 3,
@@ -82,7 +86,6 @@ function DraggableList<T>({
                                     boxShadow: 2,
                                     userSelect: 'none',
                                     transition: 'box-shadow 0.2s, transform 0.2s',
-                                    position: "relative",
                                     '&:active': {
                                         background: theme => theme.palette.primary.dark,
                                         color: 'common.white',
@@ -96,18 +99,7 @@ function DraggableList<T>({
                                     },
                                 }}
                             >
-                                {colorful && <Box
-                                    sx={{
-                                        width: '6px',
-                                        height: '100%',
-                                        borderRadius: theme => theme.shape.borderRadius,
-                                        position: 'absolute',
-                                        top: 0,
-                                        left: 0,
-                                        bgcolor: stringToColor(getLabel(item)),
-                                    }}
-                                />}
-                                {getLabel(item)}
+                                {renderItem ? renderItem(item) : getLabel(item)}
                             </Box>
                         ))}
                     </Box>

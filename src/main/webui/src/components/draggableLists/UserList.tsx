@@ -5,6 +5,7 @@ import shiftStore, {Shift, User} from '../../stores/ShiftStore';
 import DeleteUserDialog from "../dialogs/DeleteUserDialog";
 import UserInfoDialog from "../dialogs/UserInfoDialog";
 import DraggableList from './DraggableList';
+import UserCard from '../basicSharedComponents/UserCard';
 import EditUser from "../dialogs/EditUser";
 import authStore from "../../stores/AuthStore";
 import notificationStore from "../../stores/NotificationStore";
@@ -95,7 +96,7 @@ const UserList: React.FC<{ isDragged?: boolean, setIsDragged?: (val: boolean) =>
                     {label: 'מחק', onClick: () => handleDeleteDialogOpen(user)},
                 ]}
                 isDragged={isDragged}
-                colorful
+                renderItem={u => <UserCard name={u.name}/>}
             />
             <EditUser open={editDialogOpen}
                        handleDialogClose={handleEditDialogClose}

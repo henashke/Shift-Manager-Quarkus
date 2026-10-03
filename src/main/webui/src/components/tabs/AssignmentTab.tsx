@@ -1,6 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import CalendarNavigation from '../shiftTable/CalendarNavigation';
-import ShiftTable, {stringToColor} from '../shiftTable/ShiftTable';
+import ShiftTable from '../shiftTable/ShiftTable';
+import UserCard from '../basicSharedComponents/UserCard';
 import UserList from '../draggableLists/UserList';
 import {Alert, Box, Container, Snackbar} from "@mui/material";
 import usersStore from "../../stores/UsersStore";
@@ -139,22 +140,10 @@ const AssignmentTab: React.FC = observer(() => {
         return <Box
             sx={{display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1}}
         >
-            <Box sx={{
-                background: theme => assignedShift.isPending ? theme.palette.secondary.main : stringToColor(assignedShift.assignedUsername),
-                color: 'common.white',
-                borderRadius: 1,
-                px: 1,
-                py: 0.5,
-                fontWeight: 700,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexDirection: 'column'
-            }}
-                 onDragStart={e => onDragStart(e, user, shift)}
+            <Box onDragStart={e => onDragStart(e, user, shift)}
                  onDragEnd={onDragEnd} draggable
             >
-                {user.name + ' (' + assignedShift.preset.name + ')'}
+                <UserCard name={user.name} shiftType={assignedShift.preset.name} isPending={assignedShift.isPending}/>
             </Box>
         </Box>
     }
