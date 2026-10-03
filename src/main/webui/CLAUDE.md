@@ -25,5 +25,5 @@ npx eslint src          # lint (CRA's react-app config)
   `notificationStore.showUnauthorizedError()`.
 - **User colors** come from `stringToColor(name)` (`components/shiftTable/ShiftTable.tsx`); pending items use
   `theme.palette.secondary.main`. Show a user with `UserCard` (`components/basicSharedComponents/`), passing
-  `shiftType` when there is a shift context to show.
+  `subtitle` for the context line (the shift's preset, the constraint type).
 - Hoist static `sx` objects to module level; use ternaries, not `&&`, for conditional JSX.

@@ -2,7 +2,8 @@ import React, {useEffect, useState} from 'react';
 import {observer} from 'mobx-react-lite';
 import CalendarNavigation from '../shiftTable/CalendarNavigation';
 import DraggableList from '../draggableLists/DraggableList';
-import ShiftTable, {stringToColor} from '../shiftTable/ShiftTable';
+import ShiftTable from '../shiftTable/ShiftTable';
+import UserCard from '../basicSharedComponents/UserCard';
 import {Box, Container, Typography} from "@mui/material";
 import {sameShift, Shift} from '../../stores/ShiftStore';
 import authStore from "../../stores/AuthStore";
@@ -130,22 +131,11 @@ const ConstraintTab: React.FC = observer(() => {
             sx={{display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1}}
         >
             {allConstraintsOfShift.map(c =>
-                <Box sx={{
-                    background: theme => c.isPending ? theme.palette.secondary.main : stringToColor(c.userId),
-                    color: 'common.white',
-                    borderRadius: 1,
-                    px: 1,
-                    py: 0.5,
-                    fontWeight: 700,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexDirection: 'column'
-                }}
-                     onDragStart={e => onAssignedConstraintDragStart(e, constraintType, shift, c.userId)}
+                <Box key={c.userId}
+                     onDragStart={e => onAssignedConstraintDragStart(e, c.constraintType, shift, c.userId)}
                      onDragEnd={onDragEnd} draggable
                 >
-                    {c.userId + ': ' + constraintType}
+                    <UserCard name={c.userId} subtitle={c.constraintType} isPending={c.isPending}/>
                 </Box>
             )
             }

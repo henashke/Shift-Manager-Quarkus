@@ -6,11 +6,11 @@ import {stringToColor} from "../shiftTable/ShiftTable";
 
 interface UserCardProps {
     name: string;
-    shiftType?: string;
+    subtitle?: string;
     isPending?: boolean;
 }
 
-const UserCard: React.FC<UserCardProps> = ({name, shiftType, isPending}) => {
+const UserCard: React.FC<UserCardProps> = ({name, subtitle, isPending}) => {
     const theme = useTheme();
     const color = isPending ? theme.palette.secondary.main : stringToColor(name);
 
@@ -20,7 +20,7 @@ const UserCard: React.FC<UserCardProps> = ({name, shiftType, isPending}) => {
             alignItems: 'center',
             gap: 1,
             px: 1.5,
-            py: shiftType ? 0.75 : 1,
+            py: subtitle ? 0.75 : 1,
             minWidth: 0,
             borderRadius: 2,
             border: '1px solid',
@@ -39,9 +39,9 @@ const UserCard: React.FC<UserCardProps> = ({name, shiftType, isPending}) => {
                 <Typography noWrap sx={{fontWeight: 700, fontSize: '0.95rem', lineHeight: 1.2}}>
                     {name}
                 </Typography>
-                {shiftType ? (
+                {subtitle ? (
                     <Typography noWrap variant="caption" sx={{color: 'text.secondary', lineHeight: 1.2}}>
-                        {shiftType}
+                        {subtitle}
                     </Typography>
                 ) : null}
             </Box>

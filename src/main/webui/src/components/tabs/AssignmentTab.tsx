@@ -171,7 +171,7 @@ const AssignmentTab: React.FC = observer(() => {
             <Box onDragStart={e => onDragStart(e, user, shift)}
                  onDragEnd={onDragEnd} draggable
             >
-                <UserCard name={user.name} shiftType={assignedShift.preset.name} isPending={assignedShift.isPending}/>
+                <UserCard name={user.name} subtitle={assignedShift.preset.name} isPending={assignedShift.isPending}/>
             </Box>
         </Box>
     }
