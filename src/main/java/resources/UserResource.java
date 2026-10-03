@@ -22,7 +22,7 @@ public class UserResource {
 
     @GET
     public List<UserDto> list() {
-        return userResponder.listAll();
+        return userResponder.listNonAdmins();
     }
 
     @POST

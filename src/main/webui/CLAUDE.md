@@ -38,6 +38,9 @@ npx eslint src          # lint (CRA's react-app config)
 - **Mobile first.** Screen space on phones is precious: keep chrome slim (the top bar is ~56px) and don't add
   persistent UI that pushes the table down. `md` is the layout breakpoint: below it the shift table goes vertical and the
   user list moves into `BottomTray`. On desktop, cap and center small panels (the calendar navigation is 600px max).
+- **Colors** come from the theme palette (`App.tsx`) and `src/theme.ts` (`primaryGradient`); don't hard-code hex values in
+  components. User card colors (`stringToColor`), the pending color (`secondary`) and error/warning/success (constraint
+  cards) are deliberately left alone when changing the palette.
 - **Buttons** get their look from the theme (`MuiButton` in `App.tsx`), so don't restyle them per page: use
   `variant="contained"` for the primary action (purple gradient), `variant="contained" color="error"` for destructive
   ones, and `variant="outlined" color="inherit"` for secondary ones. Icons and spacing between buttons use `gap`, never
