@@ -58,22 +58,9 @@ const ShiftTableActions: React.FC<ShiftTableActionsProps> = ({onSave, onCancel, 
     return (
         <Grow in timeout={700} style={{ transformOrigin: 'left center' }}>
             <Paper sx={{p: 2, flex: 1, borderRadius: 3}}>
-                <Box sx={{display: "flex", alignItems: 'center', mb: 1}}>
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={handleSave}
-                        sx={{ml: 1}}
-                    >
-                        שמור
-                    </Button>
-                    <Button
-                        variant="outlined"
-                        color="secondary"
-                        onClick={handleCancel}
-                    >
-                        בטל
-                    </Button>
+                <Box sx={{display: "flex", alignItems: 'center', gap: 1, mb: 1}}>
+                    <Button variant="contained" onClick={handleSave}>שמור</Button>
+                    <Button variant="outlined" color="inherit" onClick={handleCancel}>בטל</Button>
                 </Box>
                 <ColorIndicators/>
             </Paper>
