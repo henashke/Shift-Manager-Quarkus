@@ -26,7 +26,6 @@ import SuggestAssignmentsDialog from "../dialogs/SuggestAssignmentsDialog";
 // MUI's startIcon margins don't flip without an RTL style plugin, so space the icon with gap instead
 const actionButtonSx = {
     flex: 1,
-    maxWidth: 280,
     py: 1.25,
     gap: 1,
     borderRadius: 2,

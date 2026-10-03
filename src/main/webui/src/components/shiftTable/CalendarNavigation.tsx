@@ -40,7 +40,7 @@ const CalendarNavigation: React.FC<CalendarNavigationProps> = observer(({actions
     const handleTodayClick = () => store.setWeekOffset(0);
 
     return (
-        <Paper sx={{borderRadius: 3, boxShadow: 3, p: 2, mb: 2}}>
+        <Paper sx={{borderRadius: 3, boxShadow: 3, p: 2, mb: 2, maxWidth: 600, mx: 'auto'}}>
             <Box display="flex" alignItems="center" gap={1}>
                 <Box sx={navSideSx}>
                     <IconButton sx={navButtonSx} onClick={handlePrevWeekClick} aria-label="שבוע קודם">
@@ -71,7 +71,7 @@ const CalendarNavigation: React.FC<CalendarNavigationProps> = observer(({actions
                     </Tooltip>
                 </Box>
             </Box>
-            {actions ? <Box display="flex" justifyContent="center" gap={1.5} mt={2}>{actions}</Box> : null}
+            {actions ? <Box display="flex" gap={1.5} mt={2}>{actions}</Box> : null}
         </Paper>
     );
 });
