@@ -6,6 +6,9 @@ import DeleteUserDialog from "../dialogs/DeleteUserDialog";
 import UserInfoDialog from "../dialogs/UserInfoDialog";
 import DraggableList from './DraggableList';
 import UserCard from '../basicSharedComponents/UserCard';
+import BadgeOutlined from '@mui/icons-material/BadgeOutlined';
+import EditOutlined from '@mui/icons-material/EditOutlined';
+import DeleteOutlineRounded from '@mui/icons-material/DeleteOutlineRounded';
 import BottomTray from '../basicSharedComponents/BottomTray';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import {useTheme} from '@mui/material/styles';
@@ -95,9 +98,9 @@ const UserList: React.FC<{ isDragged?: boolean, setIsDragged?: (val: boolean) =>
         onDrop={deleteAreaOnDropHandler}
         onItemClick={(user) => handleInfoDialogOpen(user)}
         contextMenuItems={(user) => [
-            {label: 'פרטי משתמש', onClick: () => handleInfoDialogOpen(user)},
-            {label: 'ערוך', onClick: () => handleEditDialogOpen(user)},
-            {label: 'מחק', onClick: () => handleDeleteDialogOpen(user)},
+            {label: 'פרטי משתמש', icon: <BadgeOutlined fontSize="small"/>, onClick: () => handleInfoDialogOpen(user)},
+            {label: 'ערוך', icon: <EditOutlined fontSize="small"/>, onClick: () => handleEditDialogOpen(user)},
+            {label: 'מחק', icon: <DeleteOutlineRounded fontSize="small"/>, danger: true, onClick: () => handleDeleteDialogOpen(user)},
         ]}
         isDragged={isDragged}
         embedded={isNarrowScreen}
