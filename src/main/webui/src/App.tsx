@@ -10,10 +10,9 @@ import ConstraintTab from './components/tabs/ConstraintTab';
 import AssignmentTab from './components/tabs/AssignmentTab';
 import SettingsTab from './components/tabs/SettingsTab';
 import {AppBarComponent} from "./components/AppBarComponent";
+import {primaryGradient} from './theme';
 
 const DARK_MODE_KEY = 'darkMode';
-// The second stop of the primary button gradient
-const GRADIENT_END = '#8b5cf6';
 
 const App: React.FC = observer(() => {
     const navigate = useNavigate();
@@ -37,15 +36,21 @@ const App: React.FC = observer(() => {
 
     // Memoized: App re-renders on every route change (useNavigate), and a new theme restyles the whole tree
     const theme = useMemo(() => createTheme({
+        // Ink with a faint violet cast; surfaces sit lighter than the page. secondary (pending cards) and
+        // error/warning/success (constraint cards, danger buttons) keep MUI's defaults on purpose.
         palette: {
             mode: darkMode ? 'dark' : 'light',
             primary: {
-                main: '#594db9',
+                main: '#6d5ef5',
             },
             background: {
-                default: darkMode ? '#252529' : '#f5f5f5',
-                paper: darkMode ? 'rgb(32,32,36)' : '#fff',
+                default: darkMode ? '#16161d' : '#f4f4f8',
+                paper: darkMode ? '#1f1f29' : '#ffffff',
             },
+            text: darkMode
+                ? {primary: '#ecebf5', secondary: '#a09fb3'}
+                : {primary: '#1b1a26', secondary: '#5f5e72'},
+            divider: darkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(20, 20, 40, 0.09)',
         },
         direction: 'rtl',
         typography: {
@@ -57,6 +62,10 @@ const App: React.FC = observer(() => {
             ].join(','),
         },
         components: {
+            // Drop MUI's dark-mode elevation overlay so every surface is the same paper color
+            MuiPaper: {
+                styleOverrides: {root: {backgroundImage: 'none'}},
+            },
             // The app's one button language; pages shouldn't restyle buttons themselves
             MuiButton: {
                 defaultProps: {disableElevation: true},
@@ -74,7 +83,7 @@ const App: React.FC = observer(() => {
                     {
                         props: {variant: 'contained', color: 'primary'},
                         style: ({theme}) => ({
-                            background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${GRADIENT_END})`,
+                            background: primaryGradient(theme),
                             '&.Mui-disabled': {background: theme.palette.action.disabledBackground},
                         }),
                     },

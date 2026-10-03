@@ -3,6 +3,7 @@ import Box from '@mui/material/Box';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Paper from '@mui/material/Paper';
+import {alpha} from '@mui/material/styles';
 import DeleteIcon from '@mui/icons-material/Delete';
 
 interface DraggableListProps<T> {
@@ -122,13 +123,13 @@ function DraggableList<T>({
                         inset: 0,
                         height: 180,
                         border: '2px dashed',
-                        borderColor: isDragOver ? 'error.main' : 'grey.400',
-                        backgroundColor: isDragOver ? 'rgb(161,44,44)' : '#2e2e33',
+                        borderColor: isDragOver ? 'error.main' : 'divider',
+                        bgcolor: theme => isDragOver ? alpha(theme.palette.error.main, 0.22) : theme.palette.background.paper,
                         borderRadius: 2,
                         alignItems: 'center',
                         justifyContent: 'center',
                         display: isDragged && onDrop ? 'flex' : 'none',
-                        color: isDragOver ? 'error.secondary' : 'text.secondary',
+                        color: isDragOver ? 'error.light' : 'text.secondary',
                         transition: 'all 0.2s',
                         minHeight: 64,
                         cursor: 'pointer',

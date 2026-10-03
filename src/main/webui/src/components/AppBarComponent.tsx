@@ -17,6 +17,7 @@ import {useNavigate} from 'react-router-dom';
 import authStore from "../stores/AuthStore";
 import LogoutDialog from "./dialogs/LogoutDialog";
 import {stringToColor} from "./shiftTable/ShiftTable";
+import {primaryGradient} from '../theme';
 
 const appBarSx: SxProps<Theme> = {
     mb: 2,
@@ -47,7 +48,7 @@ const tabsSx: SxProps<Theme> = {
         height: '100%',
         borderRadius: 2,
         zIndex: 0,
-        background: theme => `linear-gradient(90deg, ${theme.palette.primary.main}, #8b5cf6)`,
+        background: primaryGradient,
     },
 };
 

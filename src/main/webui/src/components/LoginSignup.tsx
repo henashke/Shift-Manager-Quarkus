@@ -63,12 +63,12 @@ const LoginSignup: React.FC = observer(() => {
 
   return (
     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
-      <Paper elevation={6} sx={{ p: 4, minWidth: 340, maxWidth: 380, borderRadius: 4, background: 'rgba(34,34,34,0.97)' }}>
+      <Paper elevation={0} sx={{ p: 4, minWidth: 340, maxWidth: 380, borderRadius: 4, border: 1, borderColor: 'divider' }}>
         <Tabs value={tab} onChange={handleTabChange} centered sx={{ mb: 2 }}>
           <Tab label="התחברות" />
           <Tab label="הרשמה" />
         </Tabs>
-        <Typography variant="h5" align="center" fontWeight={700} color="#61dafb" sx={{ mb: 2 }}>
+        <Typography variant="h5" align="center" fontWeight={700} sx={{ mb: 2 }}>
           {tab === 0 ? 'התחברות למערכת' : 'הרשמה למערכת'}
         </Typography>
         <form onSubmit={handleSubmit}>

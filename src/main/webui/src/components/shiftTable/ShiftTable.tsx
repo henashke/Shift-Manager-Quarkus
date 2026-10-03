@@ -22,6 +22,7 @@ import AssignToShiftDialog from '../dialogs/AssignToShiftDialog';
 import AddIcon from '@mui/icons-material/Add';
 import ShiftTableActions from './ShiftTableActions';
 import authStore from '../../stores/AuthStore';
+import {alpha, Theme} from '@mui/material/styles';
 import notificationStore from '../../stores/NotificationStore';
 import DeleteIcon from "@mui/icons-material/Delete";
 import {formatDate} from "./CalendarNavigation";
@@ -198,7 +199,7 @@ function ShiftTable<T>({
                     minHeight: 48,
                     color: 'common.white',
                     cursor: 'pointer',
-                    bgcolor: isToday(date) ? 'background.default' : undefined
+                    bgcolor: isToday(date) ? todayTint : undefined
                 }}
             >
                 {item ? (
@@ -211,7 +212,7 @@ function ShiftTable<T>({
                         {renderItemElement(item, shift)}
                     </Box>
                 ) : (
-                    <Typography variant="body1" sx={{color: '#7d7bf2'}}>{"שבץ " + itemName}</Typography>
+                    <Typography variant="body1" sx={{color: 'primary.light'}}>{"שבץ " + itemName}</Typography>
                 )}
             </TableCell>
         );
@@ -331,8 +332,11 @@ function ShiftTable<T>({
 
 const isToday = (date: Date) => date.toDateString() === new Date().toDateString();
 
+// A faint wash of the primary color marks today's column
+const todayTint = (theme: Theme) => alpha(theme.palette.primary.main, 0.08);
+
 const WeekDayHeaderTableCell = ({date}: { date: Date }) => (
-    <TableCell sx={{bgcolor: isToday(date) ? 'background.default' : undefined}} align="center">
+    <TableCell sx={{bgcolor: isToday(date) ? todayTint : undefined}} align="center">
         <Typography variant={"h6"}>{days[date.getDay()]}</Typography>
         <Typography>{date.toLocaleDateString('he-IL', {
             day: 'numeric',

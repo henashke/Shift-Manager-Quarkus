@@ -22,6 +22,7 @@ import AutoAwesome from '@mui/icons-material/AutoAwesome';
 import SwapHoriz from '@mui/icons-material/SwapHoriz';
 import ResetWeeklyShiftsDialog from "../dialogs/ResetWeeklyShiftsDialog";
 import SuggestAssignmentsDialog from "../dialogs/SuggestAssignmentsDialog";
+import {primaryGradient} from '../../theme';
 
 const actionButtonSx = {flex: 1, py: 1.25} as const;
 
@@ -29,7 +30,7 @@ const actionButtonSx = {flex: 1, py: 1.25} as const;
 const suggestButtonSx: SxProps<Theme> = {
     ...actionButtonSx,
     '&.Mui-disabled': {
-        background: theme => `linear-gradient(90deg, ${theme.palette.primary.main}, #8b5cf6)`,
+        background: primaryGradient,
         color: 'common.white',
         opacity: 0.85,
     },
