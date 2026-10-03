@@ -4,6 +4,8 @@ import CalendarNavigation from '../shiftTable/CalendarNavigation';
 import DraggableList from '../draggableLists/DraggableList';
 import ShiftTable from '../shiftTable/ShiftTable';
 import UserCard from '../basicSharedComponents/UserCard';
+import TintedCard from '../basicSharedComponents/TintedCard';
+import {useTheme} from '@mui/material/styles';
 import {Box, Container, Typography} from "@mui/material";
 import {sameShift, Shift} from '../../stores/ShiftStore';
 import authStore from "../../stores/AuthStore";
@@ -14,7 +16,15 @@ import NativeSelect from "../basicSharedComponents/NativeSelect";
 
 const constraintTypes = [ConstraintType.CANT, ConstraintType.PREFERS_NOT, ConstraintType.PREFERS];
 
+// Colors by meaning, from can't (red) to prefers (green)
+const constraintPaletteKey = {
+    [ConstraintType.CANT]: 'error',
+    [ConstraintType.PREFERS_NOT]: 'warning',
+    [ConstraintType.PREFERS]: 'success',
+} as const;
+
 const ConstraintTab: React.FC = observer(() => {
+    const theme = useTheme();
     const [isDragged, setIsDragged] = useState(false);
     const [selectedUser, setSelectedUser] = useState<string>(authStore.username || '');
     useEffect(() => {
@@ -180,6 +190,7 @@ const ConstraintTab: React.FC = observer(() => {
                     onDragStart={setDragData}
                     onDrop={handleDeleteAreaOnDrop}
                     isDragged={isDragged}
+                    renderItem={type => <TintedCard label={type} color={theme.palette[constraintPaletteKey[type]].main}/>}
                     renderAdditionalComponent={
                         <>
                             <Typography variant="h6">משבץ אילוצים עבור:</Typography>
