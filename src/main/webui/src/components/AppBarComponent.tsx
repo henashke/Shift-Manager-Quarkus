@@ -3,6 +3,7 @@ import AppBar from '@mui/material/AppBar';
 import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
+import ListItemIcon from '@mui/material/ListItemIcon';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Tab from '@mui/material/Tab';
@@ -13,6 +14,8 @@ import {SxProps, Theme} from '@mui/material/styles';
 import DarkMode from '@mui/icons-material/DarkMode';
 import LightMode from '@mui/icons-material/LightMode';
 import LoginIcon from '@mui/icons-material/Login';
+import LogoutRounded from '@mui/icons-material/LogoutRounded';
+import {dangerMenuItemSx} from './basicSharedComponents/menuStyles';
 import {useNavigate} from 'react-router-dom';
 import authStore from "../stores/AuthStore";
 import LogoutDialog from "./dialogs/LogoutDialog";
@@ -126,10 +129,13 @@ export const AppBarComponent = ({darkMode, setDarkMode}: {
                         anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
                         transformOrigin={{vertical: 'top', horizontal: 'right'}}
                     >
-                        <MenuItem onClick={() => {
+                        <MenuItem sx={dangerMenuItemSx} onClick={() => {
                             setAnchorEl(null);
                             setLogoutOpen(true);
-                        }}>יציאה</MenuItem>
+                        }}>
+                            <ListItemIcon><LogoutRounded fontSize="small"/></ListItemIcon>
+                            יציאה
+                        </MenuItem>
                     </Menu>
                 </>
             ) : (

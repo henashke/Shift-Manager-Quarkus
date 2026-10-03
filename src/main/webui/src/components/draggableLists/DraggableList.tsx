@@ -1,9 +1,19 @@
 import React, {useState} from 'react';
 import Box from '@mui/material/Box';
 import Menu from '@mui/material/Menu';
+import Divider from '@mui/material/Divider';
+import ListItemIcon from '@mui/material/ListItemIcon';
 import MenuItem from '@mui/material/MenuItem';
 import Paper from '@mui/material/Paper';
 import DeleteIcon from '@mui/icons-material/Delete';
+import {dangerMenuItemSx} from '../basicSharedComponents/menuStyles';
+
+export interface ContextMenuItem {
+    label: string;
+    onClick: () => void;
+    icon?: React.ReactNode;
+    danger?: boolean;
+}
 
 interface DraggableListProps<T> {
     items: T[];
@@ -11,7 +21,8 @@ interface DraggableListProps<T> {
     getLabel: (item: T) => string;
     onDragStart: (e: React.DragEvent, item: T) => void;
     onDrop?: (e: React.DragEvent) => void;
-    contextMenuItems?: (item: T, close: () => void) => { label: string, onClick: () => void }[];
+    // danger items (delete and the like) are shown in red, after a divider
+    contextMenuItems?: (item: T, close: () => void) => ContextMenuItem[];
     onItemClick?: (item: T) => void;
     renderAdditionalComponent?: JSX.Element;
     isDragged?: boolean;
@@ -142,12 +153,16 @@ function DraggableList<T>({
             </>
             {contextMenuItems && selectedItem && (
                 <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}>
-                    {contextMenuItems(selectedItem, () => setMenuAnchor(null)).map((menu, idx) => (
-                        <MenuItem key={idx} onClick={() => {
+                    {contextMenuItems(selectedItem, () => setMenuAnchor(null)).flatMap((menu, idx, items) => [
+                        menu.danger && idx > 0 && !items[idx - 1].danger ? <Divider key={`divider-${idx}`} sx={{my: 0.5}}/> : null,
+                        <MenuItem key={idx} sx={menu.danger ? dangerMenuItemSx : undefined} onClick={() => {
                             menu.onClick();
                             setMenuAnchor(null);
-                        }}>{menu.label}</MenuItem>
-                    ))}
+                        }}>
+                            {menu.icon ? <ListItemIcon>{menu.icon}</ListItemIcon> : null}
+                            {menu.label}
+                        </MenuItem>,
+                    ])}
                 </Menu>
             )}
         </Paper>

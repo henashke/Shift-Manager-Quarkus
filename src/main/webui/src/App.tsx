@@ -84,6 +84,33 @@ const App: React.FC = observer(() => {
                     },
                 ],
             },
+            // Context menus share the dialogs' surface; they render in a portal, so set RTL here
+            MuiMenu: {
+                styleOverrides: {
+                    paper: ({theme}) => ({
+                        direction: 'rtl',
+                        minWidth: 180,
+                        borderRadius: 12,
+                        border: `1px solid ${theme.palette.divider}`,
+                        backgroundImage: 'none',
+                        boxShadow: '0 16px 32px rgba(0, 0, 0, 0.3)',
+                    }),
+                    list: {padding: 4},
+                },
+            },
+            MuiMenuItem: {
+                styleOverrides: {
+                    root: ({theme}) => ({
+                        gap: 12,
+                        minHeight: 0,
+                        padding: '8px 12px',
+                        borderRadius: 8,
+                        fontSize: '0.9rem',
+                        fontWeight: 500,
+                        '& .MuiListItemIcon-root': {minWidth: 0, color: theme.palette.text.secondary},
+                    }),
+                },
+            },
         },
     }), [darkMode]);
     return (

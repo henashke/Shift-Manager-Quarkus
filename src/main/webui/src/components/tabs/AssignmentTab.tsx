@@ -19,7 +19,7 @@ import shiftWeightStore from "../../stores/ShiftWeightStore";
 import ChangeAssignedShiftPresetDialog from '../dialogs/ChangeAssignedShiftPresetDialog';
 import Autorenew from '@mui/icons-material/Autorenew';
 import AutoAwesome from '@mui/icons-material/AutoAwesome';
-import SwapHoriz from '@mui/icons-material/SwapHoriz';
+import TuneRounded from '@mui/icons-material/TuneRounded';
 import ResetWeeklyShiftsDialog from "../dialogs/ResetWeeklyShiftsDialog";
 import SuggestAssignmentsDialog from "../dialogs/SuggestAssignmentsDialog";
 
@@ -200,7 +200,7 @@ const AssignmentTab: React.FC = observer(() => {
                                 setSelectedShift(getPendingOrAssignedShift(shift));
                                 setIsChangePresetDialogOpen(true);
                             },
-                            icon: <SwapHoriz color={'primary'}/>,
+                            icon: <TuneRounded fontSize="small"/>,
                             disabled: (shift: Shift) => !shiftStore.getAssignedShift(shift)
                         }]}
                         isRemoveItemDisabled={(shift: Shift) => !shiftStore.getAssignedOrPendingShift(shift)}

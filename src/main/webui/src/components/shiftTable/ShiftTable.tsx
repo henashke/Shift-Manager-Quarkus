@@ -1,29 +1,29 @@
 import React, {useState} from 'react';
 import {observer} from 'mobx-react-lite';
-import {
-    Box,
-    ListItemIcon,
-    ListItemText,
-    Menu,
-    MenuItem,
-    Paper,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    Typography,
-    useMediaQuery,
-    useTheme
-} from '@mui/material';
+import Box from '@mui/material/Box';
+import Divider from '@mui/material/Divider';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import Paper from '@mui/material/Paper';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import Typography from '@mui/material/Typography';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import {useTheme} from '@mui/material/styles';
 import store, {Shift, ShiftType} from '../../stores/ShiftStore';
 import AssignToShiftDialog from '../dialogs/AssignToShiftDialog';
-import AddIcon from '@mui/icons-material/Add';
+import AddRounded from '@mui/icons-material/AddRounded';
 import ShiftTableActions from './ShiftTableActions';
 import authStore from '../../stores/AuthStore';
 import notificationStore from '../../stores/NotificationStore';
-import DeleteIcon from "@mui/icons-material/Delete";
+import DeleteOutlineRounded from "@mui/icons-material/DeleteOutlineRounded";
+import {dangerMenuItemSx} from "../basicSharedComponents/menuStyles";
 import {formatDate} from "./CalendarNavigation";
 
 const days = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
@@ -295,20 +295,10 @@ function ShiftTable<T>({
                     }
                 >
                     <MenuItem onClick={handleAssignUser}>
-                        <ListItemIcon>
-                            <AddIcon color={'success'} fontSize="small"/>
-                        </ListItemIcon>
+                        <ListItemIcon><AddRounded fontSize="small"/></ListItemIcon>
                         <ListItemText>שבץ {itemName}</ListItemText>
                     </MenuItem>
-                    <MenuItem onClick={handleRemoveItem}
-                              disabled={isRemoveItemDisabled && isRemoveItemDisabled(contextMenu?.shift!)}
-                    >
-                        <ListItemIcon>
-                            <DeleteIcon color={'error'} fontSize="small"/>
-                        </ListItemIcon>
-                        <ListItemText>הסר {itemName}</ListItemText>
-                    </MenuItem>
-                    {additionalContextMenuItems && contextMenu?.shift && additionalContextMenuItems.map((menuItem, index) => (
+                    {additionalContextMenuItems && contextMenu?.shift ? additionalContextMenuItems.map((menuItem, index) => (
                         <MenuItem
                             key={index}
                             onClick={() => {
@@ -317,12 +307,17 @@ function ShiftTable<T>({
                             }}
                             disabled={menuItem.disabled && contextMenu.shift ? menuItem.disabled(contextMenu.shift) : false}
                         >
-                            <ListItemIcon>
-                                {menuItem.icon}
-                            </ListItemIcon>
+                            <ListItemIcon>{menuItem.icon}</ListItemIcon>
                             <ListItemText>{menuItem.label}</ListItemText>
                         </MenuItem>
-                    ))}
+                    )) : null}
+                    <Divider sx={{my: 0.5}}/>
+                    <MenuItem onClick={handleRemoveItem} sx={dangerMenuItemSx}
+                              disabled={isRemoveItemDisabled && isRemoveItemDisabled(contextMenu?.shift!)}
+                    >
+                        <ListItemIcon><DeleteOutlineRounded fontSize="small"/></ListItemIcon>
+                        <ListItemText>הסר {itemName}</ListItemText>
+                    </MenuItem>
                 </Menu>
             </TableContainer>
         </Box>
