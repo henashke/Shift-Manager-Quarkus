@@ -194,7 +194,7 @@ const ConstraintTab: React.FC = observer(() => {
                     renderAdditionalComponent={
                         <>
                             <Typography variant="h6">משבץ אילוצים עבור:</Typography>
-                            <NativeSelect title={""}
+                            <NativeSelect title={"כל המשתמשים"}
                                           options={getUsernames()}
                                           onChange={selectedUserOnChange} hideTitleElement={!authStore.isAdmin()}/>
                         </>
