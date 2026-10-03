@@ -1,8 +1,6 @@
-import React, {useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
-import Collapse from '@mui/material/Collapse';
-import Fade from '@mui/material/Fade';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import {SxProps, Theme} from '@mui/material/styles';
@@ -22,6 +20,12 @@ const HEADER_HEIGHT = 56;
 const MAX_DOTS = 6;
 // Decelerate into place, like a sheet settling
 const easing = 'cubic-bezier(0.2, 0.9, 0.3, 1)';
+// A release faster than this (px/ms) follows the flick's direction instead of the nearest position
+const FLICK_VELOCITY = 0.4;
+// Less movement than this is a tap, which toggles the tray
+const TAP_SLOP_PX = 5;
+// Closed, the sheet is pushed down so only its header (and the safe area below it) shows
+const CLOSED_TRANSFORM = `translateY(calc(100% - ${HEADER_HEIGHT}px - env(safe-area-inset-bottom)))`;
 
 const traySx: SxProps<Theme> = {
     position: 'fixed',
@@ -45,6 +49,10 @@ const headerSx: SxProps<Theme> = {
     justifyContent: 'flex-start',
     position: 'relative',
     borderRadius: '16px 16px 0 0',
+    // The header is the drag handle: the browser shouldn't scroll the page while it's dragged
+    touchAction: 'none',
+    cursor: 'grab',
+    '&:active': {cursor: 'grabbing'},
     '&.Mui-focusVisible': {outline: '2px solid', outlineColor: 'primary.main', outlineOffset: -2},
 };
 
@@ -59,23 +67,130 @@ const handleSx: SxProps<Theme> = {
     bgcolor: 'divider',
 };
 
+interface DragState {
+    startY: number;
+    startOffset: number;
+    closedOffset: number;
+    offset: number;
+    // Recent positions, for the release speed
+    samples: { y: number, time: number }[];
+    moved: boolean;
+}
+
+// Speed over the last VELOCITY_WINDOW_MS of movement; a single pair of samples is too noisy to tell a flick
+const VELOCITY_WINDOW_MS = 100;
+const releaseVelocity = (samples: DragState['samples']) => {
+    const last = samples[samples.length - 1];
+    const first = samples.find(s => last.time - s.time <= VELOCITY_WINDOW_MS) ?? last;
+    return last.time > first.time ? (last.y - first.y) / (last.time - first.time) : 0;
+};
+
 const BottomTray: React.FC<BottomTrayProps> = ({title, names, forceOpen, children}) => {
     const [expanded, setExpanded] = useState(false);
     const reduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)', {noSsr: true});
     const open = expanded || Boolean(forceOpen);
-    const timeout = reduceMotion ? 0 : 320;
+    const duration = reduceMotion ? 0 : 320;
     const hiddenCount = names.length - MAX_DOTS;
+
+    const trayRef = useRef<HTMLDivElement>(null);
+    const backdropRef = useRef<HTMLDivElement>(null);
+    const contentRef = useRef<HTMLDivElement>(null);
+    const drag = useRef<DragState | null>(null);
+    // Set when a drag ends, so the click that follows the pointer release doesn't toggle the tray again
+    const suppressClick = useRef(false);
+
+    // Off-screen cards shouldn't be reachable with the keyboard or a screen reader
+    useEffect(() => {
+        contentRef.current?.toggleAttribute('inert', !open);
+    }, [open]);
+
+    // While dragging, move the sheet and dim the page directly, without re-rendering
+    const applyDragOffset = (offset: number, closedOffset: number) => {
+        if (trayRef.current) trayRef.current.style.transform = `translateY(${offset}px)`;
+        if (backdropRef.current) backdropRef.current.style.opacity = String(1 - offset / closedOffset);
+    };
+
+    const clearDragStyles = () => {
+        for (const el of [trayRef.current, backdropRef.current]) {
+            if (!el) continue;
+            el.style.transition = '';
+            el.style.transform = '';
+            el.style.opacity = '';
+        }
+    };
+
+    const onPointerDown = (e: React.PointerEvent) => {
+        // A touch drag isn't followed by a click, so a leftover flag must not swallow this new press's click
+        suppressClick.current = false;
+        const tray = trayRef.current;
+        if (!tray || (e.pointerType === 'mouse' && e.button !== 0)) return;
+        const closedOffset = tray.offsetHeight - HEADER_HEIGHT - parseFloat(getComputedStyle(tray).paddingBottom || '0');
+        const startOffset = open ? 0 : closedOffset;
+        drag.current = {
+            startY: e.clientY, startOffset, closedOffset, offset: startOffset,
+            samples: [{y: e.clientY, time: e.timeStamp}], moved: false,
+        };
+        e.currentTarget.setPointerCapture(e.pointerId);
+    };
+
+    const onPointerMove = (e: React.PointerEvent) => {
+        const d = drag.current;
+        if (!d) return;
+        const dy = e.clientY - d.startY;
+        if (!d.moved) {
+            if (Math.abs(dy) < TAP_SLOP_PX) return;
+            d.moved = true;
+            for (const el of [trayRef.current, backdropRef.current]) if (el) el.style.transition = 'none';
+            if (backdropRef.current) backdropRef.current.style.pointerEvents = 'none';
+        }
+        d.samples.push({y: e.clientY, time: e.timeStamp});
+        if (d.samples.length > 20) d.samples.shift();
+        d.offset = Math.min(Math.max(d.startOffset + dy, 0), d.closedOffset);
+        applyDragOffset(d.offset, d.closedOffset);
+    };
+
+    const endDrag = () => {
+        const d = drag.current;
+        drag.current = null;
+        if (!d?.moved) return;
+        suppressClick.current = true;
+        const velocity = releaseVelocity(d.samples);
+        const shouldOpen = Math.abs(velocity) > FLICK_VELOCITY ? velocity < 0 : d.offset < d.closedOffset / 2;
+        if (backdropRef.current) backdropRef.current.style.pointerEvents = '';
+        // Hand the position back to the styles below, whose transition settles the sheet
+        clearDragStyles();
+        setExpanded(shouldOpen);
+    };
+
+    const onHeaderClick = () => {
+        if (suppressClick.current) {
+            suppressClick.current = false;
+            return;
+        }
+        setExpanded(!open);
+    };
 
     return (
         <>
             {/* Keeps the end of the page reachable above the collapsed tray */}
             <Box sx={{height: HEADER_HEIGHT + 16}}/>
-            <Fade in={open} timeout={timeout}>
-                <Box onClick={() => setExpanded(false)}
-                     sx={{position: 'fixed', inset: 0, zIndex: theme => theme.zIndex.appBar - 2, bgcolor: 'rgba(0, 0, 0, 0.4)'}}/>
-            </Fade>
-            <Box sx={traySx}>
-                <ButtonBase onClick={() => setExpanded(!open)} aria-expanded={open} sx={headerSx}>
+            <Box ref={backdropRef} onClick={() => setExpanded(false)} sx={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: theme => theme.zIndex.appBar - 2,
+                bgcolor: 'rgba(0, 0, 0, 0.4)',
+                opacity: open ? 1 : 0,
+                pointerEvents: open ? 'auto' : 'none',
+                transition: `opacity ${duration}ms ${easing}`,
+            }}/>
+            <Box ref={trayRef} sx={{
+                ...traySx,
+                transform: open ? 'none' : CLOSED_TRANSFORM,
+                transition: `transform ${duration}ms ${easing}`,
+            } as SxProps<Theme>}>
+                <ButtonBase onClick={onHeaderClick} aria-expanded={open} sx={headerSx}
+                            onPointerDown={onPointerDown} onPointerMove={onPointerMove}
+                            onPointerUp={endDrag} onPointerCancel={endDrag}>
                     <Box sx={handleSx}/>
                     <Typography sx={{fontWeight: 700}}>{title}</Typography>
                     <Box sx={{
@@ -110,15 +225,13 @@ const BottomTray: React.FC<BottomTrayProps> = ({title, names, forceOpen, childre
                     </Box>
                     <ExpandLess sx={{
                         color: 'text.secondary',
-                        transition: `transform ${timeout}ms ${easing}`,
+                        transition: `transform ${duration}ms ${easing}`,
                         transform: open ? 'rotate(180deg)' : 'none',
                     }}/>
                 </ButtonBase>
-                <Collapse in={open} timeout={timeout} easing={easing}>
-                    <Box sx={{maxHeight: '50vh', overflowY: 'auto', px: 1, pb: 1}}>
-                        {children}
-                    </Box>
-                </Collapse>
+                <Box ref={contentRef} sx={{maxHeight: '50vh', overflowY: 'auto', px: 1, pb: 1}}>
+                    {children}
+                </Box>
             </Box>
         </>
     );
