@@ -53,13 +53,8 @@ const backdropSx: SxProps<Theme> = {
     backdropFilter: 'blur(4px)',
 };
 
-const actionButtonSx: SxProps<Theme> = {flex: 1, py: 1.1, borderRadius: 2.5, fontWeight: 700};
+const actionButtonSx: SxProps<Theme> = {flex: 1, py: 1.1};
 
-const confirmSx: SxProps<Theme> = {
-    ...actionButtonSx,
-    background: theme => `linear-gradient(90deg, ${theme.palette.primary.main}, #8b5cf6)`,
-    '&.Mui-disabled': {background: theme => theme.palette.action.disabledBackground},
-};
 
 const CommonDialog: React.FC<CommonDialogProps> = ({
                                                        open,
@@ -116,13 +111,12 @@ const CommonDialog: React.FC<CommonDialogProps> = ({
             {content ? <Box sx={{px: 2.5, pb: handleConfirm ? 1 : 2.5}}>{content}</Box> : null}
             {handleConfirm ? (
                 <Box sx={{display: 'flex', gap: 1, p: 2.5, pt: 2}}>
-                    <Button variant="contained" color={danger ? 'error' : 'primary'} disableElevation
+                    <Button variant="contained" color={danger ? 'error' : 'primary'}
                             onClick={handleConfirmInternal} disabled={disableConfirmButton}
-                            sx={danger ? actionButtonSx : confirmSx}>
+                            sx={actionButtonSx}>
                         {confirmLabel}
                     </Button>
-                    <Button variant="outlined" color="inherit" onClick={handleDialogClose}
-                            sx={{...actionButtonSx, borderColor: 'divider'}}>
+                    <Button variant="outlined" color="inherit" onClick={handleDialogClose} sx={actionButtonSx}>
                         {cancelLabel}
                     </Button>
                 </Box>

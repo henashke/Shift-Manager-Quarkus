@@ -23,26 +23,17 @@ import SwapHoriz from '@mui/icons-material/SwapHoriz';
 import ResetWeeklyShiftsDialog from "../dialogs/ResetWeeklyShiftsDialog";
 import SuggestAssignmentsDialog from "../dialogs/SuggestAssignmentsDialog";
 
-// MUI's startIcon margins don't flip without an RTL style plugin, so space the icon with gap instead
-const actionButtonSx = {
-    flex: 1,
-    py: 1.25,
-    gap: 1,
-    borderRadius: 2,
-    fontWeight: 700,
-    '& .MuiButton-startIcon': {m: 0},
-} as const;
-
-const suggestButtonGradient = (theme: Theme) => `linear-gradient(90deg, ${theme.palette.primary.main}, #8b5cf6)`;
+const actionButtonSx = {flex: 1, py: 1.25} as const;
 
 // Keeps the gradient while disabled so the loading state stays visible instead of turning grey
 const suggestButtonSx: SxProps<Theme> = {
     ...actionButtonSx,
-    background: suggestButtonGradient,
-    '&.Mui-disabled': {background: suggestButtonGradient, color: 'common.white', opacity: 0.85},
+    '&.Mui-disabled': {
+        background: theme => `linear-gradient(90deg, ${theme.palette.primary.main}, #8b5cf6)`,
+        color: 'common.white',
+        opacity: 0.85,
+    },
 };
-
-const resetButtonSx: SxProps<Theme> = {...actionButtonSx, borderColor: 'divider'};
 
 const AssignmentTab: React.FC = observer(() => {
     const {users} = usersStore;
@@ -186,7 +177,7 @@ const AssignmentTab: React.FC = observer(() => {
                     {shiftStore.isSuggesting ? 'תכף לא תשאר לנו עבודה...' : 'הצע שיבוץ שבועי'}
                 </Button>
                 <Button variant="outlined" color="inherit" startIcon={<Autorenew/>} onClick={handleResetOpen}
-                        sx={resetButtonSx}>
+                        sx={actionButtonSx}>
                     אתחל משמרות
                 </Button>
             </> : undefined}/>
