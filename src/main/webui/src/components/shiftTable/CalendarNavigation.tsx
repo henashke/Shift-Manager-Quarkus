@@ -1,14 +1,13 @@
 import React from 'react';
 import {observer} from 'mobx-react-lite';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import Paper from '@mui/material/Paper';
-import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import store from '../../stores/ShiftStore';
 import ChevronLeft from '@mui/icons-material/ChevronLeft';
 import ChevronRight from '@mui/icons-material/ChevronRight';
-import Today from '@mui/icons-material/Today';
 
 interface CalendarNavigationProps {
     actions?: React.ReactNode;
@@ -23,8 +22,29 @@ const navButtonSx = {
     flexShrink: 0,
 };
 
-// Equal-width sides keep the date range centered when one side has more buttons
-const navSideSx = {flex: 1, display: 'flex', gap: 1};
+// A thin pill that fits on the caption line without making it much taller or wider
+const todayButtonSx = {
+    minWidth: 0,
+    height: 20,
+    px: 1,
+    py: 0,
+    borderRadius: 10,
+    border: '1px solid',
+    borderColor: 'primary.main',
+    color: 'primary.light',
+    fontSize: '0.7rem',
+    fontWeight: 600,
+    lineHeight: 1,
+} as const;
+
+const dateRangeSx = {
+    display: 'flex',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    columnGap: 1,
+    fontSize: {xs: '1rem', sm: '1.15rem'},
+    lineHeight: 1.35,
+} as const;
 
 const weekOffsetLabel = (offset: number) => {
     const weeks = Math.abs(offset);
@@ -41,35 +61,34 @@ const CalendarNavigation: React.FC<CalendarNavigationProps> = observer(({actions
 
     return (
         <Paper sx={{borderRadius: 3, boxShadow: 3, p: 2, mb: 2, maxWidth: 600, mx: 'auto'}}>
-            <Box display="flex" alignItems="center" gap={1}>
-                <Box sx={navSideSx}>
-                    <IconButton sx={navButtonSx} onClick={handlePrevWeekClick} aria-label="שבוע קודם">
-                        <ChevronRight/>
-                    </IconButton>
-                </Box>
-                <Box display="flex" flexDirection="column" alignItems="center">
-                    <Typography variant="caption" color="primary.light" fontWeight={600}>
-                        {weekOffsetLabel(store.weekOffset)}
+            <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1}}>
+                <IconButton sx={navButtonSx} onClick={handlePrevWeekClick} aria-label="שבוע קודם">
+                    <ChevronRight/>
+                </IconButton>
+                <Box display="flex" flexDirection="column" alignItems="center" sx={{minWidth: 0, textAlign: 'center'}}>
+                    <Box sx={{display: 'flex', alignItems: 'center', gap: 0.75}}>
+                        <Typography variant="caption" color="primary.light" fontWeight={600}>
+                            {weekOffsetLabel(store.weekOffset)}
+                        </Typography>
+                        {store.weekOffset !== 0 ? (
+                            <Button onClick={handleTodayClick} aria-label="חזרה לשבוע הנוכחי" sx={todayButtonSx}>
+                                היום
+                            </Button>
+                        ) : null}
+                    </Box>
+                    {/* Wraps onto two lines when narrow, so the dates never push the buttons out of the card */}
+                    <Typography component="div" fontWeight={700} sx={dateRangeSx}>
+                        <Box component="span" sx={{whiteSpace: 'nowrap'}}>{formatNavDate(weekDates[0])}</Box>
+                        <Box component="span" sx={{whiteSpace: 'nowrap'}}>
+                            <Typography component="span" variant="body2" color="text.secondary"
+                                        sx={{marginInlineEnd: 1}}>עד</Typography>
+                            {formatNavDate(weekDates[6])}
+                        </Box>
                     </Typography>
-                    <Typography variant="h6" fontWeight={700} sx={{lineHeight: 1.3}}>
-                        {formatNavDate(weekDates[0])}
-                        <Typography component="span" variant="body2" color="text.secondary" sx={{mx: 1}}>עד</Typography>
-                        {formatNavDate(weekDates[6])}
-                    </Typography>
                 </Box>
-                <Box sx={{...navSideSx, justifyContent: 'flex-end'}}>
-                    <IconButton sx={navButtonSx} onClick={handleNextWeekClick} aria-label="שבוע הבא">
-                        <ChevronLeft/>
-                    </IconButton>
-                    <Tooltip title="חזרה לשבוע הנוכחי" arrow>
-                        <span>
-                            <IconButton sx={navButtonSx} onClick={handleTodayClick} disabled={store.weekOffset === 0}
-                                        aria-label="חזרה לשבוע הנוכחי">
-                                <Today/>
-                            </IconButton>
-                        </span>
-                    </Tooltip>
-                </Box>
+                <IconButton sx={navButtonSx} onClick={handleNextWeekClick} aria-label="שבוע הבא">
+                    <ChevronLeft/>
+                </IconButton>
             </Box>
             {actions ? <Box display="flex" gap={1.5} mt={2}>{actions}</Box> : null}
         </Paper>

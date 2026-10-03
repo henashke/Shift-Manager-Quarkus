@@ -106,7 +106,7 @@ const SettingsTab: React.FC = observer(() => {
             notificationStore.showUnauthorizedError();
             return;
         }
-        setRecalculateScoresDialogOpen(false);
+        setPresetNameDialogOpen(false);
         const weights: ShiftWeight[] = [];
         for (const day of daysOfWeek) {
             for (const type of shiftTypes) {
@@ -157,9 +157,7 @@ const SettingsTab: React.FC = observer(() => {
                     <NativeSelect title={"פריסט"} options={presetOptions} onChange={handlePresetSelect}
                                   hideTitleElement/>
                     {showSaveButton && (
-                        <Button variant="contained" color="primary" onClick={handleSave} sx={{ml: 2}}>
-                            שמור
-                        </Button>
+                        <Button variant="contained" onClick={handleSave}>שמור</Button>
                     )}
                     {showMakeDefaultButton && preset && (
                         <BasicButton onClick={handleMakeDefault} title={"הפוך לברירת מחדל"} disabled={isDefaultPreset}/>

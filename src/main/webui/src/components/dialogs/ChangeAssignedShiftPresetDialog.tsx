@@ -1,10 +1,11 @@
-import React, {useState} from 'react';
-import {Box,} from '@mui/material';
-import shiftStore, {AssignedShift} from '../../stores/ShiftStore';
-import shiftWeightStore, {ShiftWeightPreset} from '../../stores/ShiftWeightStore';
+import React, {useEffect, useState} from 'react';
 import {observer} from 'mobx-react-lite';
+import TuneRounded from '@mui/icons-material/TuneRounded';
+import shiftStore, {AssignedShift} from '../../stores/ShiftStore';
+import shiftWeightStore from '../../stores/ShiftWeightStore';
 import CommonDialog from "./CommonDialog";
-import NativeSelect from "../basicSharedComponents/NativeSelect";
+import DialogSelect from "./DialogSelect";
+import {formatShiftDescription} from "./AssignToShiftDialog";
 
 interface ChangeAssignedShiftPresetProps {
     open: boolean;
@@ -17,29 +18,31 @@ const ChangeAssignedShiftPresetDialog: React.FC<ChangeAssignedShiftPresetProps> 
                                                                                                 onClose,
                                                                                                 assignedShift,
                                                                                             }) => {
-    const [selectedPreset, setSelectedPreset] = useState<ShiftWeightPreset>(assignedShift?.preset);
-    const handlePresetChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-        const newPreset = Array.from(shiftWeightStore.presets.values()).find(p => p.name === event.target.value);
-        if (newPreset) {
-            setSelectedPreset(newPreset);
-        }
-    };
+    const [selectedPresetName, setSelectedPresetName] = useState<string | undefined>(assignedShift.preset?.name);
+
+    // The dialog stays mounted, so pick up the shift it was opened for
+    useEffect(() => {
+        if (open) setSelectedPresetName(assignedShift.preset?.name);
+    }, [open, assignedShift]);
 
     const handleSave = () => {
-        shiftStore.assignShiftPending({...assignedShift, preset: selectedPreset});
-        onClose();
+        const preset = Array.from(shiftWeightStore.presets.values()).find(p => p.name === selectedPresetName);
+        if (preset) shiftStore.assignShiftPending({...assignedShift, preset});
     };
 
-    const isSaveDisabled = selectedPreset.name === assignedShift.preset.name;
-    const availablePresets = Array.from(shiftWeightStore.presets.values());
-
     return (
-        <CommonDialog open={open} title={"שינוי פריסט למשמרת"}
-                      content={<Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
-                          <NativeSelect title={"פריסט"} options={availablePresets.map(preset => preset.name)}
-                                        onChange={handlePresetChange}/>
-                      </Box>
-                      } handleConfirm={handleSave} handleDialogClose={onClose} disableConfirmButton={isSaveDisabled}/>
+        <CommonDialog open={open}
+                      title="שינוי פריסט"
+                      description={`${assignedShift.assignedUsername}, ${formatShiftDescription(assignedShift)}`}
+                      icon={<TuneRounded/>}
+                      content={<DialogSelect label="פריסט"
+                                             options={Array.from(shiftWeightStore.presets.values()).map(preset => preset.name)}
+                                             defaultValue={assignedShift.preset?.name}
+                                             onChange={name => setSelectedPresetName(name || undefined)}/>}
+                      confirmLabel="שמור"
+                      disableConfirmButton={!selectedPresetName || selectedPresetName === assignedShift.preset?.name}
+                      handleConfirm={handleSave}
+                      handleDialogClose={onClose}/>
     );
 });
 

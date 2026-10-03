@@ -1,10 +1,9 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {observer} from 'mobx-react-lite';
-import {Box, DialogContent} from '@mui/material';
+import EventAvailableOutlined from '@mui/icons-material/EventAvailableOutlined';
 import {Shift} from '../../stores/ShiftStore';
 import CommonDialog from "./CommonDialog";
-import NativeSelect from "../basicSharedComponents/NativeSelect";
-
+import DialogSelect from "./DialogSelect";
 
 interface AssignToShiftDialogProps<T> {
     open: boolean;
@@ -16,6 +15,9 @@ interface AssignToShiftDialogProps<T> {
     getItemName: (item: T) => string;
     assignFunction: (shift: Shift, item: T) => void;
 }
+
+export const formatShiftDescription = (shift: Shift) =>
+    `משמרת ${shift.type}, ${new Date(shift.date).toLocaleDateString('he-IL', {weekday: 'long', day: 'numeric', month: 'numeric'})}`;
 
 function AssignToShiftDialog<T>({
                                     open,
@@ -29,33 +31,27 @@ function AssignToShiftDialog<T>({
                                 }: AssignToShiftDialogProps<T>) {
     const [selectedItem, setSelectedItem] = useState<T | undefined>(defaultItem);
 
-    if (!shift) return <></>;
-    const handleAssign = (item: T) => {
-        assignFunction(shift, item);
-        onClose();
-    };
+    // Start every opening from the default, not from the previous pick
+    useEffect(() => {
+        if (open) setSelectedItem(defaultItem);
+    }, [open, defaultItem]);
 
-    const handleSelectChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-        const newItem = Array.from(itemList.values()).find(item => getItemName(item) === event.target.value);
-        if (newItem) {
-            setSelectedItem(newItem);
-        }
-    };
+    if (!shift) return null;
 
     return (
         <CommonDialog open={open}
-                      title={"שבץ " + itemTitle + " ל" + shift.type}
-                      content={<DialogContent sx={{direction: 'rtl'}}>
-                          <Box sx={{direction: 'rtl'}}>
-                              <NativeSelect title={itemTitle} options={itemList.map(getItemName)}
-                                            onChange={handleSelectChange}
-                                            defaultValue={defaultItem ? getItemName(defaultItem) : ''}/>
-                          </Box>
-                      </DialogContent>}
+                      title={`שבץ ${itemTitle}`}
+                      description={formatShiftDescription(shift)}
+                      icon={<EventAvailableOutlined/>}
+                      content={<DialogSelect label={itemTitle}
+                                             options={itemList.map(getItemName)}
+                                             defaultValue={defaultItem ? getItemName(defaultItem) : undefined}
+                                             onChange={name => setSelectedItem(itemList.find(item => getItemName(item) === name))}/>}
+                      confirmLabel="שבץ"
                       disableConfirmButton={!selectedItem}
-                      handleConfirm={() => selectedItem && handleAssign(selectedItem)}
+                      handleConfirm={() => selectedItem && assignFunction(shift, selectedItem)}
                       handleDialogClose={onClose}/>
-    )
+    );
 }
 
 export default observer(AssignToShiftDialog) as typeof AssignToShiftDialog;

@@ -1,25 +1,23 @@
 import React from 'react';
-import {Button, Dialog, DialogActions, DialogContent, DialogTitle, Typography} from '@mui/material';
+import LogoutRounded from '@mui/icons-material/LogoutRounded';
+import CommonDialog from "./CommonDialog";
 
 interface LogoutDialogProps {
-  open: boolean;
-  onClose: () => void;
-  onLogout: () => void;
-  username: string;
+    open: boolean;
+    onClose: () => void;
+    onLogout: () => void;
+    username: string;
 }
 
-const LogoutDialog: React.FC<LogoutDialogProps> = ({ open, onClose, onLogout, username }) => (
-  <Dialog open={open} onClose={onClose}>
-    <DialogTitle>התנתקות</DialogTitle>
-    <DialogContent>
-      <Typography>האם אתה בטוח שברצונך להתנתק, {username}?</Typography>
-    </DialogContent>
-    <DialogActions>
-      <Button onClick={onClose} color="primary">ביטול</Button>
-      <Button onClick={onLogout} color="error" variant="contained">התנתק</Button>
-    </DialogActions>
-  </Dialog>
+const LogoutDialog: React.FC<LogoutDialogProps> = ({open, onClose, onLogout, username}) => (
+    <CommonDialog open={open}
+                  title="התנתקות"
+                  description={`להתנתק מהחשבון של ${username}?`}
+                  icon={<LogoutRounded/>}
+                  confirmLabel="התנתק"
+                  handleConfirm={onLogout}
+                  handleDialogClose={onClose}
+                  danger/>
 );
 
 export default LogoutDialog;
-

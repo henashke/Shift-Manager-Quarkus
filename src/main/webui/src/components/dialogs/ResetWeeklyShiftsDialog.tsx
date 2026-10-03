@@ -1,21 +1,18 @@
 import React from 'react';
+import RestartAltRounded from '@mui/icons-material/RestartAltRounded';
 import CommonDialog, {CommonDialogProps} from "./CommonDialog";
 
-interface DeleteUserProps extends Omit<CommonDialogProps, 'title' | 'content' | 'handleConfirm'> {
-    handleConfirm: (userToDeleteId: string) => void;
-}
+type ResetWeeklyShiftsDialogProps = Pick<CommonDialogProps, 'open' | 'handleDialogClose' | 'handleConfirm'>;
 
-const ResetWeeklyShiftsDialog: React.FC<DeleteUserProps> = ({
-                                                                open,
-                                                                handleDialogClose,
-                                                                handleConfirm,
-                                                            }) => (
+const ResetWeeklyShiftsDialog: React.FC<ResetWeeklyShiftsDialogProps> = ({open, handleDialogClose, handleConfirm}) => (
     <CommonDialog open={open}
-                  title={"אישור איפוס"}
-                  content={<>האם אתה בטוח שברצונך לאפס את כל המשמרות של השבוע הנוכחי?</>}
+                  title="איפוס משמרות השבוע"
+                  description="כל המשמרות של השבוע המוצג יימחקו."
+                  icon={<RestartAltRounded/>}
+                  confirmLabel="אפס משמרות"
                   handleConfirm={handleConfirm}
                   handleDialogClose={handleDialogClose}
-                  warningDialog/>
+                  danger/>
 );
 
 export default ResetWeeklyShiftsDialog;

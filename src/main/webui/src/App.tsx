@@ -12,6 +12,8 @@ import SettingsTab from './components/tabs/SettingsTab';
 import {AppBarComponent} from "./components/AppBarComponent";
 
 const DARK_MODE_KEY = 'darkMode';
+// The second stop of the primary button gradient
+const GRADIENT_END = '#8b5cf6';
 
 const App: React.FC = observer(() => {
     const navigate = useNavigate();
@@ -53,6 +55,35 @@ const App: React.FC = observer(() => {
                 'Arial',
                 'sans-serif',
             ].join(','),
+        },
+        components: {
+            // The app's one button language; pages shouldn't restyle buttons themselves
+            MuiButton: {
+                defaultProps: {disableElevation: true},
+                styleOverrides: {
+                    root: {
+                        borderRadius: 10,
+                        fontWeight: 700,
+                        textTransform: 'none',
+                        // MUI's icon margins don't flip without an RTL style plugin, so space icons with gap
+                        gap: 8,
+                        '& .MuiButton-startIcon, & .MuiButton-endIcon': {margin: 0},
+                    },
+                },
+                variants: [
+                    {
+                        props: {variant: 'contained', color: 'primary'},
+                        style: ({theme}) => ({
+                            background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${GRADIENT_END})`,
+                            '&.Mui-disabled': {background: theme.palette.action.disabledBackground},
+                        }),
+                    },
+                    {
+                        props: {variant: 'outlined', color: 'inherit'},
+                        style: ({theme}) => ({borderColor: theme.palette.divider}),
+                    },
+                ],
+            },
         },
     }), [darkMode]);
     return (
