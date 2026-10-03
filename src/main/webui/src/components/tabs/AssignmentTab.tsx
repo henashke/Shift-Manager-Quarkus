@@ -98,15 +98,17 @@ const AssignmentTab: React.FC = observer(() => {
     }
 
     const getUserFromShift = (shift: Shift): User | undefined => {
-        return users.find(u => shiftStore.getAssignedShift(shift)?.assignedUsername === u.name);
+        const assignedUsername = shiftStore.getAssignedShift(shift)?.assignedUsername;
+        return users.find(u => u.name === assignedUsername);
     }
 
     const getPendingOrAssignedUserFromShift = (shift: Shift): User | undefined => {
-        return users.find(u => u.name === shiftStore.pendingAssignedShifts.concat(shiftStore.assignedShifts).find(assignedShift => sameShift(assignedShift, shift))?.assignedUsername)
+        const assignedUsername = shiftStore.getAssignedOrPendingShift(shift)?.assignedUsername;
+        return users.find(u => u.name === assignedUsername);
     }
 
     const getPendingOrAssignedShift = (shift: Shift): AssignedShift | undefined => {
-        return shiftStore.pendingAssignedShifts.concat(shiftStore.assignedShifts).find(assignedShift => sameShift(assignedShift, shift))
+        return shiftStore.getAssignedOrPendingShift(shift);
     }
 
     const handleSuggestOpen = () => {

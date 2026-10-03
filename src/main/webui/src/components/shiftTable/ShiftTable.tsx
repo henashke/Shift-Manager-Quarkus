@@ -76,7 +76,7 @@ function ShiftTable<T>({
                            additionalContextMenuItems,
                        }: ShiftTableProps<T>) {
     const theme = useTheme();
-    const isNarrowScreen = useMediaQuery(theme.breakpoints.down('md')); // Switch to vertical on screens smaller than 'md' breakpoint
+    const isNarrowScreen = useMediaQuery(theme.breakpoints.down('md'), {noSsr: true}); // Switch to vertical on screens smaller than 'md' breakpoint
     const {weekDates} = store;
     const [assignDialogOpen, setAssignDialogOpen] = useState(false);
     const [selectedShift, setSelectedShift] = useState<Shift | null>(null);

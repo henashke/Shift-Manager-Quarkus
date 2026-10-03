@@ -93,18 +93,15 @@ const ConstraintTab: React.FC = observer(() => {
         });
     }
 
+    const isSelectedUsers = (c: Constraint, username?: string) => username === 'admin' || c.userId === username;
+
     const retrieveConstraintFromShift = (shift: Shift): Constraint | undefined => {
-        return constraintStore.constraints.find(c => (selectedUser === 'admin' || c.userId === selectedUser) && sameShift({
-            date: c.shift.date,
-            type: c.shift.type
-        }, shift));
+        return constraintStore.getConstraintsOfShift(shift).find(c => isSelectedUsers(c, selectedUser));
     };
 
     const retrieveConstraintsFromShift = (shift: Shift, username?: string): Constraint[] => {
-        return constraintStore.constraints.concat(constraintStore.pendingConstraints).filter(c => (username === 'admin' || c.userId === username) && sameShift({
-            date: c.shift.date,
-            type: c.shift.type
-        }, shift));
+        return constraintStore.getConstraintsOfShift(shift).concat(constraintStore.getPendingConstraintsOfShift(shift))
+            .filter(c => isSelectedUsers(c, username));
     }
 
     const retrieveConstraintTypeFromShift = (shift: Shift): ConstraintType | undefined => {
@@ -116,13 +113,11 @@ const ConstraintTab: React.FC = observer(() => {
     }
 
     const getPendingConstraintFromShift = (shift: Shift): Constraint | undefined => {
-        return constraintStore.pendingConstraints.find(c => c.userId === selectedUser && sameShift({
-            date: c.shift.date,
-            type: c.shift.type
-        }, shift));
+        return constraintStore.getPendingConstraintsOfShift(shift).find(c => c.userId === selectedUser);
     }
 
-    const isRemoveItemDisabled = (shift: Shift) => !constraintStore.constraints.concat(constraintStore.pendingConstraints).find(c => c.userId === selectedUser && sameShift(c.shift, shift))
+    const isRemoveItemDisabled = (shift: Shift) => !shift || !constraintStore.getConstraintsOfShift(shift)
+        .concat(constraintStore.getPendingConstraintsOfShift(shift)).find(c => c.userId === selectedUser)
 
     const getConstraintElement = (constraintType: ConstraintType, shift: Shift) => {
         const allConstraintsOfShift = retrieveConstraintsFromShift(shift, selectedUser);

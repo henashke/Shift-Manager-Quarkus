@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import NotificationDisplay from './components/NotificationDisplay';
 import {CssBaseline} from '@mui/material';
 import {observer} from 'mobx-react-lite';
@@ -33,7 +33,8 @@ const App: React.FC = observer(() => {
         }
     }, [navigate]);
 
-    const theme = createTheme({
+    // Memoized: App re-renders on every route change (useNavigate), and a new theme restyles the whole tree
+    const theme = useMemo(() => createTheme({
         palette: {
             mode: darkMode ? 'dark' : 'light',
             primary: {
@@ -63,7 +64,7 @@ const App: React.FC = observer(() => {
                 'sans-serif',
             ].join(','),
         },
-    });
+    }), [darkMode]);
     return (
         <ThemeProvider theme={theme}>
             <CssBaseline/>
