@@ -3,7 +3,12 @@ import CalendarNavigation from '../shiftTable/CalendarNavigation';
 import ShiftTable from '../shiftTable/ShiftTable';
 import UserCard from '../basicSharedComponents/UserCard';
 import UserList from '../draggableLists/UserList';
-import {Alert, Box, Container, Snackbar} from "@mui/material";
+import Alert from "@mui/material/Alert";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Container from "@mui/material/Container";
+import Snackbar from "@mui/material/Snackbar";
+import {SxProps, Theme} from "@mui/material/styles";
 import usersStore from "../../stores/UsersStore";
 import {observer} from 'mobx-react-lite';
 import shiftStore, {AssignedShift, sameShift, Shift, User} from "../../stores/ShiftStore";
@@ -11,11 +16,29 @@ import authStore from "../../stores/AuthStore";
 import notificationStore from "../../stores/NotificationStore";
 import shiftWeightStore from "../../stores/ShiftWeightStore";
 import ChangeAssignedShiftPresetDialog from '../dialogs/ChangeAssignedShiftPresetDialog';
-import {SwapHoriz} from '@mui/icons-material';
-import DangerousButton from "../basicSharedComponents/DangerousButton";
-import BasicButton from "../basicSharedComponents/BasicButton";
+import Autorenew from '@mui/icons-material/Autorenew';
+import AutoAwesome from '@mui/icons-material/AutoAwesome';
+import SwapHoriz from '@mui/icons-material/SwapHoriz';
 import ResetWeeklyShiftsDialog from "../dialogs/ResetWeeklyShiftsDialog";
 import SuggestAssignmentsDialog from "../dialogs/SuggestAssignmentsDialog";
+
+// MUI's startIcon margins don't flip without an RTL style plugin, so space the icon with gap instead
+const actionButtonSx = {
+    flex: 1,
+    maxWidth: 280,
+    py: 1.25,
+    gap: 1,
+    borderRadius: 2,
+    fontWeight: 700,
+    '& .MuiButton-startIcon': {m: 0},
+} as const;
+
+const suggestButtonSx: SxProps<Theme> = {
+    ...actionButtonSx,
+    background: theme => `linear-gradient(90deg, ${theme.palette.primary.main}, #8b5cf6)`,
+};
+
+const resetButtonSx: SxProps<Theme> = {...actionButtonSx, borderColor: 'divider'};
 
 const AssignmentTab: React.FC = observer(() => {
     const {users} = usersStore;
@@ -150,11 +173,16 @@ const AssignmentTab: React.FC = observer(() => {
 
     return (
         <Container maxWidth={"xl"} dir={"rtl"}>
-            <CalendarNavigation/>
-            <Box sx={{display: 'flex', gap: 2, mb: 2}}>
-                <BasicButton onClick={handleSuggestOpen} title={"הצע שיבוץ לשבוע"}/>
-                <DangerousButton title={"אתחל משמרות השבוע"} onClick={handleResetOpen}/>
-            </Box>
+            <CalendarNavigation actions={authStore.isAdmin() ? <>
+                <Button variant="contained" startIcon={<AutoAwesome/>} onClick={handleSuggestOpen}
+                        sx={suggestButtonSx}>
+                    הצע שיבוץ שבועי
+                </Button>
+                <Button variant="outlined" color="inherit" startIcon={<Autorenew/>} onClick={handleResetOpen}
+                        sx={resetButtonSx}>
+                    אתחל משמרות
+                </Button>
+            </> : undefined}/>
             <ShiftTable onDropHandler={handleDrop}
                         onDragStartHandler={onDragStart}
                         onDragEndHandler={onDragEnd}

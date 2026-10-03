@@ -1,5 +1,7 @@
 import React from 'react';
-import {alpha, Box, Typography, useTheme} from '@mui/material';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import {alpha, useTheme} from '@mui/material/styles';
 import {stringToColor} from "../shiftTable/ShiftTable";
 
 interface UserCardProps {
@@ -37,11 +39,11 @@ const UserCard: React.FC<UserCardProps> = ({name, shiftType, isPending}) => {
                 <Typography noWrap sx={{fontWeight: 700, fontSize: '0.95rem', lineHeight: 1.2}}>
                     {name}
                 </Typography>
-                {shiftType && (
+                {shiftType ? (
                     <Typography noWrap variant="caption" sx={{color: 'text.secondary', lineHeight: 1.2}}>
                         {shiftType}
                     </Typography>
-                )}
+                ) : null}
             </Box>
         </Box>
     );
