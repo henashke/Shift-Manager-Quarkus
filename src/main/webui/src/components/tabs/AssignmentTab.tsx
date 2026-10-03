@@ -6,6 +6,7 @@ import UserList from '../draggableLists/UserList';
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import CircularProgress from "@mui/material/CircularProgress";
 import Container from "@mui/material/Container";
 import Snackbar from "@mui/material/Snackbar";
 import {SxProps, Theme} from "@mui/material/styles";
@@ -33,9 +34,13 @@ const actionButtonSx = {
     '& .MuiButton-startIcon': {m: 0},
 } as const;
 
+const suggestButtonGradient = (theme: Theme) => `linear-gradient(90deg, ${theme.palette.primary.main}, #8b5cf6)`;
+
+// Keeps the gradient while disabled so the loading state stays visible instead of turning grey
 const suggestButtonSx: SxProps<Theme> = {
     ...actionButtonSx,
-    background: theme => `linear-gradient(90deg, ${theme.palette.primary.main}, #8b5cf6)`,
+    background: suggestButtonGradient,
+    '&.Mui-disabled': {background: suggestButtonGradient, color: 'common.white', opacity: 0.85},
 };
 
 const resetButtonSx: SxProps<Theme> = {...actionButtonSx, borderColor: 'divider'};
@@ -174,9 +179,10 @@ const AssignmentTab: React.FC = observer(() => {
     return (
         <Container maxWidth={"xl"} dir={"rtl"}>
             <CalendarNavigation actions={authStore.isAdmin() ? <>
-                <Button variant="contained" startIcon={<AutoAwesome/>} onClick={handleSuggestOpen}
-                        sx={suggestButtonSx}>
-                    הצע שיבוץ שבועי
+                <Button variant="contained" onClick={handleSuggestOpen} sx={suggestButtonSx}
+                        disabled={shiftStore.isSuggesting} aria-busy={shiftStore.isSuggesting}
+                        startIcon={shiftStore.isSuggesting ? <CircularProgress size={20} color="inherit"/> : <AutoAwesome/>}>
+                    {shiftStore.isSuggesting ? 'תכף לא תשאר לנו עבודה...' : 'הצע שיבוץ שבועי'}
                 </Button>
                 <Button variant="outlined" color="inherit" startIcon={<Autorenew/>} onClick={handleResetOpen}
                         sx={resetButtonSx}>

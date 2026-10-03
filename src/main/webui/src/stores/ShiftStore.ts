@@ -30,6 +30,7 @@ export class ShiftStore {
     pendingAssignedShifts: AssignedShift[] = [];
     weekOffset = 0;
     loading = false;
+    isSuggesting = false;
 
     constructor() {
         makeAutoObservable(this);
@@ -182,6 +183,7 @@ export class ShiftStore {
 
     async suggestShiftAssignments(userIds: string[], startDate: Date, endDate: Date) {
         this.loading = true;
+        this.isSuggesting = true;
         try {
             const response = await authFetch(`${config.API_BASE_URL}/shifts/suggest`, {
                 method: 'POST',
@@ -213,7 +215,12 @@ export class ShiftStore {
             runInAction(() => {
                 this.loading = false;
             });
+            notificationStore.showError('הצעת השיבוץ נכשלה');
             console.error(error);
+        } finally {
+            runInAction(() => {
+                this.isSuggesting = false;
+            });
         }
     }
 
