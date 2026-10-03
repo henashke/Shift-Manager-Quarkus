@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {startTransition, useState} from 'react';
 import {AppBar, Avatar, Box, IconButton, Menu, MenuItem, Tab, Tabs, Toolbar, Tooltip, Typography} from '@mui/material';
 import {DarkMode, LightMode} from '@mui/icons-material';
 import LoginIcon from '@mui/icons-material/Login';
@@ -24,9 +24,12 @@ export const AppBarComponent = ({darkMode, setDarkMode}: {
 
     const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
         setTabValue(newValue);
-        if (newValue === 0) navigate('/');
-        if (newValue === 1) navigate('/constraints');
-        if (newValue === 2) navigate('/settings');
+        // Mount the new tab as a transition so the indicator animation isn't blocked by it
+        startTransition(() => {
+            if (newValue === 0) navigate('/');
+            if (newValue === 1) navigate('/constraints');
+            if (newValue === 2) navigate('/settings');
+        });
     };
 
     return <AppBar position="sticky" color="primary" sx={{mb: 2}}>

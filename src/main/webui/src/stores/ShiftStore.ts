@@ -30,6 +30,7 @@ export class ShiftStore {
     pendingAssignedShifts: AssignedShift[] = [];
     weekOffset = 0;
     loading = false;
+    isSuggesting = false;
 
     constructor() {
         makeAutoObservable(this);
@@ -118,12 +119,24 @@ export class ShiftStore {
         }
     };
 
-    getAssignedShift = (shift: Shift): AssignedShift | undefined => {
-        return this.assignedShifts.find(assignedShift => sameShift(assignedShift, shift));
+    // Computed lookups, so each table cell doesn't scan every shift; pending shifts take precedence
+    get assignedShiftsByKey() {
+        return new Map(this.assignedShifts.map(s => [shiftKey(s), s]));
     }
 
-    getAssignedOrPendingShift = (shift: Shift): AssignedShift | undefined => {
-        return this.pendingAssignedShifts.concat(this.assignedShifts).find(assignedShift => sameShift(assignedShift, shift));
+    get assignedOrPendingShiftsByKey() {
+        const map = new Map(this.assignedShiftsByKey);
+        this.pendingAssignedShifts.forEach(s => map.set(shiftKey(s), s));
+        return map;
+    }
+
+    // shift can be undefined at runtime (e.g. a closed context menu), like sameShift tolerates
+    getAssignedShift = (shift?: Shift): AssignedShift | undefined => {
+        return shift ? this.assignedShiftsByKey.get(shiftKey(shift)) : undefined;
+    }
+
+    getAssignedOrPendingShift = (shift?: Shift): AssignedShift | undefined => {
+        return shift ? this.assignedOrPendingShiftsByKey.get(shiftKey(shift)) : undefined;
     }
 
     setWeekOffset = (offset: number) => {
@@ -182,6 +195,7 @@ export class ShiftStore {
 
     async suggestShiftAssignments(userIds: string[], startDate: Date, endDate: Date) {
         this.loading = true;
+        this.isSuggesting = true;
         try {
             const response = await authFetch(`${config.API_BASE_URL}/shifts/suggest`, {
                 method: 'POST',
@@ -213,7 +227,12 @@ export class ShiftStore {
             runInAction(() => {
                 this.loading = false;
             });
+            notificationStore.showError('הצעת השיבוץ נכשלה');
             console.error(error);
+        } finally {
+            runInAction(() => {
+                this.isSuggesting = false;
+            });
         }
     }
 
@@ -279,6 +298,12 @@ export class ShiftStore {
 }
 
 const store = new ShiftStore();
+// Same day (local time) and type, matching sameShift
+export const shiftKey = (shift: Shift) => {
+    const date = new Date(shift.date);
+    return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}|${shift.type}`;
+};
+
 export const sameShift = (shift1: Shift, shift2: Shift) => {
     if (!shift1 || !shift2) return false;
     const date1 = new Date(shift1.date);

@@ -76,7 +76,7 @@ function ShiftTable<T>({
                            additionalContextMenuItems,
                        }: ShiftTableProps<T>) {
     const theme = useTheme();
-    const isNarrowScreen = useMediaQuery(theme.breakpoints.down('md')); // Switch to vertical on screens smaller than 'md' breakpoint
+    const isNarrowScreen = useMediaQuery(theme.breakpoints.down('md'), {noSsr: true}); // Switch to vertical on screens smaller than 'md' breakpoint
     const {weekDates} = store;
     const [assignDialogOpen, setAssignDialogOpen] = useState(false);
     const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
@@ -85,9 +85,6 @@ function ShiftTable<T>({
         mouseY: number;
         shift: Shift | null
     } | null>(null);
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
 
 
     const onDrop = (e: React.DragEvent, shift: Shift) => {
@@ -164,50 +161,6 @@ function ShiftTable<T>({
         return retrieveItemFromShift(shift);
     };
 
-    const WeekDayHeaderTableCell = ({date}: { date: Date }) => (
-        <TableCell sx={{backgroundColor: isToday(date) ? theme.palette.background.default : undefined}}
-                   key={'header-' + formatDate(date)}
-                   align="center">
-            <Typography variant={"h6"}>{days[date.getDay()]}</Typography>
-            <Typography>{date.toLocaleDateString('he-IL', {
-                day: 'numeric',
-                month: 'numeric'
-            })}</Typography>
-        </TableCell>
-    );
-
-    const ShiftTypeHeaderTableCell = ({shiftType}: { shiftType: ShiftType }) => (
-        <TableCell key={shiftType.toString()} align="center">
-            <Typography variant={"h6"}>{shiftType}</Typography>
-        </TableCell>
-    );
-
-    const VerticalTableHeader = () => <TableHead>
-        <TableRow>
-            <TableCell></TableCell>
-            {shiftTypes.map((shiftType) => (
-                <ShiftTypeHeaderTableCell shiftType={shiftType}/>
-            ))}
-        </TableRow>
-    </TableHead>
-
-    const HorizontalTableHeader = () => <TableHead>
-        <TableRow>
-            <TableCell></TableCell>
-            {weekDates.map((date, index: number) => (
-                <WeekDayHeaderTableCell key={index} date={date}/>
-            ))}
-        </TableRow>
-    </TableHead>
-
-    const tableHeader = isNarrowScreen ? <VerticalTableHeader/> : <HorizontalTableHeader/>;
-
-    const isToday = (date: Date) => {
-        return date.getFullYear() === today.getFullYear() &&
-            date.getMonth() === today.getMonth() &&
-            date.getDate() === today.getDate();
-    }
-
     const getDefaultItemElement = (item: T, shift: Shift) => {
         const isPending = retrievePendingItem?.(shift) !== undefined;
         return <Box sx={{
@@ -245,7 +198,7 @@ function ShiftTable<T>({
                     minHeight: 48,
                     color: 'common.white',
                     cursor: 'pointer',
-                    backgroundColor: isToday(date) ? theme.palette.background.default : undefined
+                    bgcolor: isToday(date) ? 'background.default' : undefined
                 }}
             >
                 {item ? (
@@ -264,25 +217,30 @@ function ShiftTable<T>({
         );
     }
 
-    const VerticalTableBody = () => <TableBody>
-        {weekDates.map((date) => (
-            <TableRow key={'table-row-' + formatDate(date)}>
-                <WeekDayHeaderTableCell date={date}/>
-                {shiftTypes.map(shiftType => createTableCell(date, shiftType))}
-            </TableRow>
-        ))}
-    </TableBody>
+    const tableHeader = <TableHead>
+        <TableRow>
+            <TableCell></TableCell>
+            {isNarrowScreen
+                ? shiftTypes.map(shiftType => <ShiftTypeHeaderTableCell key={shiftType} shiftType={shiftType}/>)
+                : weekDates.map(date => <WeekDayHeaderTableCell key={formatDate(date)} date={date}/>)}
+        </TableRow>
+    </TableHead>;
 
-    const HorizontalTableBody = () => <TableBody>
-        {shiftTypes.map((shiftType,) => (
-            <TableRow key={shiftType}>
-                <ShiftTypeHeaderTableCell shiftType={shiftType}/>
-                {weekDates.map((date) => createTableCell(date, shiftType))}
-            </TableRow>
-        ))}
-    </TableBody>
-
-    const tableBody = isNarrowScreen ? <VerticalTableBody/> : <HorizontalTableBody/>
+    const tableBody = <TableBody>
+        {isNarrowScreen
+            ? weekDates.map(date => (
+                <TableRow key={'table-row-' + formatDate(date)}>
+                    <WeekDayHeaderTableCell date={date}/>
+                    {shiftTypes.map(shiftType => createTableCell(date, shiftType))}
+                </TableRow>
+            ))
+            : shiftTypes.map(shiftType => (
+                <TableRow key={shiftType}>
+                    <ShiftTypeHeaderTableCell shiftType={shiftType}/>
+                    {weekDates.map(date => createTableCell(date, shiftType))}
+                </TableRow>
+            ))}
+    </TableBody>;
 
     const isAllContextMenuDisabledButAddItem = (shift: Shift) => {
         if (isRemoveItemDisabled === undefined || !(isRemoveItemDisabled(shift))) {
@@ -370,6 +328,24 @@ function ShiftTable<T>({
         </Box>
     );
 }
+
+const isToday = (date: Date) => date.toDateString() === new Date().toDateString();
+
+const WeekDayHeaderTableCell = ({date}: { date: Date }) => (
+    <TableCell sx={{bgcolor: isToday(date) ? 'background.default' : undefined}} align="center">
+        <Typography variant={"h6"}>{days[date.getDay()]}</Typography>
+        <Typography>{date.toLocaleDateString('he-IL', {
+            day: 'numeric',
+            month: 'numeric'
+        })}</Typography>
+    </TableCell>
+);
+
+const ShiftTypeHeaderTableCell = ({shiftType}: { shiftType: ShiftType }) => (
+    <TableCell align="center">
+        <Typography variant={"h6"}>{shiftType}</Typography>
+    </TableCell>
+);
 
 export function stringToColor(str: string): string {
     // Hash string → number

@@ -1,5 +1,5 @@
 import {makeAutoObservable, reaction} from 'mobx';
-import {sameShift, Shift} from "./ShiftStore";
+import {sameShift, Shift, shiftKey} from "./ShiftStore";
 import {authFetch} from "../api";
 import config from "../config";
 import authStore from "./AuthStore";
@@ -20,9 +20,31 @@ export type Constraint = {
 
 const PENDING_CONSTRAINTS_KEY_PREFIX = 'pendingConstraints:';
 
+const groupByShiftKey = (constraints: Constraint[]) => {
+    const map = new Map<string, Constraint[]>();
+    constraints.forEach(c => {
+        const key = shiftKey(c.shift);
+        map.set(key, [...(map.get(key) ?? []), c]);
+    });
+    return map;
+};
+
 class ConstraintStore {
     constraints: Constraint[] = [];
     pendingConstraints: Constraint[] = [];
+
+    // Computed lookups, so each table cell doesn't scan every constraint
+    get constraintsByShiftKey() {
+        return groupByShiftKey(this.constraints);
+    }
+
+    get pendingConstraintsByShiftKey() {
+        return groupByShiftKey(this.pendingConstraints);
+    }
+
+    getConstraintsOfShift = (shift: Shift): Constraint[] => this.constraintsByShiftKey.get(shiftKey(shift)) ?? [];
+
+    getPendingConstraintsOfShift = (shift: Shift): Constraint[] => this.pendingConstraintsByShiftKey.get(shiftKey(shift)) ?? [];
 
     constructor() {
         makeAutoObservable(this);

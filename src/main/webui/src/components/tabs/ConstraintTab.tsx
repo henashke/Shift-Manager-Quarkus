@@ -2,7 +2,8 @@ import React, {useEffect, useState} from 'react';
 import {observer} from 'mobx-react-lite';
 import CalendarNavigation from '../shiftTable/CalendarNavigation';
 import DraggableList from '../draggableLists/DraggableList';
-import ShiftTable, {stringToColor} from '../shiftTable/ShiftTable';
+import ShiftTable from '../shiftTable/ShiftTable';
+import UserCard from '../basicSharedComponents/UserCard';
 import {Box, Container, Typography} from "@mui/material";
 import {sameShift, Shift} from '../../stores/ShiftStore';
 import authStore from "../../stores/AuthStore";
@@ -92,18 +93,15 @@ const ConstraintTab: React.FC = observer(() => {
         });
     }
 
+    const isSelectedUsers = (c: Constraint, username?: string) => username === 'admin' || c.userId === username;
+
     const retrieveConstraintFromShift = (shift: Shift): Constraint | undefined => {
-        return constraintStore.constraints.find(c => (selectedUser === 'admin' || c.userId === selectedUser) && sameShift({
-            date: c.shift.date,
-            type: c.shift.type
-        }, shift));
+        return constraintStore.getConstraintsOfShift(shift).find(c => isSelectedUsers(c, selectedUser));
     };
 
     const retrieveConstraintsFromShift = (shift: Shift, username?: string): Constraint[] => {
-        return constraintStore.constraints.concat(constraintStore.pendingConstraints).filter(c => (username === 'admin' || c.userId === username) && sameShift({
-            date: c.shift.date,
-            type: c.shift.type
-        }, shift));
+        return constraintStore.getConstraintsOfShift(shift).concat(constraintStore.getPendingConstraintsOfShift(shift))
+            .filter(c => isSelectedUsers(c, username));
     }
 
     const retrieveConstraintTypeFromShift = (shift: Shift): ConstraintType | undefined => {
@@ -115,13 +113,11 @@ const ConstraintTab: React.FC = observer(() => {
     }
 
     const getPendingConstraintFromShift = (shift: Shift): Constraint | undefined => {
-        return constraintStore.pendingConstraints.find(c => c.userId === selectedUser && sameShift({
-            date: c.shift.date,
-            type: c.shift.type
-        }, shift));
+        return constraintStore.getPendingConstraintsOfShift(shift).find(c => c.userId === selectedUser);
     }
 
-    const isRemoveItemDisabled = (shift: Shift) => !constraintStore.constraints.concat(constraintStore.pendingConstraints).find(c => c.userId === selectedUser && sameShift(c.shift, shift))
+    const isRemoveItemDisabled = (shift: Shift) => !shift || !constraintStore.getConstraintsOfShift(shift)
+        .concat(constraintStore.getPendingConstraintsOfShift(shift)).find(c => c.userId === selectedUser)
 
     const getConstraintElement = (constraintType: ConstraintType, shift: Shift) => {
         const allConstraintsOfShift = retrieveConstraintsFromShift(shift, selectedUser);
@@ -130,22 +126,11 @@ const ConstraintTab: React.FC = observer(() => {
             sx={{display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1}}
         >
             {allConstraintsOfShift.map(c =>
-                <Box sx={{
-                    background: theme => c.isPending ? theme.palette.secondary.main : stringToColor(c.userId),
-                    color: 'common.white',
-                    borderRadius: 1,
-                    px: 1,
-                    py: 0.5,
-                    fontWeight: 700,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexDirection: 'column'
-                }}
-                     onDragStart={e => onAssignedConstraintDragStart(e, constraintType, shift, c.userId)}
+                <Box key={c.userId}
+                     onDragStart={e => onAssignedConstraintDragStart(e, c.constraintType, shift, c.userId)}
                      onDragEnd={onDragEnd} draggable
                 >
-                    {c.userId + ': ' + constraintType}
+                    <UserCard name={c.userId} subtitle={c.constraintType} isPending={c.isPending}/>
                 </Box>
             )
             }
