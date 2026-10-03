@@ -12,7 +12,7 @@ import Snackbar from "@mui/material/Snackbar";
 import {SxProps, Theme} from "@mui/material/styles";
 import usersStore from "../../stores/UsersStore";
 import {observer} from 'mobx-react-lite';
-import shiftStore, {AssignedShift, sameShift, Shift, User} from "../../stores/ShiftStore";
+import shiftStore, {AssignedShift, isInWindow, sameShift, Shift, User} from "../../stores/ShiftStore";
 import authStore from "../../stores/AuthStore";
 import notificationStore from "../../stores/NotificationStore";
 import shiftWeightStore from "../../stores/ShiftWeightStore";
@@ -189,6 +189,7 @@ const AssignmentTab: React.FC = observer(() => {
             </> : undefined}/>
             <ShiftTable onDropHandler={handleDrop}
                         loading={shiftStore.isFetchingShifts && !shiftStore.hasShiftsForCurrentWeek}
+                        isWeekLoaded={offset => isInWindow(offset, shiftStore.loadedShiftsCenter)}
                         onDragStartHandler={onDragStart}
                         onDragEndHandler={onDragEnd}
                         assignHandler={assignHandler}
