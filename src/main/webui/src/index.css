@@ -1,3 +1,10 @@
+/* Nothing should widen the page sideways: content sliding past the edge (the week swipe) would otherwise let mobile
+   Safari scroll or re-zoom the page, which knocks fixed elements like the users tray out of view. clip, not hidden,
+   so the sticky top bar keeps working. */
+html, body {
+  overflow-x: clip;
+}
+
 body {
   margin: 0;
   font-family: 'Rubik Variable', 'Segoe UI', Arial, sans-serif;

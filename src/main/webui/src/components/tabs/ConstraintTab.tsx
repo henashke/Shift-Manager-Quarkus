@@ -165,6 +165,7 @@ const ConstraintTab: React.FC = observer(() => {
             <CalendarNavigation/>
             <ShiftTable itemList={constraintTypes}
                         loading={constraintStore.isFetching && !constraintStore.hasConstraintsForWeek(weekOffset)}
+                        isWeekLoaded={offset => constraintStore.hasConstraintsForWeek(offset)}
                         defaultItem={ConstraintType.CANT}
                         retrieveItemFromShift={retrieveConstraintTypeFromShift}
                         assignHandler={assignConstraint}

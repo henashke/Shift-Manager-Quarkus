@@ -60,15 +60,7 @@ export class ShiftStore {
     }
 
     get weekDates() {
-        const today = new Date();
-        const start = new Date(today);
-        start.setDate(today.getDate() - today.getDay() + this.weekOffset * 7);
-        start.setHours(10);
-        return Array.from({length: 7}, (_, i) => {
-            const d = new Date(start);
-            d.setDate(start.getDate() + i);
-            return d;
-        });
+        return weekDatesFor(this.weekOffset);
     }
 
     // Loads the weeks around weekOffset (the server's window), never the whole history
@@ -328,6 +320,19 @@ const store = new ShiftStore();
 // within 1 of the center: the server works out "this week" in its own time zone, which can be a week off from ours
 // around Saturday midnight.
 const LOADED_WEEKS_RADIUS = 1;
+
+// Sunday to Saturday of the week weekOffset weeks from this one
+export const weekDatesFor = (weekOffset: number) => {
+    const today = new Date();
+    const start = new Date(today);
+    start.setDate(today.getDate() - today.getDay() + weekOffset * 7);
+    start.setHours(10);
+    return Array.from({length: 7}, (_, i) => {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        return d;
+    });
+};
 
 export const isInWindow = (weekOffset: number, loadedCenter: number | null) =>
     loadedCenter !== null && Math.abs(weekOffset - loadedCenter) <= LOADED_WEEKS_RADIUS;

@@ -1,33 +1,63 @@
-import React, {useRef} from 'react';
+import React, {useLayoutEffect, useRef, useState} from 'react';
 
-// How far a horizontal swipe must travel to change the week
-const SWIPE_THRESHOLD_PX = 60;
+// Space between the table and the neighboring week's table beside it, matching the page gutter
+export const SWIPE_PANE_GAP_PX = 16;
+// Releasing past this fraction of the width, or flicking, moves to the neighboring week
+const COMMIT_FRACTION = 0.25;
+const FLICK_VELOCITY = 0.35; // px/ms
+const VELOCITY_WINDOW_MS = 100;
 // Movement before we decide whether the gesture is a horizontal swipe or a vertical scroll
 const DIRECTION_LOCK_PX = 10;
-// The element follows the finger at this fraction of the distance, so it feels attached but not loose
-const FOLLOW_FACTOR = 0.35;
 const EASING = 'cubic-bezier(0.2, 0.9, 0.3, 1)';
 
 const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-/**
- * Swipe sideways on the returned element to change the week. RTL: next week is on the left, so dragging the finger to
- * the right brings it in (calls onSwipe(1)) and dragging to the left goes back (onSwipe(-1)).
- * The element follows the finger through its style directly, so dragging doesn't re-render the table.
- */
-export const useWeekSwipe = <E extends HTMLElement>(onSwipe: (direction: 1 | -1) => void) => {
-    const ref = useRef<E>(null);
-    const gesture = useRef<{ x: number, y: number, mode: 'pending' | 'swipe' | 'scroll' } | null>(null);
+export type Peek = 0 | 1 | -1;
 
-    const setOffset = (px: number) => {
-        if (!ref.current) return;
-        ref.current.style.transform = px ? `translateX(${px}px)` : '';
-        ref.current.style.opacity = px ? String(1 - Math.min(Math.abs(px) / 400, 0.35)) : '';
+interface Gesture {
+    x: number;
+    y: number;
+    mode: 'pending' | 'swipe' | 'scroll';
+    samples: { x: number, time: number }[];
+}
+
+/**
+ * Swipe sideways to change the week, like a pager: the returned track follows the finger 1:1 and `peek` says which
+ * neighboring week to render beside it (1 = next week, on the left in RTL; -1 = previous week, on the right).
+ * Dragging the finger right brings next week in, dragging left brings the previous week.
+ * When `weekOffset` changes the track snaps back in the same frame, so the neighbor becomes the table seamlessly.
+ */
+export const useWeekSwipe = <E extends HTMLElement>(weekOffset: number, onSwipe: (direction: 1 | -1) => void) => {
+    const trackRef = useRef<E>(null);
+    const gesture = useRef<Gesture | null>(null);
+    const [peek, setPeek] = useState<Peek>(0);
+    const peekRef = useRef<Peek>(0);
+    // While a finished swipe slides into place, new touches wait for the week to change
+    const settling = useRef(false);
+
+    const showPeek = (value: Peek) => {
+        if (peekRef.current === value) return;
+        peekRef.current = value;
+        setPeek(value);
+    };
+
+    // The new week has rendered: the neighbor we slid in is now the table itself, so drop the offset before painting
+    useLayoutEffect(() => {
+        const el = trackRef.current;
+        el?.getAnimations().forEach(animation => animation.cancel());
+        if (el) el.style.transform = '';
+        settling.current = false;
+        showPeek(0);
+    }, [weekOffset]);
+
+    const setX = (px: number) => {
+        if (trackRef.current) trackRef.current.style.transform = px ? `translateX(${px}px)` : '';
     };
 
     const onTouchStart = (e: React.TouchEvent) => {
-        if (e.touches.length !== 1) return;
-        gesture.current = {x: e.touches[0].clientX, y: e.touches[0].clientY, mode: 'pending'};
+        if (e.touches.length !== 1 || settling.current) return;
+        const {clientX: x, clientY: y} = e.touches[0];
+        gesture.current = {x, y, mode: 'pending', samples: [{x, time: e.timeStamp}]};
     };
 
     const onTouchMove = (e: React.TouchEvent) => {
@@ -38,48 +68,51 @@ export const useWeekSwipe = <E extends HTMLElement>(onSwipe: (direction: 1 | -1)
         if (g.mode === 'pending') {
             if (Math.abs(dx) < DIRECTION_LOCK_PX && Math.abs(dy) < DIRECTION_LOCK_PX) return;
             g.mode = Math.abs(dx) > Math.abs(dy) ? 'swipe' : 'scroll';
+            if (g.mode === 'scroll') return;
         }
-        if (g.mode === 'swipe' && !prefersReducedMotion()) setOffset(dx * FOLLOW_FACTOR);
+        g.samples.push({x: e.touches[0].clientX, time: e.timeStamp});
+        if (g.samples.length > 20) g.samples.shift();
+        if (prefersReducedMotion()) return;
+        showPeek(dx > 0 ? 1 : dx < 0 ? -1 : peekRef.current);
+        setX(dx);
     };
 
     const onTouchEnd = (e: React.TouchEvent) => {
         const g = gesture.current;
         gesture.current = null;
-        if (!g || g.mode !== 'swipe' || !ref.current) return;
-        const el = ref.current;
+        const el = trackRef.current;
+        if (!g || g.mode !== 'swipe' || !el) return;
         const dx = e.changedTouches[0].clientX - g.x;
-        const from = dx * FOLLOW_FACTOR;
-        const reduced = prefersReducedMotion();
+        const last = g.samples[g.samples.length - 1];
+        const first = g.samples.find(s => last.time - s.time <= VELOCITY_WINDOW_MS) ?? last;
+        const velocity = last.time > first.time ? (last.x - first.x) / (last.time - first.time) : 0;
+        const width = el.offsetWidth + SWIPE_PANE_GAP_PX;
+        const direction: 1 | -1 = dx > 0 ? 1 : -1;
+        const commit = Math.abs(dx) > width * COMMIT_FRACTION
+            || (Math.abs(velocity) > FLICK_VELOCITY && Math.sign(velocity) === direction);
 
-        if (Math.abs(dx) < SWIPE_THRESHOLD_PX) {
-            setOffset(0);
-            if (!reduced) el.animate([{transform: `translateX(${from}px)`}, {transform: 'none'}], {duration: 200, easing: EASING});
+        if (prefersReducedMotion()) {
+            if (commit) onSwipe(direction);
             return;
         }
-
-        const direction = dx > 0 ? 1 : -1;
-        if (reduced) {
-            setOffset(0);
-            onSwipe(direction);
-            return;
+        setX(0);
+        if (commit) {
+            // Finish the slide so the neighbor fills the frame, then switch the week (the layout effect resets the track)
+            settling.current = true;
+            const slide = el.animate([{transform: `translateX(${dx}px)`}, {transform: `translateX(${direction * width}px)`}],
+                {duration: 220, easing: EASING, fill: 'forwards'});
+            slide.onfinish = () => onSwipe(direction);
+        } else {
+            const back = el.animate([{transform: `translateX(${dx}px)`}, {transform: 'none'}], {duration: 200, easing: EASING});
+            back.onfinish = () => showPeek(0);
         }
-        // Slide out the way the finger went, switch the week, then slide the new week in from the other side
-        const exit = el.animate(
-            [{transform: `translateX(${from}px)`, opacity: el.style.opacity || 1}, {transform: `translateX(${direction * 80}px)`, opacity: 0}],
-            {duration: 130, easing: 'ease-in', fill: 'forwards'});
-        exit.onfinish = () => {
-            setOffset(0);
-            onSwipe(direction);
-            exit.cancel();
-            el.animate([{transform: `translateX(${-direction * 60}px)`, opacity: 0}, {transform: 'none', opacity: 1}],
-                {duration: 240, easing: EASING});
-        };
     };
 
     const onTouchCancel = () => {
         gesture.current = null;
-        setOffset(0);
+        setX(0);
+        showPeek(0);
     };
 
-    return {ref, handlers: {onTouchStart, onTouchMove, onTouchEnd, onTouchCancel}};
+    return {trackRef, peek, handlers: {onTouchStart, onTouchMove, onTouchEnd, onTouchCancel}};
 };
