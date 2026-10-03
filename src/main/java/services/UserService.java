@@ -11,6 +11,8 @@ import jakarta.transaction.Transactional;
 import mappers.CommandToEntityMapper;
 import mappers.user.UserCommandToEntityMapper;
 
+import java.util.List;
+
 @ApplicationScoped
 public class UserService extends BaseService<User, AddUserCommand, UpdateUserCommand> {
 
@@ -28,6 +30,11 @@ public class UserService extends BaseService<User, AddUserCommand, UpdateUserCom
     @Override
     protected CommandToEntityMapper<User, AddUserCommand, UpdateUserCommand> getMapper() {
         return commandToEntityMapper;
+    }
+
+    // The people who get scheduled; admins only manage the system
+    public List<User> listNonAdmins() {
+        return dao.listNonAdmins();
     }
 
     public User findByUsername(String username) {
