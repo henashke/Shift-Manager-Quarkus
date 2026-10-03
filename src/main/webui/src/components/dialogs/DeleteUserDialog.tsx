@@ -1,28 +1,21 @@
 import React from 'react';
+import DeleteOutlineRounded from '@mui/icons-material/DeleteOutlineRounded';
 import CommonDialog, {CommonDialogProps} from "./CommonDialog";
-import usersStore from "../../stores/UsersStore";
 
-interface DeleteUserProps extends Omit<CommonDialogProps, 'title' | 'content' | 'handleConfirm'> {
+interface DeleteUserProps extends Pick<CommonDialogProps, 'open' | 'handleDialogClose'> {
     selectedUsername?: string;
-    handleConfirm: (userToDeleteId: string) => void;
+    handleConfirm: () => void;
 }
 
-const DeleteUserDialog: React.FC<DeleteUserProps> = ({
-                                                         open,
-                                                         handleDialogClose,
-                                                         handleConfirm,
-                                                         selectedUsername
-                                                     }) => {
-    const user = usersStore.users.find(u => u.name === selectedUsername);
-
-    return (
-        <CommonDialog open={open}
-                      title={"מחיקת " + (user ? user.name : '')}
-                      content={<>האם אתה בטוח שברצונך למחוק את {user?.name}?</>}
-                      handleConfirm={handleConfirm}
-                      handleDialogClose={handleDialogClose}
-                      warningDialog/>
-    );
-}
+const DeleteUserDialog: React.FC<DeleteUserProps> = ({open, handleDialogClose, handleConfirm, selectedUsername}) => (
+    <CommonDialog open={open}
+                  title={`מחיקת ${selectedUsername ?? ''}`}
+                  description="המשתמש יוסר מהמערכת."
+                  icon={<DeleteOutlineRounded/>}
+                  confirmLabel="מחק"
+                  handleConfirm={handleConfirm}
+                  handleDialogClose={handleDialogClose}
+                  danger/>
+);
 
 export default DeleteUserDialog;
