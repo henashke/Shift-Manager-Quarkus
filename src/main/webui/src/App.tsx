@@ -46,16 +46,6 @@ const App: React.FC = observer(() => {
             },
         },
         direction: 'rtl',
-        components: {
-            MuiAppBar: {
-                styleOverrides: {
-                    colorPrimary: {
-                        backgroundColor: '#594db9',
-                        color: '#fff',
-                    },
-                },
-            },
-        },
         typography: {
             fontFamily: [
                 'Inter',
