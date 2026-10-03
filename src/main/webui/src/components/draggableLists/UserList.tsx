@@ -6,12 +6,18 @@ import DeleteUserDialog from "../dialogs/DeleteUserDialog";
 import UserInfoDialog from "../dialogs/UserInfoDialog";
 import DraggableList from './DraggableList';
 import UserCard from '../basicSharedComponents/UserCard';
+import BottomTray from '../basicSharedComponents/BottomTray';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import {useTheme} from '@mui/material/styles';
 import EditUser from "../dialogs/EditUser";
 import authStore from "../../stores/AuthStore";
 import notificationStore from "../../stores/NotificationStore";
 
 const UserList: React.FC<{ isDragged?: boolean, setIsDragged?: (val: boolean) => void }> = observer(({ isDragged, setIsDragged }) => {
     const {users} = usersStore;
+    const theme = useTheme();
+    // Same breakpoint where the shift table switches to its vertical layout
+    const isNarrowScreen = useMediaQuery(theme.breakpoints.down('md'), {noSsr: true});
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [selectedUserName, setSelectedUserName] = useState<string | undefined>(undefined);
@@ -81,23 +87,30 @@ const UserList: React.FC<{ isDragged?: boolean, setIsDragged?: (val: boolean) =>
         }
     };
 
+    const userList = <DraggableList
+        items={users}
+        getKey={u => u.name}
+        getLabel={u => u.name}
+        onDragStart={onDragStart}
+        onDrop={deleteAreaOnDropHandler}
+        onItemClick={(user) => handleInfoDialogOpen(user)}
+        contextMenuItems={(user) => [
+            {label: 'פרטי משתמש', onClick: () => handleInfoDialogOpen(user)},
+            {label: 'ערוך', onClick: () => handleEditDialogOpen(user)},
+            {label: 'מחק', onClick: () => handleDeleteDialogOpen(user)},
+        ]}
+        isDragged={isDragged}
+        embedded={isNarrowScreen}
+        renderItem={u => <UserCard name={u.name}/>}
+    />;
+
     return (
         <>
-            <DraggableList
-                items={users}
-                getKey={u => u.name}
-                getLabel={u => u.name}
-                onDragStart={onDragStart}
-                onDrop={deleteAreaOnDropHandler}
-                onItemClick={(user) => handleInfoDialogOpen(user)}
-                contextMenuItems={(user) => [
-                    {label: 'פרטי משתמש', onClick: () => handleInfoDialogOpen(user)},
-                    {label: 'ערוך', onClick: () => handleEditDialogOpen(user)},
-                    {label: 'מחק', onClick: () => handleDeleteDialogOpen(user)},
-                ]}
-                isDragged={isDragged}
-                renderItem={u => <UserCard name={u.name}/>}
-            />
+            {isNarrowScreen ? (
+                <BottomTray title="כוננים" names={users.map(u => u.name)} forceOpen={isDragged}>
+                    {userList}
+                </BottomTray>
+            ) : userList}
             <EditUser open={editDialogOpen}
                        handleDialogClose={handleEditDialogClose}
                       username={selectedUserName}/>

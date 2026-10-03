@@ -16,7 +16,11 @@ interface DraggableListProps<T> {
     renderAdditionalComponent?: JSX.Element;
     isDragged?: boolean;
     renderItem?: (item: T) => JSX.Element;
+    // Drops the card background, for when the list sits inside another surface (e.g. BottomTray)
+    embedded?: boolean;
 }
+
+const embeddedSx = {bgcolor: 'transparent', backgroundImage: 'none'};
 
 function DraggableList<T>({
                               items,
@@ -27,7 +31,8 @@ function DraggableList<T>({
                               contextMenuItems,
                               renderAdditionalComponent,
                               isDragged,
-                              renderItem
+                              renderItem,
+                              embedded
                           }: DraggableListProps<T>) {
     const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
     const [selectedItem, setSelectedItem] = useState<T | null>(null);
@@ -54,7 +59,8 @@ function DraggableList<T>({
     };
 
     return (
-        <Paper sx={{p: 2, borderRadius: 2, position: 'relative', flexGrow: 1}}>
+        <Paper elevation={embedded ? 0 : 1}
+               sx={{p: 2, borderRadius: 2, position: 'relative', flexGrow: 1, ...(embedded ? embeddedSx : {})}}>
             <>
                 <Box sx={{
                     display: 'flex',
