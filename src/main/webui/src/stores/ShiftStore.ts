@@ -30,6 +30,8 @@ export class ShiftStore {
     pendingAssignedShifts: AssignedShift[] = [];
     weekOffset = 0;
     loading = false;
+    // Shift fetches in flight; a counter so overlapping fetches (fast week clicks) don't end the indicator early
+    pendingShiftFetches = 0;
     isSuggesting = false;
 
     constructor() {
@@ -71,6 +73,7 @@ export class ShiftStore {
         }
 
         this.loading = true;
+        this.pendingShiftFetches++;
         try {
             const response = await authFetch(`${config.API_BASE_URL}/shifts`, {
                 method: 'GET',
@@ -91,8 +94,16 @@ export class ShiftStore {
                 this.loading = false;
             });
             console.error(error);
+        } finally {
+            runInAction(() => {
+                this.pendingShiftFetches--;
+            });
         }
     };
+
+    get isFetchingShifts() {
+        return this.pendingShiftFetches > 0;
+    }
     unassignUser = async (shift: Shift) => {
         const pendingShiftToUnassign = this.pendingAssignedShifts.find(s => sameShift(s, shift));
         if (pendingShiftToUnassign) {

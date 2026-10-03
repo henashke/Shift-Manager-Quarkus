@@ -1,4 +1,4 @@
-import {makeAutoObservable, reaction} from 'mobx';
+import {makeAutoObservable, reaction, runInAction} from 'mobx';
 import {sameShift, Shift, shiftKey} from "./ShiftStore";
 import {authFetch} from "../api";
 import config from "../config";
@@ -32,6 +32,8 @@ const groupByShiftKey = (constraints: Constraint[]) => {
 class ConstraintStore {
     constraints: Constraint[] = [];
     pendingConstraints: Constraint[] = [];
+    // Constraint fetches in flight, for the table's loading state
+    pendingFetches = 0;
 
     // Computed lookups, so each table cell doesn't scan every constraint
     get constraintsByShiftKey() {
@@ -187,17 +189,30 @@ class ConstraintStore {
             return;
         }
 
-        const url = `${config.API_BASE_URL}/constraints`;
-        const res = await authFetch(url, {
-            headers: authStore.getAuthHeaders()
-        });
-        if (!res.ok) throw new Error('Failed to fetch constraints');
-        const json = await res.json();
-        const data: Constraint[] = (json);
-        this.constraints = data.map((c: Constraint) => ({
-            ...c,
-            date: new Date(c.shift.date)
-        }));
+        this.pendingFetches++;
+        try {
+            const url = `${config.API_BASE_URL}/constraints`;
+            const res = await authFetch(url, {
+                headers: authStore.getAuthHeaders()
+            });
+            if (!res.ok) throw new Error('Failed to fetch constraints');
+            const json = await res.json();
+            const data: Constraint[] = (json);
+            runInAction(() => {
+                this.constraints = data.map((c: Constraint) => ({
+                    ...c,
+                    date: new Date(c.shift.date)
+                }));
+            });
+        } finally {
+            runInAction(() => {
+                this.pendingFetches--;
+            });
+        }
+    }
+
+    get isFetching() {
+        return this.pendingFetches > 0;
     }
 }
 
