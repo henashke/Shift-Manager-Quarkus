@@ -53,10 +53,11 @@ const App: React.FC = observer(() => {
             divider: darkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(20, 20, 40, 0.09)',
         },
         direction: 'rtl',
+        // Rubik (bundled, see index.tsx) covers Hebrew and Latin, and its soft corners match the rounded UI
         typography: {
             fontFamily: [
-                'Inter',
-                'Segoe UI',
+                '"Rubik Variable"',
+                '"Segoe UI"',
                 'Arial',
                 'sans-serif',
             ].join(','),

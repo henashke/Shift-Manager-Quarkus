@@ -41,6 +41,8 @@ npx eslint src          # lint (CRA's react-app config)
 - **Colors** come from the theme palette (`App.tsx`) and `src/theme.ts` (`primaryGradient`); don't hard-code hex values in
   components. User card colors (`stringToColor`), the pending color (`secondary`) and error/warning/success (constraint
   cards) are deliberately left alone when changing the palette.
+- **Type:** Rubik (`@fontsource-variable/rubik`, imported in `index.tsx`) for Hebrew and Latin alike. Fonts are bundled
+  from npm, not loaded from a CDN, so the app makes no third-party requests.
 - **Buttons** get their look from the theme (`MuiButton` in `App.tsx`), so don't restyle them per page: use
   `variant="contained"` for the primary action (purple gradient), `variant="contained" color="error"` for destructive
   ones, and `variant="outlined" color="inherit"` for secondary ones. Icons and spacing between buttons use `gap`, never
