@@ -7,7 +7,7 @@ import UserCard from '../basicSharedComponents/UserCard';
 import TintedCard from '../basicSharedComponents/TintedCard';
 import {useTheme} from '@mui/material/styles';
 import {Box, Container, Typography} from "@mui/material";
-import {sameShift, Shift} from '../../stores/ShiftStore';
+import shiftStore, {sameShift, Shift} from '../../stores/ShiftStore';
 import authStore from "../../stores/AuthStore";
 import {Constraint, constraintStore, ConstraintType} from "../../stores/ConstraintStore";
 import usersStore from "../../stores/UsersStore";
@@ -27,10 +27,15 @@ const ConstraintTab: React.FC = observer(() => {
     const theme = useTheme();
     const [isDragged, setIsDragged] = useState(false);
     const [selectedUser, setSelectedUser] = useState<string>(authStore.username || '');
+    const {weekOffset} = shiftStore;
+
     useEffect(() => {
         usersStore.fetchUsers();
-        constraintStore.fetchConstraint();
     }, []);
+
+    useEffect(() => {
+        constraintStore.fetchConstraint(weekOffset);
+    }, [weekOffset]);
 
     const onAssignedConstraintDragStart = (e: React.DragEvent, type: ConstraintType, fromShift?: Shift, username?: string) => {
         requestAnimationFrame(() => setIsDragged(true));
@@ -159,7 +164,7 @@ const ConstraintTab: React.FC = observer(() => {
         <Container maxWidth={"xl"} dir="rtl">
             <CalendarNavigation/>
             <ShiftTable itemList={constraintTypes}
-                        loading={constraintStore.isFetching}
+                        loading={constraintStore.isFetching && !constraintStore.hasConstraintsForWeek(weekOffset)}
                         defaultItem={ConstraintType.CANT}
                         retrieveItemFromShift={retrieveConstraintTypeFromShift}
                         assignHandler={assignConstraint}
