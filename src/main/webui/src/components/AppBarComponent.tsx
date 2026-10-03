@@ -1,11 +1,66 @@
 import React, {startTransition, useState} from 'react';
-import {AppBar, Avatar, Box, IconButton, Menu, MenuItem, Tab, Tabs, Toolbar, Tooltip, Typography} from '@mui/material';
-import {DarkMode, LightMode} from '@mui/icons-material';
+import AppBar from '@mui/material/AppBar';
+import Avatar from '@mui/material/Avatar';
+import Box from '@mui/material/Box';
+import IconButton from '@mui/material/IconButton';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
+import Toolbar from '@mui/material/Toolbar';
+import Tooltip from '@mui/material/Tooltip';
+import {SxProps, Theme} from '@mui/material/styles';
+import DarkMode from '@mui/icons-material/DarkMode';
+import LightMode from '@mui/icons-material/LightMode';
 import LoginIcon from '@mui/icons-material/Login';
 import {useNavigate} from 'react-router-dom';
 import authStore from "../stores/AuthStore";
 import LogoutDialog from "./dialogs/LogoutDialog";
 import {stringToColor} from "./shiftTable/ShiftTable";
+
+const appBarSx: SxProps<Theme> = {
+    mb: 2,
+    bgcolor: 'background.default',
+    backgroundImage: 'none',
+    boxShadow: 'none',
+    borderBottom: '1px solid',
+    borderColor: 'divider',
+};
+
+const squareButtonSx: SxProps<Theme> = {
+    width: 36,
+    height: 36,
+    borderRadius: 2,
+    border: '1px solid',
+    borderColor: 'divider',
+};
+
+// A segmented control: the indicator is stretched into a pill behind the selected tab, so it still slides on change
+const tabsSx: SxProps<Theme> = {
+    minHeight: 0,
+    p: 0.5,
+    borderRadius: 3,
+    border: '1px solid',
+    borderColor: 'divider',
+    bgcolor: 'background.paper',
+    '& .MuiTabs-indicator': {
+        height: '100%',
+        borderRadius: 2,
+        zIndex: 0,
+        background: theme => `linear-gradient(90deg, ${theme.palette.primary.main}, #8b5cf6)`,
+    },
+};
+
+const tabSx: SxProps<Theme> = {
+    zIndex: 1,
+    minHeight: 0,
+    minWidth: 0,
+    px: 2,
+    py: 0.75,
+    fontWeight: 600,
+    color: 'text.secondary',
+    '&.Mui-selected': {color: 'common.white'},
+};
 
 export const AppBarComponent = ({darkMode, setDarkMode}: {
     darkMode: boolean,
@@ -32,65 +87,65 @@ export const AppBarComponent = ({darkMode, setDarkMode}: {
         });
     };
 
-    return <AppBar position="sticky" color="primary" sx={{mb: 2}}>
-        <Toolbar sx={{justifyContent: 'space-between'}}>
-            <Box sx={{display: 'flex', alignItems: 'center', flex: 1}}>
-                <IconButton
-                    aria-label="toggle theme"
-                    onClick={() => setDarkMode(!darkMode)}
-                    size="large"
-                >
-                    {darkMode ? <LightMode sx={{color: '#ffe066'}}/> : <DarkMode sx={{color: '#23272f'}}/>}
-                </IconButton>
-                <Box sx={{flex: 1, display: 'flex', justifyContent: 'center'}}>
-                    <Tabs value={tabValue} onChange={handleTabChange} textColor="inherit"
-                          indicatorColor="secondary">
-                        <Tab label="שיבוצים"/>
-                        <Tab label="אילוצים"/>
-                        <Tab label="הגדרות"/>
-                    </Tabs>
-                </Box>
-                {!authStore.isAuthenticated() && (
-                    <IconButton aria-label="login" color="inherit" onClick={() => navigate('/login')}>
-                        <LoginIcon/>
-                    </IconButton>
-                )}
-                {authStore.isAuthenticated() && (
-                    <>
-                        {authStore.username &&
-                            <Tooltip title="אפשרויות משתמש">
-                                <Avatar sx={{bgcolor: stringToColor(authStore.username), cursor: 'pointer'}}
-                                        onClick={e => setAnchorEl(e.currentTarget)}>
-                                    <Typography variant={"button"} sx={{color: 'common.white'}}>
-                                        {authStore.username[0]}
-                                    </Typography>
-                                </Avatar>
-                            </Tooltip>
-                        }
-                        <Menu
-                            anchorEl={anchorEl}
-                            open={menuOpen}
-                            onClose={() => setAnchorEl(null)}
-                            anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
-                            transformOrigin={{vertical: 'top', horizontal: 'right'}}
-                        >
-                            <MenuItem onClick={() => {
-                                setAnchorEl(null);
-                                setLogoutOpen(true);
-                            }}>יציאה</MenuItem>
-                        </Menu>
-                    </>
-                )}
-                <LogoutDialog
-                    open={logoutOpen}
-                    onClose={() => setLogoutOpen(false)}
-                    onLogout={() => {
-                        authStore.logout();
-                        setLogoutOpen(false);
-                    }}
-                    username={authStore.username || ''}
-                />
+    return <AppBar position="sticky" color="inherit" sx={appBarSx}>
+        <Toolbar variant="dense" sx={{gap: 1, minHeight: 56, px: {xs: 1.5, sm: 2}}}>
+            <IconButton aria-label="החלף ערכת צבעים" onClick={() => setDarkMode(!darkMode)} sx={squareButtonSx}>
+                {darkMode ? <LightMode fontSize="small" sx={{color: '#ffe066'}}/> : <DarkMode fontSize="small"/>}
+            </IconButton>
+            <Box sx={{flex: 1, display: 'flex', justifyContent: 'center'}}>
+                <Tabs value={tabValue} onChange={handleTabChange} sx={tabsSx}>
+                    <Tab label="שיבוצים" sx={tabSx}/>
+                    <Tab label="אילוצים" sx={tabSx}/>
+                    <Tab label="הגדרות" sx={tabSx}/>
+                </Tabs>
             </Box>
+            {authStore.isAuthenticated() ? (
+                <>
+                    {authStore.username ? (
+                        <Tooltip title="אפשרויות משתמש">
+                            <IconButton aria-label="אפשרויות משתמש" onClick={e => setAnchorEl(e.currentTarget)}
+                                        sx={{p: 0, borderRadius: 2}}>
+                                <Avatar variant="rounded" sx={{
+                                    width: 36,
+                                    height: 36,
+                                    borderRadius: 2,
+                                    bgcolor: stringToColor(authStore.username),
+                                    color: 'common.white',
+                                    fontSize: '1rem',
+                                    fontWeight: 700,
+                                }}>
+                                    {authStore.username[0].toUpperCase()}
+                                </Avatar>
+                            </IconButton>
+                        </Tooltip>
+                    ) : null}
+                    <Menu
+                        anchorEl={anchorEl}
+                        open={menuOpen}
+                        onClose={() => setAnchorEl(null)}
+                        anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
+                        transformOrigin={{vertical: 'top', horizontal: 'right'}}
+                    >
+                        <MenuItem onClick={() => {
+                            setAnchorEl(null);
+                            setLogoutOpen(true);
+                        }}>יציאה</MenuItem>
+                    </Menu>
+                </>
+            ) : (
+                <IconButton aria-label="התחברות" onClick={() => navigate('/login')} sx={squareButtonSx}>
+                    <LoginIcon fontSize="small"/>
+                </IconButton>
+            )}
+            <LogoutDialog
+                open={logoutOpen}
+                onClose={() => setLogoutOpen(false)}
+                onLogout={() => {
+                    authStore.logout();
+                    setLogoutOpen(false);
+                }}
+                username={authStore.username || ''}
+            />
         </Toolbar>
     </AppBar>
 }
