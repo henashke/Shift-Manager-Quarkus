@@ -28,6 +28,7 @@ npx eslint src          # lint (CRA's react-app config)
   `subtitle` for the context line (the shift's preset, the constraint type).
 - **Dialogs** are built on `CommonDialog` (`components/dialogs/`): icon, title, one-line `description`, an action-named
   `confirmLabel`, and `danger` for destructive actions. It sets `dir="rtl"` itself, since dialogs render in a portal
-  outside the app's RTL containers. Use `DialogTextField` (label above the field) and `OptionGrid` (instead of a native
-  select) inside them.
+  outside the app's RTL containers. Use `DialogTextField` and `DialogSelect` (labels above the field) inside them.
+- **Pickers use `NativeSelect`**, not MUI's `Select`, so phones open their own picker (iOS's native one). Keep it that
+  way when restyling.
 - Hoist static `sx` objects to module level; use ternaries, not `&&`, for conditional JSX.
