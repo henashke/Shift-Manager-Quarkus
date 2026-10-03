@@ -26,4 +26,8 @@ npx eslint src          # lint (CRA's react-app config)
 - **User colors** come from `stringToColor(name)` (`components/shiftTable/ShiftTable.tsx`); pending items use
   `theme.palette.secondary.main`. Show a user with `UserCard` (`components/basicSharedComponents/`), passing
   `subtitle` for the context line (the shift's preset, the constraint type).
+- **Dialogs** are built on `CommonDialog` (`components/dialogs/`): icon, title, one-line `description`, an action-named
+  `confirmLabel`, and `danger` for destructive actions. It sets `dir="rtl"` itself, since dialogs render in a portal
+  outside the app's RTL containers. Use `DialogTextField` (label above the field) and `OptionGrid` (instead of a native
+  select) inside them.
 - Hoist static `sx` objects to module level; use ternaries, not `&&`, for conditional JSX.

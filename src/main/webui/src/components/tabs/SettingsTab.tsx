@@ -106,7 +106,7 @@ const SettingsTab: React.FC = observer(() => {
             notificationStore.showUnauthorizedError();
             return;
         }
-        setRecalculateScoresDialogOpen(false);
+        setPresetNameDialogOpen(false);
         const weights: ShiftWeight[] = [];
         for (const day of daysOfWeek) {
             for (const type of shiftTypes) {

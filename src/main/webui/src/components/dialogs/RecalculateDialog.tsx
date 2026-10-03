@@ -1,20 +1,18 @@
 import React from 'react';
+import CalculateOutlined from '@mui/icons-material/CalculateOutlined';
 import CommonDialog, {CommonDialogProps} from "./CommonDialog";
 
-interface DeleteUserProps extends Omit<CommonDialogProps, 'title' | 'content'> {
-}
+type RecalculateDialogProps = Pick<CommonDialogProps, 'open' | 'handleDialogClose' | 'handleConfirm'>;
 
-const RecalculateDialog: React.FC<DeleteUserProps> = ({
-                                                          open,
-                                                          handleDialogClose,
-                                                          handleConfirm,
-                                                      }) => (
+const RecalculateDialog: React.FC<RecalculateDialogProps> = ({open, handleDialogClose, handleConfirm}) => (
     <CommonDialog open={open}
-                  title={"חישוב ניקוד מחדש"}
-                  content={<>האם אתה בטוח שברצונך לחשב את הניקוד מחדש?</>}
+                  title="חישוב ניקוד מחדש"
+                  description="הניקוד של כל המשתמשים יחושב מחדש לפי המשמרות שלהם."
+                  icon={<CalculateOutlined/>}
+                  confirmLabel="חשב מחדש"
                   handleConfirm={handleConfirm}
                   handleDialogClose={handleDialogClose}
-                  warningDialog/>
+                  danger/>
 );
 
 export default RecalculateDialog;

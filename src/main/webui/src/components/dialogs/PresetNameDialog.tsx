@@ -1,5 +1,7 @@
-import React, {useState} from 'react';
-import {Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Typography} from '@mui/material';
+import React, {useEffect, useState} from 'react';
+import SaveOutlined from '@mui/icons-material/SaveOutlined';
+import CommonDialog from "./CommonDialog";
+import DialogTextField from "./DialogTextField";
 
 interface PresetNameDialogProps {
     open: boolean;
@@ -11,31 +13,21 @@ interface PresetNameDialogProps {
 const PresetNameDialog: React.FC<PresetNameDialogProps> = ({open, defaultValue, onClose, onSave}) => {
     const [value, setValue] = useState(defaultValue);
 
-    React.useEffect(() => {
+    useEffect(() => {
         setValue(defaultValue);
     }, [defaultValue, open]);
 
     return (
-        <Dialog open={open} onClose={onClose}>
-            <DialogTitle>שמור פריסט</DialogTitle>
-            <DialogContent>
-                <Typography variant="body2" color="textSecondary" sx={{mb: 1}}>
-                    שמירה בשם שלא קיים תיצור פריסט חדש
-                </Typography>
-                <TextField
-                    autoFocus
-                    margin="dense"
-                    label="שם פריסט"
-                    fullWidth
-                    value={value}
-                    onChange={e => setValue(e.target.value)}
-                />
-            </DialogContent>
-            <DialogActions>
-                <Button onClick={onClose} color="primary">ביטול</Button>
-                <Button onClick={() => onSave(value)} color="primary" variant="contained">שמור</Button>
-            </DialogActions>
-        </Dialog>
+        <CommonDialog open={open}
+                      title="שמירת פריסט"
+                      icon={<SaveOutlined/>}
+                      content={<DialogTextField label="שם הפריסט" value={value} autoFocus
+                                                hint="שם שעוד לא קיים ייצור פריסט חדש."
+                                                onChange={e => setValue(e.target.value)}/>}
+                      confirmLabel="שמור"
+                      disableConfirmButton={!value.trim()}
+                      handleConfirm={() => onSave(value)}
+                      handleDialogClose={onClose}/>
     );
 };
 
