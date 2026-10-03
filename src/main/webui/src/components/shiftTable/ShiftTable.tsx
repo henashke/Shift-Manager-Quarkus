@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {observer} from 'mobx-react-lite';
 import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
@@ -25,11 +25,14 @@ import notificationStore from '../../stores/NotificationStore';
 import DeleteOutlineRounded from "@mui/icons-material/DeleteOutlineRounded";
 import {dangerMenuItemSx} from "../basicSharedComponents/menuStyles";
 import {formatDate} from "./CalendarNavigation";
+import CardSkeleton from "../basicSharedComponents/CardSkeleton";
 
 const days = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 const shiftTypes = ['יום', 'לילה'] as const;
 
 interface ShiftTableProps<T> {
+    // While true (and only once it has lasted a moment), every cell shows a skeleton card instead of its content
+    loading?: boolean;
     retrieveItemFromShift: (shift: Shift) => T | undefined;
     getItemName: (item: T, shift?: Shift) => string;
     getItemElement?: (item: T, shift: Shift) => JSX.Element;
@@ -73,11 +76,13 @@ function ShiftTable<T>({
                            itemName,
                            isRemoveItemDisabled,
                            requireAdmin = true,
+                           loading = false,
                            additionalContextMenuItems,
                        }: ShiftTableProps<T>) {
     const theme = useTheme();
     const isNarrowScreen = useMediaQuery(theme.breakpoints.down('md'), {noSsr: true}); // Switch to vertical on screens smaller than 'md' breakpoint
     const {weekDates} = store;
+    const showSkeletons = useDelayedFlag(loading, SKELETON_DELAY_MS);
     const [assignDialogOpen, setAssignDialogOpen] = useState(false);
     const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
     const [contextMenu, setContextMenu] = useState<{
@@ -185,6 +190,16 @@ function ShiftTable<T>({
 
     const createTableCell = (date: Date, shiftType: ShiftType) => {
         const shift = {date: date, type: shiftType};
+        const cellSx = {minHeight: 48, color: 'common.white', bgcolor: isToday(date) ? todayTint : undefined};
+        if (showSkeletons) {
+            // Day, then shift type, so the shimmer travels across the table as one wave
+            const delayMs = date.getDay() * 90 + shiftTypes.indexOf(shiftType) * 45;
+            return (
+                <TableCell key={'table-cell-' + formatDate(date) + shiftType} align="center" sx={cellSx}>
+                    <CardSkeleton delayMs={delayMs}/>
+                </TableCell>
+            );
+        }
         const item = getPendingOrAssignedItem(shift);
         return (
             <TableCell
@@ -194,12 +209,7 @@ function ShiftTable<T>({
                 onDragOver={onDragOver}
                 onClick={(e) => shift && isAllContextMenuDisabledButAddItem(shift) ? handleCellClick(shift) : handleContextMenu(e, shift)}
                 onContextMenu={e => shift && handleContextMenu(e, shift)}
-                sx={{
-                    minHeight: 48,
-                    color: 'common.white',
-                    cursor: 'pointer',
-                    bgcolor: isToday(date) ? todayTint : undefined
-                }}
+                sx={{...cellSx, cursor: 'pointer'}}
             >
                 {item ? (
                     <Box
@@ -267,7 +277,7 @@ function ShiftTable<T>({
                     requireAdmin={requireAdmin}
                 />
             }
-            <TableContainer component={Paper} sx={{borderRadius: 3, boxShadow: 3, direction: 'rtl', height: '100%'}}
+            <TableContainer component={Paper} aria-busy={showSkeletons} sx={{borderRadius: 3, boxShadow: 3, direction: 'rtl', height: '100%'}}
                             dir="rtl">
                 <Table className="shift-table">
                     {tableHeader}
@@ -323,6 +333,23 @@ function ShiftTable<T>({
         </Box>
     );
 }
+
+// Fast responses keep showing the current data instead of flashing skeletons
+const SKELETON_DELAY_MS = 200;
+
+// True only once `value` has stayed true for `delayMs`; turns false immediately
+const useDelayedFlag = (value: boolean, delayMs: number) => {
+    const [delayed, setDelayed] = useState(false);
+    useEffect(() => {
+        if (!value) {
+            setDelayed(false);
+            return;
+        }
+        const timer = setTimeout(() => setDelayed(true), delayMs);
+        return () => clearTimeout(timer);
+    }, [value, delayMs]);
+    return value && delayed;
+};
 
 const isToday = (date: Date) => date.toDateString() === new Date().toDateString();
 

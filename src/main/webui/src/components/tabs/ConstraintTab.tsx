@@ -159,6 +159,7 @@ const ConstraintTab: React.FC = observer(() => {
         <Container maxWidth={"xl"} dir="rtl">
             <CalendarNavigation/>
             <ShiftTable itemList={constraintTypes}
+                        loading={constraintStore.isFetching}
                         defaultItem={ConstraintType.CANT}
                         retrieveItemFromShift={retrieveConstraintTypeFromShift}
                         assignHandler={assignConstraint}

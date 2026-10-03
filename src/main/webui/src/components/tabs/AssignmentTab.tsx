@@ -183,6 +183,7 @@ const AssignmentTab: React.FC = observer(() => {
                 </Button>
             </> : undefined}/>
             <ShiftTable onDropHandler={handleDrop}
+                        loading={shiftStore.isFetchingShifts}
                         onDragStartHandler={onDragStart}
                         onDragEndHandler={onDragEnd}
                         assignHandler={assignHandler}
