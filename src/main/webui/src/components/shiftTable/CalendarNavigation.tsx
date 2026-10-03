@@ -22,16 +22,13 @@ const navButtonSx = {
     flexShrink: 0,
 };
 
-// A thin pill that fits on the caption line without making it much taller or wider
+// A thin filled pill (the theme's primary gradient) that fits on the caption line without making it taller
 const todayButtonSx = {
     minWidth: 0,
     height: 20,
     px: 1,
     py: 0,
     borderRadius: 10,
-    border: '1px solid',
-    borderColor: 'primary.main',
-    color: 'primary.light',
     fontSize: '0.7rem',
     fontWeight: 600,
     lineHeight: 1,
@@ -71,8 +68,8 @@ const CalendarNavigation: React.FC<CalendarNavigationProps> = observer(({actions
                             {weekOffsetLabel(store.weekOffset)}
                         </Typography>
                         {store.weekOffset !== 0 ? (
-                            <Button onClick={handleTodayClick} aria-label="חזרה לשבוע הנוכחי" sx={todayButtonSx}>
-                                היום
+                            <Button variant="contained" onClick={handleTodayClick} sx={todayButtonSx}>
+                                חזור להיום
                             </Button>
                         ) : null}
                     </Box>
