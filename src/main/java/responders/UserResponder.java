@@ -13,6 +13,8 @@ import mappers.user.UserDtoToCommandMapper;
 import services.BaseService;
 import services.UserService;
 
+import java.util.List;
+
 @ApplicationScoped
 public class UserResponder extends BaseResponder<User, AddUserCommand, UpdateUserCommand, UserDto> {
 
@@ -30,6 +32,10 @@ public class UserResponder extends BaseResponder<User, AddUserCommand, UpdateUse
     @Override
     protected UserDtoToCommandMapper getDtoToCommandMapper() {
         return dtoToCommandMapper;
+    }
+
+    public List<UserDto> listNonAdmins() {
+        return dtoToCommandMapper.mapToDto(service.listNonAdmins());
     }
 
     @Transactional
