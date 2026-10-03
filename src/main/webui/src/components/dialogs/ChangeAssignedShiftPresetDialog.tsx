@@ -4,7 +4,7 @@ import TuneRounded from '@mui/icons-material/TuneRounded';
 import shiftStore, {AssignedShift} from '../../stores/ShiftStore';
 import shiftWeightStore from '../../stores/ShiftWeightStore';
 import CommonDialog from "./CommonDialog";
-import OptionGrid from "./OptionGrid";
+import DialogSelect from "./DialogSelect";
 import {formatShiftDescription} from "./AssignToShiftDialog";
 
 interface ChangeAssignedShiftPresetProps {
@@ -18,7 +18,7 @@ const ChangeAssignedShiftPresetDialog: React.FC<ChangeAssignedShiftPresetProps> 
                                                                                                 onClose,
                                                                                                 assignedShift,
                                                                                             }) => {
-    const [selectedPresetName, setSelectedPresetName] = useState(assignedShift.preset?.name);
+    const [selectedPresetName, setSelectedPresetName] = useState<string | undefined>(assignedShift.preset?.name);
 
     // The dialog stays mounted, so pick up the shift it was opened for
     useEffect(() => {
@@ -35,10 +35,10 @@ const ChangeAssignedShiftPresetDialog: React.FC<ChangeAssignedShiftPresetProps> 
                       title="שינוי פריסט"
                       description={`${assignedShift.assignedUsername}, ${formatShiftDescription(assignedShift)}`}
                       icon={<TuneRounded/>}
-                      content={<OptionGrid label="פריסט"
-                                           options={Array.from(shiftWeightStore.presets.values()).map(preset => preset.name)}
-                                           value={selectedPresetName}
-                                           onChange={setSelectedPresetName}/>}
+                      content={<DialogSelect label="פריסט"
+                                             options={Array.from(shiftWeightStore.presets.values()).map(preset => preset.name)}
+                                             defaultValue={assignedShift.preset?.name}
+                                             onChange={name => setSelectedPresetName(name || undefined)}/>}
                       confirmLabel="שמור"
                       disableConfirmButton={!selectedPresetName || selectedPresetName === assignedShift.preset?.name}
                       handleConfirm={handleSave}

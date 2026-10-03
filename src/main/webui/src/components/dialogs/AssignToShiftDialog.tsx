@@ -3,7 +3,7 @@ import {observer} from 'mobx-react-lite';
 import EventAvailableOutlined from '@mui/icons-material/EventAvailableOutlined';
 import {Shift} from '../../stores/ShiftStore';
 import CommonDialog from "./CommonDialog";
-import OptionGrid from "./OptionGrid";
+import DialogSelect from "./DialogSelect";
 
 interface AssignToShiftDialogProps<T> {
     open: boolean;
@@ -43,10 +43,10 @@ function AssignToShiftDialog<T>({
                       title={`שבץ ${itemTitle}`}
                       description={formatShiftDescription(shift)}
                       icon={<EventAvailableOutlined/>}
-                      content={<OptionGrid label={itemTitle}
-                                           options={itemList.map(getItemName)}
-                                           value={selectedItem ? getItemName(selectedItem) : undefined}
-                                           onChange={name => setSelectedItem(itemList.find(item => getItemName(item) === name))}/>}
+                      content={<DialogSelect label={itemTitle}
+                                             options={itemList.map(getItemName)}
+                                             defaultValue={defaultItem ? getItemName(defaultItem) : undefined}
+                                             onChange={name => setSelectedItem(itemList.find(item => getItemName(item) === name))}/>}
                       confirmLabel="שבץ"
                       disableConfirmButton={!selectedItem}
                       handleConfirm={() => selectedItem && assignFunction(shift, selectedItem)}

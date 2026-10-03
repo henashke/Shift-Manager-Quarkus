@@ -9,6 +9,8 @@ interface NativeSelectProps {
     onChange: (event: React.ChangeEvent<HTMLSelectElement>) => void;
     hideTitleElement?: boolean;
     disabled?: boolean;
+    fullWidth?: boolean;
+    id?: string;
 }
 
 const StyledSelect = styled("select")(({theme}) => ({
@@ -32,10 +34,13 @@ const NativeSelect: React.FC<NativeSelectProps> = observer(({
                                                                 disabled,
                                                                 onChange,
                                                                 hideTitleElement,
-                                                                defaultValue
+                                                                defaultValue,
+                                                                fullWidth,
+                                                                id
                                                             }) => {
     return (
-        <StyledSelect onChange={onChange} disabled={disabled} defaultValue={defaultValue ?? ""}>
+        <StyledSelect id={id} onChange={onChange} disabled={disabled} defaultValue={defaultValue ?? ""}
+                      style={fullWidth ? {width: '100%'} : undefined}>
             {hideTitleElement ? <></> : <option value="">{title}</option>}
             {options.map(option => <option key={option} value={option}>{option}</option>)}
         </StyledSelect>
