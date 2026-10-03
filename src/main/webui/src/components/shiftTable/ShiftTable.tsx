@@ -26,6 +26,7 @@ import DeleteOutlineRounded from "@mui/icons-material/DeleteOutlineRounded";
 import {dangerMenuItemSx} from "../basicSharedComponents/menuStyles";
 import {formatDate} from "./CalendarNavigation";
 import CardSkeleton from "../basicSharedComponents/CardSkeleton";
+import {useWeekSwipe} from "./useWeekSwipe";
 
 const days = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 const shiftTypes = ['יום', 'לילה'] as const;
@@ -82,6 +83,8 @@ function ShiftTable<T>({
     const theme = useTheme();
     const isNarrowScreen = useMediaQuery(theme.breakpoints.down('md'), {noSsr: true}); // Switch to vertical on screens smaller than 'md' breakpoint
     const {weekDates} = store;
+    const {ref: swipeRef, handlers: swipeHandlers} =
+        useWeekSwipe<HTMLDivElement>(direction => store.setWeekOffset(store.weekOffset + direction));
     const showSkeletons = useDelayedFlag(loading, SKELETON_DELAY_MS);
     const [assignDialogOpen, setAssignDialogOpen] = useState(false);
     const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
@@ -277,7 +280,9 @@ function ShiftTable<T>({
                     requireAdmin={requireAdmin}
                 />
             }
-            <TableContainer component={Paper} aria-busy={showSkeletons} sx={{borderRadius: 3, boxShadow: 3, direction: 'rtl', height: '100%'}}
+            <TableContainer component={Paper} aria-busy={showSkeletons} ref={swipeRef} {...swipeHandlers}
+                            // Narrow screens: vertical scrolling stays with the browser, sideways gestures change the week
+                            sx={{borderRadius: 3, boxShadow: 3, direction: 'rtl', height: '100%', touchAction: isNarrowScreen ? 'pan-y' : undefined}}
                             dir="rtl">
                 <Table className="shift-table">
                     {tableHeader}
