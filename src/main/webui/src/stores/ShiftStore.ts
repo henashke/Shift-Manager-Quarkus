@@ -32,6 +32,10 @@ export class ShiftStore {
     loading = false;
     // Shift fetches in flight; a counter so overlapping fetches (fast week clicks) don't end the indicator early
     pendingShiftFetches = 0;
+    // The week offset the loaded shifts are centered on (null before the first load)
+    loadedShiftsCenter: number | null = null;
+    // Only the newest request may update the shifts, so a slow, older response can't overwrite a newer week
+    private latestShiftRequest = 0;
     isSuggesting = false;
 
     constructor() {
@@ -67,31 +71,37 @@ export class ShiftStore {
         });
     }
 
-    fetchShifts = async () => {
+    // Loads the weeks around weekOffset (the server's window), never the whole history
+    fetchShifts = async (weekOffset: number = this.weekOffset) => {
         if (!authStore.isAuthenticated()) {
             return;
         }
 
         this.loading = true;
         this.pendingShiftFetches++;
+        const requestId = ++this.latestShiftRequest;
         try {
-            const response = await authFetch(`${config.API_BASE_URL}/shifts`, {
+            const response = await authFetch(`${config.API_BASE_URL}/shifts?weekOffset=${weekOffset}`, {
                 method: 'GET',
                 headers: authStore.getAuthHeaders(),
             });
             if (!response.ok) throw new Error('Failed to fetch shifts');
             const data = await response.json();
             runInAction(() => {
+                this.loading = false;
+                if (requestId !== this.latestShiftRequest) return;
                 this.assignedShifts = data.map((shift: any) => ({
                     ...shift,
                     date: new Date(shift.date)
                 }));
-                this.loading = false;
+                this.loadedShiftsCenter = weekOffset;
             });
         } catch (error) {
             runInAction(() => {
-                this.assignedShifts = [];
                 this.loading = false;
+                if (requestId !== this.latestShiftRequest) return;
+                this.assignedShifts = [];
+                this.loadedShiftsCenter = null;
             });
             console.error(error);
         } finally {
@@ -103,6 +113,11 @@ export class ShiftStore {
 
     get isFetchingShifts() {
         return this.pendingShiftFetches > 0;
+    }
+
+    // True when the displayed week is inside the loaded window, so it can show while a re-centering fetch runs
+    get hasShiftsForCurrentWeek() {
+        return isInWindow(this.weekOffset, this.loadedShiftsCenter);
     }
     unassignUser = async (shift: Shift) => {
         const pendingShiftToUnassign = this.pendingAssignedShifts.find(s => sameShift(s, shift));
@@ -150,9 +165,9 @@ export class ShiftStore {
         return shift ? this.assignedOrPendingShiftsByKey.get(shiftKey(shift)) : undefined;
     }
 
+    // Tabs fetch their own data for the new week (see their weekOffset effects)
     setWeekOffset = (offset: number) => {
         this.weekOffset = offset;
-        this.fetchShifts();
     }
 
     assignShiftPending = (shift: AssignedShift) => {
@@ -309,6 +324,14 @@ export class ShiftStore {
 }
 
 const store = new ShiftStore();
+// The server returns the requested week plus 2 weeks on each side (WeekWindow.java). A week counts as loaded only
+// within 1 of the center: the server works out "this week" in its own time zone, which can be a week off from ours
+// around Saturday midnight.
+const LOADED_WEEKS_RADIUS = 1;
+
+export const isInWindow = (weekOffset: number, loadedCenter: number | null) =>
+    loadedCenter !== null && Math.abs(weekOffset - loadedCenter) <= LOADED_WEEKS_RADIUS;
+
 // Same day (local time) and type, matching sameShift
 export const shiftKey = (shift: Shift) => {
     const date = new Date(shift.date);

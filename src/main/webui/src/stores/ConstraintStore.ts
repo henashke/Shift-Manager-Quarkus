@@ -1,5 +1,5 @@
 import {makeAutoObservable, reaction, runInAction} from 'mobx';
-import {sameShift, Shift, shiftKey} from "./ShiftStore";
+import {isInWindow, sameShift, Shift, shiftKey} from "./ShiftStore";
 import {authFetch} from "../api";
 import config from "../config";
 import authStore from "./AuthStore";
@@ -34,6 +34,10 @@ class ConstraintStore {
     pendingConstraints: Constraint[] = [];
     // Constraint fetches in flight, for the table's loading state
     pendingFetches = 0;
+    // The week offset the loaded constraints are centered on (null before the first load)
+    loadedCenter: number | null = null;
+    // Only the newest request may update the constraints, so a slow, older response can't overwrite a newer week
+    private latestRequest = 0;
 
     // Computed lookups, so each table cell doesn't scan every constraint
     get constraintsByShiftKey() {
@@ -184,14 +188,16 @@ class ConstraintStore {
         }, shift) && targetUserId === c.userId));
     }
 
-    async fetchConstraint() {
+    // Loads the weeks around weekOffset (the server's window), never the whole history
+    async fetchConstraint(weekOffset: number) {
         if (!authStore.isAuthenticated()) {
             return;
         }
 
         this.pendingFetches++;
+        const requestId = ++this.latestRequest;
         try {
-            const url = `${config.API_BASE_URL}/constraints`;
+            const url = `${config.API_BASE_URL}/constraints?weekOffset=${weekOffset}`;
             const res = await authFetch(url, {
                 headers: authStore.getAuthHeaders()
             });
@@ -199,11 +205,15 @@ class ConstraintStore {
             const json = await res.json();
             const data: Constraint[] = (json);
             runInAction(() => {
+                if (requestId !== this.latestRequest) return;
                 this.constraints = data.map((c: Constraint) => ({
                     ...c,
                     date: new Date(c.shift.date)
                 }));
+                this.loadedCenter = weekOffset;
             });
+        } catch (error) {
+            console.error(error);
         } finally {
             runInAction(() => {
                 this.pendingFetches--;
@@ -213,6 +223,10 @@ class ConstraintStore {
 
     get isFetching() {
         return this.pendingFetches > 0;
+    }
+
+    hasConstraintsForWeek(weekOffset: number) {
+        return isInWindow(weekOffset, this.loadedCenter);
     }
 }
 
