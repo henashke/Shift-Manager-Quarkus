@@ -59,6 +59,9 @@ Found by profiling tab switches; keep these when touching the shift and constrai
 
 - Per-cell lookups go through computed maps in the stores (`ShiftStore.getAssignedOrPendingShift`,
   `ConstraintStore.getConstraintsOfShift`), never by scanning or `concat`-ing the full lists in each cell.
+- Shifts and constraints are always fetched with `?weekOffset=` (the server returns a 5-week window around it), never
+  the whole history. Each tab fetches its own data when the week changes; a week next to the loaded center shows
+  immediately while the re-centering fetch runs, and only the newest request may update the store.
 - Don't define components inside components (it remounts their whole subtree every render).
 - The theme in `App.tsx` stays memoized, route changes run in `startTransition`, and `useMediaQuery` gets
   `{noSsr: true}` to skip its extra render.

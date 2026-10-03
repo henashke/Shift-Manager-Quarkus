@@ -47,11 +47,16 @@ const AssignmentTab: React.FC = observer(() => {
     const [resetSuccess, setResetSuccess] = useState(false);
     const [resetError, setResetError] = useState(false);
 
+    const {weekOffset} = shiftStore;
+
     useEffect(() => {
         shiftWeightStore.fetchPresets();
         usersStore.fetchUsers();
-        shiftStore.fetchShifts();
     }, []);
+
+    useEffect(() => {
+        shiftStore.fetchShifts(weekOffset);
+    }, [weekOffset]);
 
     useEffect(() => {
         setSelectedUserIds(users.map(u => u.name));
@@ -183,6 +188,7 @@ const AssignmentTab: React.FC = observer(() => {
                 </Button>
             </> : undefined}/>
             <ShiftTable onDropHandler={handleDrop}
+                        loading={shiftStore.isFetchingShifts && !shiftStore.hasShiftsForCurrentWeek}
                         onDragStartHandler={onDragStart}
                         onDragEndHandler={onDragEnd}
                         assignHandler={assignHandler}
