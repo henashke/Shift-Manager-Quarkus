@@ -13,7 +13,7 @@ import {SxProps, Theme} from "@mui/material/styles";
 import usersStore from "../../stores/UsersStore";
 import {observer} from 'mobx-react-lite';
 import {reaction} from 'mobx';
-import shiftStore, {AssignedShift, isInWindow, sameShift, Shift, User} from "../../stores/ShiftStore";
+import shiftStore, {AssignedShift, isInWindow, sameShift, Shift, ShiftKind, shiftKindLabels, User} from "../../stores/ShiftStore";
 import authStore from "../../stores/AuthStore";
 import notificationStore from "../../stores/NotificationStore";
 import shiftWeightStore from "../../stores/ShiftWeightStore";
@@ -21,11 +21,23 @@ import ChangeAssignedShiftPresetDialog from '../dialogs/ChangeAssignedShiftPrese
 import Autorenew from '@mui/icons-material/Autorenew';
 import AutoAwesome from '@mui/icons-material/AutoAwesome';
 import TuneRounded from '@mui/icons-material/TuneRounded';
+import PersonAddAltOutlined from '@mui/icons-material/PersonAddAltOutlined';
+import BoltOutlined from '@mui/icons-material/BoltOutlined';
+import DeleteOutlineRounded from '@mui/icons-material/DeleteOutlineRounded';
+import AssignToShiftDialog from "../dialogs/AssignToShiftDialog";
 import ResetWeeklyShiftsDialog from "../dialogs/ResetWeeklyShiftsDialog";
 import SuggestAssignmentsDialog from "../dialogs/SuggestAssignmentsDialog";
 import {primaryGradient} from '../../theme';
 
 const actionButtonSx = {flex: 1, py: 1.25} as const;
+
+// The optional roles under a shift's regular assignee
+const extraKinds: ShiftKind[] = ['SHADOW', 'JUMP'];
+const extraKindIcons: Record<string, React.ReactNode> = {
+    SHADOW: <PersonAddAltOutlined fontSize="small"/>,
+    JUMP: <BoltOutlined fontSize="small"/>,
+};
+const cellExtrasSx = {display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75, mt: 0.75} as const;
 
 // Keeps the gradient while disabled so the loading state stays visible instead of turning grey
 const suggestButtonSx: SxProps<Theme> = {
@@ -45,6 +57,8 @@ const AssignmentTab: React.FC = observer(() => {
     const [suggestDialogOpen, setSuggestDialogOpen] = useState(false);
     const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
     const [resetDialogOpen, setResetDialogOpen] = useState(false);
+    // The shadow or jump role being set, from the shift's menu
+    const [extraRoleTarget, setExtraRoleTarget] = useState<{ shift: Shift, kind: ShiftKind } | null>(null);
     const [resetSuccess, setResetSuccess] = useState(false);
     const [resetError, setResetError] = useState(false);
 
@@ -80,13 +94,52 @@ const AssignmentTab: React.FC = observer(() => {
         }
     };
 
-    const assignHandler = (shift: Shift, user: User) => {
+    const assignHandler = (shift: Shift, user: User, kind: ShiftKind = 'REGULAR') => {
+        // Nobody fills two roles of the same shift (the server checks too)
+        const otherRole = shiftStore.otherRoleOf(shift, user.name, kind);
+        if (otherRole) {
+            notificationStore.showError(`המשתמש ${user.name} כבר ${shiftKindLabels[otherRole]} במשמרת הזו`);
+            return;
+        }
         shiftStore.assignShiftPending({
-            ...shift,
+            date: shift.date,
+            type: shift.type,
             assignedUsername: user.name,
-            preset: shiftWeightStore.currentPresetObject
+            preset: shiftWeightStore.currentPresetObject,
+            kind
         });
     }
+
+    const renderExtraRoles = (shift: Shift) => {
+        const extras = extraKinds
+            .map(kind => shiftStore.getAssignedOrPendingShift(shift, kind))
+            .filter((extra): extra is AssignedShift => !!extra);
+        if (extras.length === 0) return null;
+        return (
+            <Box sx={cellExtrasSx}>
+                {extras.map(extra => (
+                    <UserCard key={extra.kind} name={extra.assignedUsername}
+                              subtitle={shiftKindLabels[extra.kind ?? 'REGULAR']} isPending={extra.isPending} secondary/>
+                ))}
+            </Box>
+        );
+    }
+
+    const extraRoleMenuItems = extraKinds.map(kind => ({
+        label: `הגדר ${shiftKindLabels[kind]}`,
+        icon: extraKindIcons[kind],
+        action: (shift: Shift) => setExtraRoleTarget({shift, kind}),
+        // Always available, so tapping a shift opens the menu instead of going straight to the regular assignment
+        disabled: () => false,
+    }));
+
+    const removeExtraRoleMenuItems = extraKinds.map(kind => ({
+        label: `הסר ${shiftKindLabels[kind]}`,
+        icon: <DeleteOutlineRounded fontSize="small"/>,
+        action: (shift: Shift) => shiftStore.unassignUser(shift, kind),
+        hidden: (shift: Shift) => !shiftStore.getAssignedOrPendingShift(shift, kind),
+        danger: true,
+    }));
 
     const getUserFromShift = (shift: Shift): User | undefined => {
         const assignedUsername = shiftStore.getAssignedShift(shift)?.assignedUsername;
@@ -199,7 +252,8 @@ const AssignmentTab: React.FC = observer(() => {
                         onSave={shiftStore.savePendingAssignments}
                         onCancel={() => shiftStore.pendingAssignedShifts = []}
                         itemName="כונן"
-                        additionalContextMenuItems={[{
+                        renderCellExtras={renderExtraRoles}
+                        additionalContextMenuItems={[...extraRoleMenuItems, {
                             label: 'שנה פריסט',
                             action: (shift: Shift) => {
                                 setSelectedShift(getPendingOrAssignedShift(shift));
@@ -207,9 +261,21 @@ const AssignmentTab: React.FC = observer(() => {
                             },
                             icon: <TuneRounded fontSize="small"/>,
                             disabled: (shift: Shift) => !shiftStore.getAssignedShift(shift)
-                        }]}
+                        }, ...removeExtraRoleMenuItems]}
                         isRemoveItemDisabled={(shift: Shift) => !shiftStore.getAssignedOrPendingShift(shift)}
                         getItemElement={getAssignmentElement}
+            />
+            <AssignToShiftDialog
+                open={extraRoleTarget !== null}
+                onClose={() => setExtraRoleTarget(null)}
+                shift={extraRoleTarget?.shift ?? null}
+                // People already in another role of this shift can't take this one
+                itemList={extraRoleTarget
+                    ? users.filter(u => !shiftStore.otherRoleOf(extraRoleTarget.shift, u.name, extraRoleTarget.kind))
+                    : []}
+                itemTitle={extraRoleTarget ? shiftKindLabels[extraRoleTarget.kind] : ''}
+                getItemName={(user: User) => user.name}
+                assignFunction={(shift, user) => extraRoleTarget && assignHandler(shift, user, extraRoleTarget.kind)}
             />
             <SuggestAssignmentsDialog handleConfirm={handleSuggestConfirm}
                                       open={suggestDialogOpen}

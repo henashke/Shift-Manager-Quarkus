@@ -6,7 +6,9 @@ import commands.UpdateShiftCommand;
 import daos.AssignedShiftDao;
 import daos.UserDao;
 import entities.*;
+import enums.ConstraintType;
 import enums.Day;
+import enums.ShiftKind;
 import enums.ShiftType;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -21,9 +23,13 @@ import util.WeekWindow;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, UpdateShiftCommand> {
@@ -63,11 +69,12 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, Up
     }
 
     /**
-     * Overrides all given shifts. Validates every shift first, so nothing is written if any assigned user has a
-     * CANT constraint on their shift.
+     * Overrides all given shifts (each in its role: regular, shadow or jump). Validates every shift first, so nothing
+     * is written if any assigned user has a CANT constraint on their shift or would fill two roles of one shift.
      */
     public List<AssignedShift> overrideShifts(List<AddShiftCommand> commands) {
         commands.forEach(this::throwIfUserCantWorkShift);
+        throwIfUserFillsTwoRoles(commands);
         commands.stream()
                 .filter(command -> command.shiftWeightPresetId == null)
                 .forEach(command -> command.shiftWeightPresetId = currentPreset().id);
@@ -80,9 +87,35 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, Up
         }
     }
 
+    // Checks each shift as it will be after the save: its current roles, with the ones in this save replacing them
+    private void throwIfUserFillsTwoRoles(List<AddShiftCommand> commands) {
+        Map<String, List<AddShiftCommand>> commandsByShift = commands.stream()
+                .collect(Collectors.groupingBy(command -> command.date + "|" + command.type));
+        for (List<AddShiftCommand> shiftCommands : commandsByShift.values()) {
+            AddShiftCommand first = shiftCommands.get(0);
+            Map<ShiftKind, Long> holders = new EnumMap<>(ShiftKind.class);
+            for (AssignedShift existing : dao.findByDateAndType(first.date, first.type)) {
+                if (existing.assignedUser != null) holders.put(existing.kind, existing.assignedUser.id);
+            }
+            shiftCommands.forEach(command -> holders.put(command.kind, command.userId));
+
+            Set<Long> seen = new HashSet<>();
+            for (Long userId : holders.values()) {
+                if (userId != null && !seen.add(userId)) {
+                    throw new ShiftRoleConflictException(userDao.findById(userId).name);
+                }
+            }
+        }
+    }
+
     public AssignedShift overrideShift(AddShiftCommand command) {
-        getDao().deleteByDateAndType(command.date, command.type);
+        dao.deleteSlot(command.date, command.type, command.kind);
         return super.create(command);
+    }
+
+    @Transactional
+    public boolean deleteSlot(LocalDate date, ShiftType type, ShiftKind kind) {
+        return dao.deleteSlot(date, type, kind) > 0;
     }
 
     public List<AssignedShift> listByWeekOffset(int weekOffset) {
@@ -112,6 +145,7 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, Up
         for (User user : users) {
             constraints.addAll(constraintService.findByUserIdBetween(user.id, startDate, endDate));
         }
+        constraints.addAll(extraRoleHoldersAsCant(startDate, endDate));
 
         // Prefer the configured LLM's schedule, but only if it passes validation; otherwise fall back.
         ShiftSuggester suggester = selectSuggester();
@@ -127,7 +161,7 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, Up
             }
         }
 
-        List<AssignedShift> offlineSuggestions = suggestAssignmentsOffline(users, startDate, endDate);
+        List<AssignedShift> offlineSuggestions = suggestAssignmentsOffline(users, constraints, startDate, endDate);
         // Validate the fallback too. It is the last resort, so we only warn rather than fail the request.
         try {
             suggestionValidator.validate(offlineSuggestions, users, constraints, startDate, endDate);
@@ -135,6 +169,25 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, Up
             Log.warnf("Offline fallback schedule has issues: %s", e.getMessage());
         }
         return withCurrentPresetIfMissing(offlineSuggestions);
+    }
+
+    /**
+     * Suggestions only fill the regular role, and whoever already holds a shift's shadow or jump role can't take its
+     * regular one too. Passed to the suggesters as CANT constraints (never saved), so every suggester and the validator
+     * respect it without knowing about the extra roles.
+     */
+    private List<Constraint> extraRoleHoldersAsCant(LocalDate startDate, LocalDate endDate) {
+        return dao.findBetweenOfKinds(startDate, endDate, List.of(ShiftKind.SHADOW, ShiftKind.JUMP)).stream()
+                .filter(shift -> shift.assignedUser != null)
+                .map(shift -> {
+                    Constraint cant = new Constraint();
+                    cant.user = shift.assignedUser;
+                    cant.date = shift.date;
+                    cant.type = shift.type;
+                    cant.constraintType = ConstraintType.CANT;
+                    return cant;
+                })
+                .toList();
     }
 
     /**
@@ -174,7 +227,12 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, Up
      * Deterministic round-robin fallback used when the LLM is disabled or unreachable.
      * Cycles through the users, skipping any with a CANT constraint for the slot.
      */
-    private List<AssignedShift> suggestAssignmentsOffline(List<User> users, LocalDate startDate, LocalDate endDate) {
+    private List<AssignedShift> suggestAssignmentsOffline(List<User> users, List<Constraint> constraints,
+                                                          LocalDate startDate, LocalDate endDate) {
+        Set<String> cantKeys = constraints.stream()
+                .filter(constraint -> constraint.constraintType == ConstraintType.CANT)
+                .map(constraint -> constraint.user.id + "|" + constraint.date + "|" + constraint.type)
+                .collect(Collectors.toSet());
         List<AssignedShift> suggestions = new ArrayList<>();
         ShiftType[] shiftTypes = {ShiftType.DAY, ShiftType.NIGHT};
         LocalDate currentDate = startDate;
@@ -186,7 +244,7 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, Up
                 while (attempts < users.size()) {
                     User user = users.get(userIndex % users.size());
 
-                    if (!constraintService.hasCANTConstraint(user.id, currentDate, shiftType)) {
+                    if (!cantKeys.contains(user.id + "|" + currentDate + "|" + shiftType)) {
                         AssignedShift shift = new AssignedShift();
                         shift.date = currentDate;
                         shift.type = shiftType;
