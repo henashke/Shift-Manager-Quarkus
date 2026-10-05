@@ -104,8 +104,30 @@ back-references).
   for a new pair; `POST /api/auth/logout` revokes it
 - Roles are enforced via `@RolesAllowed` on resource methods; role constants in `auth/`
 
+### API Behavior Worth Knowing
+
+- `GET /api/users` returns only non-admin users (admins manage the system and aren't scheduled); the backup export
+  still includes admins.
+- `GET /api/shifts` and `GET /api/constraints` take `?weekOffset=N` and return a 5-week window around that week
+  (`util/WeekWindow`: weeks start on Sunday, computed in the server's time zone). Without it they return the whole
+  history, which the frontend never asks for.
+
 ### Backup Feature
 
 `GET /api/backup` exports the DB as a zip of JSON files in the old (pre-Quarkus) backup format. Unzipped under
 `src/main/resources/backup/<name>/`, `POST /api/backup/generate-sql` turns it into
 `src/main/resources/backup/results/<name>/backup.sql`.
+
+## Checking UI Changes in a Browser
+
+Headless Chrome (driven over the DevTools protocol) against the dev server on `:3000` works for screenshots, touch
+emulation and profiling. To get past the login without anyone's password, use a throwaway account:
+
+1. `POST /api/auth/signup` with a random name and password.
+2. For admin UI, promote it in the database: `update users set role = 'admin' where name = '<name>'`.
+3. `POST /api/auth/login`, then put `token`, `refreshToken`, `username` and `role` from the response into
+   `localStorage` on the `:3000` origin.
+4. Afterwards remove it: `POST /api/auth/logout`, then delete its `refresh_tokens` rows and its `users` row.
+
+Tokens signed locally with the dev key are rejected (401), so use a real login. A non-admin test user appears in the
+user list while it exists.
