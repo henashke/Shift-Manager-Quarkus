@@ -24,7 +24,7 @@ import {alpha, Theme, useTheme} from '@mui/material/styles';
 import notificationStore from '../../stores/NotificationStore';
 import DeleteOutlineRounded from "@mui/icons-material/DeleteOutlineRounded";
 import {dangerMenuItemSx} from "../basicSharedComponents/menuStyles";
-import {formatDate} from "./CalendarNavigation";
+import {dateKey, formatDayMonth} from "../../dateFormat";
 import CardSkeleton from "../basicSharedComponents/CardSkeleton";
 import {SWIPE_PANE_GAP_PX, useWeekSwipe} from "./useWeekSwipe";
 
@@ -32,8 +32,9 @@ const days = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 
 const shiftTypes = ['יום', 'לילה'] as const;
 
 interface ShiftTableProps<T> {
-    // While true (and only once it has lasted a moment), every cell shows a skeleton card instead of its content
-    loading?: boolean;
+    // While it returns true (and only once that has lasted a moment), every cell shows a skeleton card. A function read
+    // here, so loading changes re-render only the table, not the tab around it
+    isLoading?: () => boolean;
     // Whether a week's data is loaded, so the neighboring week shown mid-swipe can use skeletons when it isn't
     isWeekLoaded?: (weekOffset: number) => boolean;
     retrieveItemFromShift: (shift: Shift) => T | undefined;
@@ -79,7 +80,7 @@ function ShiftTable<T>({
                            itemName,
                            isRemoveItemDisabled,
                            requireAdmin = true,
-                           loading = false,
+                           isLoading,
                            isWeekLoaded = () => true,
                            additionalContextMenuItems,
                        }: ShiftTableProps<T>) {
@@ -88,7 +89,7 @@ function ShiftTable<T>({
     const {weekDates} = store;
     const {trackRef, peek, handlers: swipeHandlers} =
         useWeekSwipe<HTMLDivElement>(store.weekOffset, direction => store.setWeekOffset(store.weekOffset + direction));
-    const showSkeletons = useDelayedFlag(loading, SKELETON_DELAY_MS);
+    const showSkeletons = useDelayedFlag(isLoading ? isLoading() : false, SKELETON_DELAY_MS);
     const [assignDialogOpen, setAssignDialogOpen] = useState(false);
     const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
     const [contextMenu, setContextMenu] = useState<{
@@ -201,7 +202,7 @@ function ShiftTable<T>({
         if (preview) {
             const previewItem = preview.loaded ? getPendingOrAssignedItem(shift) : undefined;
             return (
-                <TableCell key={'table-cell-' + formatDate(date) + shiftType} align="center" sx={cellSx}>
+                <TableCell key={'table-cell-' + dateKey(date) + shiftType} align="center" sx={cellSx}>
                     {!preview.loaded ? <CardSkeleton/>
                         : previewItem ? renderItemElement(previewItem, shift)
                             : <Typography variant="body1" sx={{color: 'primary.light'}}>{"שבץ " + itemName}</Typography>}
@@ -212,7 +213,7 @@ function ShiftTable<T>({
             // Day, then shift type, so the shimmer travels across the table as one wave
             const delayMs = date.getDay() * 90 + shiftTypes.indexOf(shiftType) * 45;
             return (
-                <TableCell key={'table-cell-' + formatDate(date) + shiftType} align="center" sx={cellSx}>
+                <TableCell key={'table-cell-' + dateKey(date) + shiftType} align="center" sx={cellSx}>
                     <CardSkeleton delayMs={delayMs}/>
                 </TableCell>
             );
@@ -220,7 +221,7 @@ function ShiftTable<T>({
         const item = getPendingOrAssignedItem(shift);
         return (
             <TableCell
-                key={'table-cell-' + formatDate(date) + shiftType}
+                key={'table-cell-' + dateKey(date) + shiftType}
                 align="center"
                 onDrop={e => onDrop(e, shift)}
                 onDragOver={onDragOver}
@@ -230,7 +231,7 @@ function ShiftTable<T>({
             >
                 {item ? (
                     <Box
-                        key={"assigned-" + formatDate(date) + shiftType}
+                        key={"assigned-" + dateKey(date) + shiftType}
                         draggable
                         onDragStart={e => onDragStart(e, item, shift)}
                         onDragEnd={onDragEndHandler}
@@ -251,13 +252,13 @@ function ShiftTable<T>({
                     <TableCell></TableCell>
                     {isNarrowScreen
                         ? shiftTypes.map(shiftType => <ShiftTypeHeaderTableCell key={shiftType} shiftType={shiftType}/>)
-                        : dates.map(date => <WeekDayHeaderTableCell key={formatDate(date)} date={date}/>)}
+                        : dates.map(date => <WeekDayHeaderTableCell key={dateKey(date)} date={date}/>)}
                 </TableRow>
             </TableHead>
             <TableBody>
                 {isNarrowScreen
                     ? dates.map(date => (
-                        <TableRow key={'table-row-' + formatDate(date)}>
+                        <TableRow key={'table-row-' + dateKey(date)}>
                             <WeekDayHeaderTableCell date={date}/>
                             {shiftTypes.map(shiftType => createTableCell(date, shiftType, preview))}
                         </TableRow>
@@ -300,7 +301,9 @@ function ShiftTable<T>({
             {/* The track moves under the finger; mid-swipe it also carries the neighboring week beside the table */}
             <Box ref={trackRef} {...swipeHandlers}
                  // Narrow screens: vertical scrolling stays with the browser, sideways gestures change the week
-                 sx={{position: 'relative', flex: 1, minWidth: 0, touchAction: isNarrowScreen ? 'pan-y' : undefined}}>
+                 sx={{position: 'relative', flex: 1, minWidth: 0, touchAction: isNarrowScreen ? 'pan-y' : undefined,
+                     // Its own GPU layer from the start, so a swipe doesn't have to paint one when the thumb starts moving
+                     willChange: isNarrowScreen ? 'transform' : undefined}}>
             {peek !== 0 ? (
                 <Paper aria-hidden dir="rtl" sx={{
                     ...previewPaneSx,
@@ -400,10 +403,7 @@ const todayTint = (theme: Theme) => alpha(theme.palette.primary.main, 0.08);
 const WeekDayHeaderTableCell = ({date}: { date: Date }) => (
     <TableCell sx={{bgcolor: isToday(date) ? todayTint : undefined}} align="center">
         <Typography variant={"h6"}>{days[date.getDay()]}</Typography>
-        <Typography>{date.toLocaleDateString('he-IL', {
-            day: 'numeric',
-            month: 'numeric'
-        })}</Typography>
+        <Typography>{formatDayMonth(date)}</Typography>
     </TableCell>
 );
 
