@@ -1,6 +1,7 @@
 import React from 'react';
 import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
 import Typography from '@mui/material/Typography';
 import BadgeOutlined from '@mui/icons-material/BadgeOutlined';
 import CommonDialog from "./CommonDialog";
@@ -39,6 +40,12 @@ const UserInfoDialog: React.FC<UserInfoDialogProps> = ({open, username, onClose}
                                   <Typography variant="body2" color="text.secondary">
                                       ניקוד <Box component="span" sx={{color: 'text.primary', fontWeight: 700}}>{user.score}</Box>
                                   </Typography>
+                                  {user.reserve || user.role === 'admin' ? (
+                                      <Box sx={{display: 'flex', flexWrap: 'wrap', gap: 0.75, mt: 1}}>
+                                          {user.role === 'admin' ? <Chip size="small" color="primary" variant="outlined" label="מנהל"/> : null}
+                                          {user.reserve ? <Chip size="small" variant="outlined" label="מילואים"/> : null}
+                                      </Box>
+                                  ) : null}
                               </Box>
                           </Box>
                       }

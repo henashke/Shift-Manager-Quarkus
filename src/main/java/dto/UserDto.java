@@ -8,4 +8,6 @@ import lombok.Data;
 public class UserDto {
     public String name;
     public Integer score;
+    public Boolean reserve;
+    public String role;
 }

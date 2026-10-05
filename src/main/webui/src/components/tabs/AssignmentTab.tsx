@@ -57,10 +57,6 @@ const AssignmentTab: React.FC = observer(() => {
     // dialogs) on every week switch
     useEffect(() => reaction(() => shiftStore.weekOffset, offset => shiftStore.fetchShifts(offset), {fireImmediately: true}), []);
 
-    useEffect(() => {
-        setSelectedUserIds(users.map(u => u.name));
-    }, [users]);
-
     const onDragStart = (e: React.DragEvent, user: User, fromShift?: Shift) => {
         requestAnimationFrame(() => setIsDragged(true));
         e.dataTransfer.setData('application/json', JSON.stringify({user: user, fromShift: fromShift || null}));
@@ -111,6 +107,8 @@ const AssignmentTab: React.FC = observer(() => {
             notificationStore.showUnauthorizedError();
             return;
         }
+        // Reservists join only when picked
+        setSelectedUserIds(users.filter(u => !u.reserve).map(u => u.name));
         setSuggestDialogOpen(true);
     };
     const handleSuggestClose = () => setSuggestDialogOpen(false);

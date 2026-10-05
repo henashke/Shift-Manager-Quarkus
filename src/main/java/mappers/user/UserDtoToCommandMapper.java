@@ -31,6 +31,8 @@ public class UserDtoToCommandMapper implements DtoToCommandMapper<UserDto, User,
         UserDto dto = new UserDto();
         dto.name = entity.name;
         dto.score = entity.score;
+        dto.reserve = entity.reserve;
+        dto.role = entity.role;
         return dto;
     }
 }
