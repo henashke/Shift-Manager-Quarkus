@@ -11,6 +11,7 @@ import store from '../../stores/ShiftStore';
 import ChevronLeft from '@mui/icons-material/ChevronLeft';
 import ChevronRight from '@mui/icons-material/ChevronRight';
 import {useCompactOnScroll} from './useCompactOnScroll';
+import {formatPaddedDate} from '../../dateFormat';
 
 interface CalendarNavigationProps {
     actions?: React.ReactNode;
@@ -102,11 +103,11 @@ const DateRange: React.FC<{ dates: Date[], fontSize: object | string }> = ({date
         lineHeight: 1.35,
         fontSize,
     }}>
-        <Box component="span" sx={{whiteSpace: 'nowrap'}}>{formatNavDate(dates[0])}</Box>
+        <Box component="span" sx={{whiteSpace: 'nowrap'}}>{formatPaddedDate(dates[0])}</Box>
         <Box component="span" sx={{whiteSpace: 'nowrap'}}>
             <Typography component="span" variant="body2" color="text.secondary"
                         sx={{marginInlineEnd: 1, fontSize: 'inherit'}}>עד</Typography>
-            {formatNavDate(dates[6])}
+            {formatPaddedDate(dates[6])}
         </Box>
     </Typography>
 );
@@ -221,11 +222,5 @@ const CalendarNavigation: React.FC<CalendarNavigationProps> = observer(({actions
         </Box>
     );
 });
-
-const formatNavDate = (date: Date) =>
-    date.toLocaleDateString('he-IL', {day: '2-digit', month: '2-digit', year: 'numeric'});
-
-export const formatDate = (date: Date) =>
-    date.toLocaleDateString('he-IL', {month: 'numeric', day: 'numeric', year: 'numeric'});
 
 export default CalendarNavigation;

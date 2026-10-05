@@ -12,6 +12,7 @@ import Snackbar from "@mui/material/Snackbar";
 import {SxProps, Theme} from "@mui/material/styles";
 import usersStore from "../../stores/UsersStore";
 import {observer} from 'mobx-react-lite';
+import {reaction} from 'mobx';
 import shiftStore, {AssignedShift, isInWindow, sameShift, Shift, User} from "../../stores/ShiftStore";
 import authStore from "../../stores/AuthStore";
 import notificationStore from "../../stores/NotificationStore";
@@ -47,16 +48,14 @@ const AssignmentTab: React.FC = observer(() => {
     const [resetSuccess, setResetSuccess] = useState(false);
     const [resetError, setResetError] = useState(false);
 
-    const {weekOffset} = shiftStore;
-
     useEffect(() => {
         shiftWeightStore.fetchPresets();
         usersStore.fetchUsers();
     }, []);
 
-    useEffect(() => {
-        shiftStore.fetchShifts(weekOffset);
-    }, [weekOffset]);
+    // A reaction, not an effect on the week read in render: reading it here would re-render the whole tab (tray, cards,
+    // dialogs) on every week switch
+    useEffect(() => reaction(() => shiftStore.weekOffset, offset => shiftStore.fetchShifts(offset), {fireImmediately: true}), []);
 
     useEffect(() => {
         setSelectedUserIds(users.map(u => u.name));
@@ -188,7 +187,7 @@ const AssignmentTab: React.FC = observer(() => {
                 </Button>
             </> : undefined}/>
             <ShiftTable onDropHandler={handleDrop}
-                        loading={shiftStore.isFetchingShifts && !shiftStore.hasShiftsForCurrentWeek}
+                        isLoading={() => shiftStore.isFetchingShifts && !shiftStore.hasShiftsForCurrentWeek}
                         isWeekLoaded={offset => isInWindow(offset, shiftStore.loadedShiftsCenter)}
                         onDragStartHandler={onDragStart}
                         onDragEndHandler={onDragEnd}
