@@ -79,6 +79,8 @@ public class BackupService {
         backup.put("preset", shift.shiftWeightPreset != null ? toBackup(shift.shiftWeightPreset) : null);
         // Not in the old format: regular, shadow or jump (older backups have none, meaning regular)
         backup.put("kind", shift.kind.name());
+        // Also not in the old format: the week's extra table the shift belongs to (null: the regular table)
+        backup.put("specialTableName", shift.specialTableName);
         return backup;
     }
 

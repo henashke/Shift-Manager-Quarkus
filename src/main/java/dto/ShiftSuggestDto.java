@@ -14,4 +14,6 @@ public class ShiftSuggestDto {
     public LocalDate startDate;
     @JsonDeserialize(using = FlexibleLocalDateDeserializer.class)
     public LocalDate endDate;
+    // The table to fill; missing means the regular table
+    public String specialTableName;
 }

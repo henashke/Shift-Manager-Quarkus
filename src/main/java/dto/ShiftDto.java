@@ -16,4 +16,6 @@ public class ShiftDto {
     public String type;
     // Which role of the shift (regular, shadow, jump); missing means regular
     public ShiftKind kind;
+    // The extra table of the week this shift belongs to; missing means the regular table
+    public String specialTableName;
 }

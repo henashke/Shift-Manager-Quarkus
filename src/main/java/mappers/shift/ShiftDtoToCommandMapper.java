@@ -15,6 +15,7 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.BadRequestException;
 import mappers.DtoToCommandMapper;
 import mappers.shiftWeightPreset.ShiftWeightPresetDtoToCommandMapper;
+import util.ShiftTableNames;
 
 @ApplicationScoped
 public class ShiftDtoToCommandMapper implements DtoToCommandMapper<AssignedShiftDto, AssignedShift, AddShiftCommand, UpdateShiftCommand> {
@@ -39,6 +40,7 @@ public class ShiftDtoToCommandMapper implements DtoToCommandMapper<AssignedShift
         cmd.date = dto.date;
         cmd.type = ShiftType.fromHebrew(dto.type);
         cmd.kind = ShiftKind.orRegular(dto.kind);
+        cmd.specialTableName = ShiftTableNames.normalize(dto.specialTableName);
         cmd.userId = user.id;
         cmd.shiftWeightPresetId = preset != null ? preset.id : null;
         return cmd;
@@ -62,6 +64,7 @@ public class ShiftDtoToCommandMapper implements DtoToCommandMapper<AssignedShift
         dto.date = entity.date;
         dto.type = entity.type.getHebrewRepresentation();
         dto.kind = entity.kind;
+        dto.specialTableName = entity.specialTableName;
         dto.assignedUsername = entity.assignedUser != null ? entity.assignedUser.name : null;
         dto.preset = entity.shiftWeightPreset != null
                 ? shiftWeightPresetDtoToCommandMapper.mapToDto(entity.shiftWeightPreset) : null;

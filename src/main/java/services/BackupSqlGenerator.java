@@ -157,12 +157,15 @@ public class BackupSqlGenerator {
             // Backups from before shadow and jump shifts have no kind: those are all regular
             String kind = s.get("kind") != null ? ShiftKind.valueOf(asString(s.get("kind"))).name() : ShiftKind.REGULAR.name();
 
-            sb.append("INSERT INTO assigned_shifts (user_id, date, type, preset_id, kind) VALUES (")
+            String specialTableName = asString(s.get("specialTableName"));
+
+            sb.append("INSERT INTO assigned_shifts (user_id, date, type, preset_id, kind, special_table_name) VALUES (")
                     .append(userIdVal).append(", ")
                     .append(sqlString(dateStr)).append(", ")
                     .append(sqlString(type)).append(", ")
                     .append(presetIdStr).append(", ")
-                    .append(sqlString(kind)).append(");\n");
+                    .append(sqlString(kind)).append(", ")
+                    .append(sqlString(specialTableName)).append(");\n");
         }
 
         return sb.toString();

@@ -24,6 +24,7 @@ public class ShiftCommandToEntityMapper implements CommandToEntityMapper<Assigne
         shift.date = addCommand.date;
         shift.type = addCommand.type;
         shift.kind = addCommand.kind;
+        shift.specialTableName = addCommand.specialTableName;
         shift.assignedUser = addCommand.userId != null ? userDao.findById(addCommand.userId) : null;
         shift.shiftWeightPreset = addCommand.shiftWeightPresetId != null
                 ? shiftWeightPresetDao.findById(addCommand.shiftWeightPresetId) : null;

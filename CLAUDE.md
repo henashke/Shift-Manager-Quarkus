@@ -117,6 +117,11 @@ back-references).
   (כונן צל) and JUMP (כונן הקפצה) set by hand. `kind` is on the shift DTOs (missing means REGULAR, also on
   `DELETE /api/shifts`). All three count toward scores and respect CANT constraints; nobody fills two kinds of one
   shift; suggestions only fill REGULAR and treat shadow/jump holders of a shift as unavailable for it.
+- A week can have extra shift tables (additional real schedules next to the regular one): `specialTableName` on
+  assigned shifts and the shift DTOs, also on `DELETE /api/shifts`, `DELETE /api/shifts/week` and `/suggest` (missing
+  means the regular table; "רגיל" is reserved, up to 50 characters). Each table has its own slots and counts toward
+  scores; a person may be in the same shift in several tables (the two-roles rule is per table). The client discovers a
+  week's tables from its shifts; a new, still-empty table is only remembered in the creating browser's localStorage.
 - `GET /api/shifts` and `GET /api/constraints` take `?weekOffset=N` and return a 5-week window around that week
   (`util/WeekWindow`: weeks start on Sunday, computed in the server's time zone). Without it they return the whole
   history, which the frontend never asks for.
