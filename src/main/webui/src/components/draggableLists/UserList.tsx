@@ -9,15 +9,22 @@ import UserCard from '../basicSharedComponents/UserCard';
 import BadgeOutlined from '@mui/icons-material/BadgeOutlined';
 import EditOutlined from '@mui/icons-material/EditOutlined';
 import DeleteOutlineRounded from '@mui/icons-material/DeleteOutlineRounded';
+import MilitaryTechOutlined from '@mui/icons-material/MilitaryTechOutlined';
+import UndoRounded from '@mui/icons-material/UndoRounded';
+import AdminPanelSettingsOutlined from '@mui/icons-material/AdminPanelSettingsOutlined';
+import RemoveModeratorOutlined from '@mui/icons-material/RemoveModeratorOutlined';
 import BottomTray from '../basicSharedComponents/BottomTray';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import {useTheme} from '@mui/material/styles';
 import EditUser from "../dialogs/EditUser";
 import authStore from "../../stores/AuthStore";
 import notificationStore from "../../stores/NotificationStore";
+import {ContextMenuItem} from "./DraggableList";
 
 const UserList: React.FC<{ isDragged?: boolean, setIsDragged?: (val: boolean) => void }> = observer(({ isDragged, setIsDragged }) => {
     const {users} = usersStore;
+    const regularUsers = users.filter(u => !u.reserve);
+    const reserveUsers = users.filter(u => u.reserve);
     const theme = useTheme();
     // Same breakpoint where the shift table switches to its vertical layout
     const isNarrowScreen = useMediaQuery(theme.breakpoints.down('md'), {noSsr: true});
@@ -90,8 +97,36 @@ const UserList: React.FC<{ isDragged?: boolean, setIsDragged?: (val: boolean) =>
         }
     };
 
+    const runAdminAction = (action: () => Promise<void>) => {
+        if (!authStore.isAdmin()) {
+            notificationStore.showUnauthorizedError();
+            return;
+        }
+        action();
+    };
+
+    // Reserve and role actions, for admins only; nobody changes their own role
+    const adminMenuItems = (user: User): ContextMenuItem[] => {
+        if (!authStore.isAdmin()) return [];
+        const items: ContextMenuItem[] = [user.reserve
+            ? {label: 'החזר לכוננים קבועים', icon: <UndoRounded fontSize="small"/>,
+                onClick: () => runAdminAction(() => usersStore.setReserve(user.name, false))}
+            : {label: 'העבר למילואים', icon: <MilitaryTechOutlined fontSize="small"/>,
+                onClick: () => runAdminAction(() => usersStore.setReserve(user.name, true))}];
+        if (user.name !== authStore.username) {
+            items.push(user.role === 'admin'
+                ? {label: 'הסר הרשאות מנהל', icon: <RemoveModeratorOutlined fontSize="small"/>,
+                    onClick: () => runAdminAction(() => usersStore.setRole(user.name, 'user'))}
+                : {label: 'הפוך למנהל', icon: <AdminPanelSettingsOutlined fontSize="small"/>,
+                    onClick: () => runAdminAction(() => usersStore.setRole(user.name, 'admin'))});
+        }
+        return items;
+    };
+
     const userList = <DraggableList
-        items={users}
+        items={regularUsers}
+        secondaryItems={reserveUsers}
+        secondaryLabel="מילואים"
         getKey={u => u.name}
         getLabel={u => u.name}
         onDragStart={onDragStart}
@@ -100,6 +135,7 @@ const UserList: React.FC<{ isDragged?: boolean, setIsDragged?: (val: boolean) =>
         contextMenuItems={(user) => [
             {label: 'פרטי משתמש', icon: <BadgeOutlined fontSize="small"/>, onClick: () => handleInfoDialogOpen(user)},
             {label: 'ערוך', icon: <EditOutlined fontSize="small"/>, onClick: () => handleEditDialogOpen(user)},
+            ...adminMenuItems(user),
             {label: 'מחק', icon: <DeleteOutlineRounded fontSize="small"/>, danger: true, onClick: () => handleDeleteDialogOpen(user)},
         ]}
         isDragged={isDragged}
@@ -110,7 +146,7 @@ const UserList: React.FC<{ isDragged?: boolean, setIsDragged?: (val: boolean) =>
     return (
         <>
             {isNarrowScreen ? (
-                <BottomTray title="כוננים" names={users.map(u => u.name)} forceOpen={isDragged}>
+                <BottomTray title="כוננים" names={regularUsers.map(u => u.name)} forceOpen={isDragged}>
                     {userList}
                 </BottomTray>
             ) : userList}

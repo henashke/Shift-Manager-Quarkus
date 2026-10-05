@@ -68,6 +68,34 @@ class UserStore {
     }
   };
 
+  // Admin actions; the server enforces the admin role too
+  setReserve = async (username: string, reserve: boolean) => {
+    const res = await authFetch(`${config.API_BASE_URL}/users/${encodeURIComponent(username)}/reserve`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json', ...authStore.getAuthHeaders()},
+      body: JSON.stringify({reserve})
+    });
+    if (!res.ok) return showRequestError(res, 'שגיאה בעדכון הכונן');
+    this.replaceUser(await res.json());
+    notificationStore.showSuccess(reserve ? `המשתמש ${username} הועבר למילואים` : `המשתמש ${username} חזר לכוננים הקבועים`);
+  };
+
+  setRole = async (username: string, role: 'admin' | 'user') => {
+    const res = await authFetch(`${config.API_BASE_URL}/users/${encodeURIComponent(username)}/role`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json', ...authStore.getAuthHeaders()},
+      body: JSON.stringify({role})
+    });
+    if (!res.ok) return showRequestError(res, 'שגיאה בעדכון ההרשאות');
+    this.replaceUser(await res.json());
+    notificationStore.showSuccess(role === 'admin' ? `המשתמש ${username} הוא עכשיו מנהל` : `הרשאות המנהל של ${username} הוסרו`);
+  };
+
+  private replaceUser = (updated: User) => {
+    const index = this.users.findIndex(u => u.name === updated.name);
+    if (index !== -1) this.users[index] = updated;
+  };
+
   deleteUser = async (username: string) => {
     if (!authStore.isAdmin()) {
       notificationStore.showUnauthorizedError();
@@ -94,6 +122,12 @@ class UserStore {
     }
   };
 }
+
+// Shows the server's {"error": ...} message, or a fallback
+const showRequestError = async (res: Response, fallback: string) => {
+  const body = await res.json().catch(() => null);
+  notificationStore.showError(body?.error ?? fallback);
+};
 
 const usersStore = new UserStore();
 export default usersStore;

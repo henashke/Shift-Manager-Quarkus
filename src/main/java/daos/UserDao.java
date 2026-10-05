@@ -14,8 +14,12 @@ public class UserDao implements BaseDao<User> {
         return find("name", username).firstResultOptional();
     }
 
-    public List<User> listNonAdmins() {
-        return list("role is null or role <> ?1", RoleConstants.ADMIN);
+    public List<User> listSchedulable() {
+        return list("schedulable", true);
+    }
+
+    public long countAdmins() {
+        return count("role", RoleConstants.ADMIN);
     }
 
     public void deleteByUsername(String username) {

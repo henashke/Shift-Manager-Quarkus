@@ -106,8 +106,9 @@ back-references).
 
 ### API Behavior Worth Knowing
 
-- `GET /api/users` returns only non-admin users (admins manage the system and aren't scheduled); the backup export
-  still includes admins.
+- `GET /api/users` returns only schedulable users (`users.schedulable`; false for the built-in system admin account).
+  Being an admin is only a permission: promoted admins stay listed and scheduled. The backup export includes everyone.
+- Reservists (`users.reserve`) are listed separately in the UI and left out of weekly suggestions unless picked.
 - `GET /api/shifts` and `GET /api/constraints` take `?weekOffset=N` and return a 5-week window around that week
   (`util/WeekWindow`: weeks start on Sunday, computed in the server's time zone). Without it they return the whole
   history, which the frontend never asks for.

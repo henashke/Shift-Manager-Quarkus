@@ -5,6 +5,7 @@ import Divider from '@mui/material/Divider';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import MenuItem from '@mui/material/MenuItem';
 import Paper from '@mui/material/Paper';
+import Typography from '@mui/material/Typography';
 import {alpha} from '@mui/material/styles';
 import DeleteIcon from '@mui/icons-material/Delete';
 import {dangerMenuItemSx} from '../basicSharedComponents/menuStyles';
@@ -30,6 +31,9 @@ interface DraggableListProps<T> {
     renderItem?: (item: T) => JSX.Element;
     // Drops the card background, for when the list sits inside another surface (e.g. BottomTray)
     embedded?: boolean;
+    // A second group shown right below the main one under its own label (e.g. reservists)
+    secondaryItems?: T[];
+    secondaryLabel?: string;
 }
 
 const embeddedSx = {bgcolor: 'transparent', backgroundImage: 'none'};
@@ -44,7 +48,9 @@ function DraggableList<T>({
                               renderAdditionalComponent,
                               isDragged,
                               renderItem,
-                              embedded
+                              embedded,
+                              secondaryItems,
+                              secondaryLabel
                           }: DraggableListProps<T>) {
     const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
     const [selectedItem, setSelectedItem] = useState<T | null>(null);
@@ -70,6 +76,47 @@ function DraggableList<T>({
         if (onDrop) onDrop(e);
     };
 
+    const renderEntry = (item: T) => (
+        <Box
+            key={getKey(item)}
+            draggable
+            onDragStart={e => onDragStart(e, item)}
+            onClick={contextMenuItems ? e => handleContextMenu(e, item) : undefined}
+            onContextMenu={contextMenuItems ? e => handleContextMenu(e, item) : undefined}
+            sx={renderItem ? {
+                cursor: 'grab',
+                transition: 'transform 0.2s',
+                '&:active': {transform: 'scale(0.97)'},
+                '&:hover': {transform: 'scale(1.04)', cursor: 'pointer'},
+            } : {
+                background: theme => theme.palette.primary.main,
+                color: 'common.white',
+                px: 3,
+                py: 1.5,
+                borderRadius: 2,
+                fontWeight: 700,
+                fontSize: '1.08em',
+                cursor: 'grab',
+                boxShadow: 2,
+                userSelect: 'none',
+                transition: 'box-shadow 0.2s, transform 0.2s',
+                '&:active': {
+                    background: theme => theme.palette.primary.dark,
+                    color: 'common.white',
+                    boxShadow: 4,
+                    transform: 'scale(0.97)',
+                },
+                '&:hover': {
+                    boxShadow: 6,
+                    transform: 'scale(1.04)',
+                    cursor: 'pointer',
+                },
+            }}
+        >
+            {renderItem ? renderItem(item) : getLabel(item)}
+        </Box>
+    );
+
     return (
         <Paper elevation={embedded ? 0 : 1}
                sx={{p: 2, borderRadius: 2, position: 'relative', flexGrow: 1, ...(embedded ? embeddedSx : {})}}>
@@ -81,48 +128,22 @@ function DraggableList<T>({
                     alignItems: 'center',
                 }}>
                     {renderAdditionalComponent}
-                    <Box display="flex" gap={2} flexWrap="wrap" justifyContent="center" justifySelf={'center'}
-                         alignSelf={'center'}>
-                        {items.map(item => (
-                            <Box
-                                key={getKey(item)}
-                                draggable
-                                onDragStart={e => onDragStart(e, item)}
-                                onClick={contextMenuItems ? e => handleContextMenu(e, item) : undefined}
-                                onContextMenu={contextMenuItems ? e => handleContextMenu(e, item) : undefined}
-                                sx={renderItem ? {
-                                    cursor: 'grab',
-                                    transition: 'transform 0.2s',
-                                    '&:active': {transform: 'scale(0.97)'},
-                                    '&:hover': {transform: 'scale(1.04)', cursor: 'pointer'},
-                                } : {
-                                    background: theme => theme.palette.primary.main,
-                                    color: 'common.white',
-                                    px: 3,
-                                    py: 1.5,
-                                    borderRadius: 2,
-                                    fontWeight: 700,
-                                    fontSize: '1.08em',
-                                    cursor: 'grab',
-                                    boxShadow: 2,
-                                    userSelect: 'none',
-                                    transition: 'box-shadow 0.2s, transform 0.2s',
-                                    '&:active': {
-                                        background: theme => theme.palette.primary.dark,
-                                        color: 'common.white',
-                                        boxShadow: 4,
-                                        transform: 'scale(0.97)',
-                                    },
-                                    '&:hover': {
-                                        boxShadow: 6,
-                                        transform: 'scale(1.04)',
-                                        cursor: 'pointer',
-                                    },
-                                }}
-                            >
-                                {renderItem ? renderItem(item) : getLabel(item)}
+                    <Box sx={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, minWidth: 0}}>
+                        <Box display="flex" gap={2} flexWrap="wrap" justifyContent="center">
+                            {items.map(renderEntry)}
+                        </Box>
+                        {secondaryItems && secondaryItems.length > 0 ? (
+                            <Box sx={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5, width: '100%'}}>
+                                <Divider flexItem sx={{'&::before, &::after': {borderColor: 'divider'}}}>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                                        {secondaryLabel}
+                                    </Typography>
+                                </Divider>
+                                <Box display="flex" gap={2} flexWrap="wrap" justifyContent="center">
+                                    {secondaryItems.map(renderEntry)}
+                                </Box>
                             </Box>
-                        ))}
+                        ) : null}
                     </Box>
                 </Box>
                 <Box
