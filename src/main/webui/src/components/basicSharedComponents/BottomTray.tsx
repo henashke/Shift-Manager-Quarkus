@@ -172,8 +172,8 @@ const BottomTray: React.FC<BottomTrayProps> = ({title, names, forceOpen, childre
 
     return (
         <>
-            {/* Keeps the end of the page reachable above the collapsed tray */}
-            <Box sx={{height: HEADER_HEIGHT + 16}}/>
+            {/* Exactly the collapsed tray's height, so the page ends right above it with only the content's own margin */}
+            <Box sx={{height: `calc(${HEADER_HEIGHT}px + env(safe-area-inset-bottom))`}}/>
             <Box ref={backdropRef} onClick={() => setExpanded(false)} sx={{
                 position: 'fixed',
                 inset: 0,
