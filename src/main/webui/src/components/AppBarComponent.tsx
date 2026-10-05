@@ -107,10 +107,11 @@ export const AppBarComponent = observer(({darkMode, setDarkMode}: {
             </IconButton>
             <Box sx={{flex: 1, display: 'flex', justifyContent: 'center'}}>
                 <Tabs value={tabValue} onChange={handleTabChange} sx={tabsSx}>
-                    <Tab label="שיבוצים" sx={tabSx}/>
-                    <Tab label="אילוצים" sx={tabSx}/>
-                    <Tab label="נתונים" sx={tabSx}/>
-                    <Tab label="הגדרות" sx={tabSx}/>
+                    {/* Laid out left to right (no RTL style plugin), so listed in reverse to read right to left */}
+                    <Tab value={3} label="הגדרות" sx={tabSx}/>
+                    <Tab value={2} label="נתונים" sx={tabSx}/>
+                    <Tab value={1} label="אילוצים" sx={tabSx}/>
+                    <Tab value={0} label="שיבוצים" sx={tabSx}/>
                 </Tabs>
             </Box>
             {authStore.isAuthenticated() ? (
