@@ -99,6 +99,15 @@ const BottomTray: React.FC<BottomTrayProps> = ({title, names, forceOpen, childre
     // Set when a drag ends, so the click that follows the pointer release doesn't toggle the tray again
     const suppressClick = useRef(false);
 
+    // Lets bars fixed to the bottom of the screen (the save bar) sit just above the closed tray
+    useEffect(() => {
+        const root = document.documentElement;
+        root.style.setProperty('--bottom-tray-height', `${HEADER_HEIGHT}px`);
+        return () => {
+            root.style.removeProperty('--bottom-tray-height');
+        };
+    }, []);
+
     // Off-screen cards shouldn't be reachable with the keyboard or a screen reader
     useEffect(() => {
         contentRef.current?.toggleAttribute('inert', !open);

@@ -7,6 +7,8 @@ html, body {
 
 body {
   margin: 0;
+  /* Room for the sticky save bar while there are unsaved changes (set by ShiftTableActions) */
+  padding-bottom: var(--save-bar-space, 0px);
   font-family: 'Rubik Variable', 'Segoe UI', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
