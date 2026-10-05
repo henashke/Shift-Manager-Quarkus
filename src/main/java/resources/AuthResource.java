@@ -1,13 +1,16 @@
 package resources;
 
+import auth.JwtClaims;
 import auth.RoleConstants;
 import commands.LoginCommand;
 import commands.RefreshTokenCommand;
 import commands.SignupCommand;
+import commands.UpdateAccountCommand;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
@@ -48,6 +51,13 @@ public class AuthResource {
     @Path("/logout")
     public Response logout(RefreshTokenCommand command) {
         return authResponder.logout(command);
+    }
+
+    @PUT
+    @Path("/account")
+    @RolesAllowed({RoleConstants.USER, RoleConstants.ADMIN})
+    public Response updateAccount(UpdateAccountCommand command) {
+        return authResponder.updateAccount(jwt.getClaim(JwtClaims.USERNAME), command);
     }
 
     @POST

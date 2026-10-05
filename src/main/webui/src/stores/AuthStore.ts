@@ -158,6 +158,39 @@ class AuthStore {
     }
   }
 
+  /**
+   * Changes the signed-in user's own name and/or password (both need the current password) and switches to the new
+   * tokens the server returns.
+   * @returns the error to show, or null on success
+   */
+  async updateAccount(changes: {username?: string; newPassword?: string; currentPassword: string}): Promise<string | null> {
+    // Not authFetch: it imports this store
+    if (!(await this.ensureFreshToken())) return 'החיבור פג, יש להתחבר מחדש';
+    try {
+      const res = await fetch(`${config.API_BASE_URL}/auth/account`, {
+        method: 'PUT',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(changes)
+      });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) return body?.error ?? 'עדכון החשבון נכשל';
+      const oldRefreshToken = this.refreshToken;
+      runInAction(() => this.setAuth(body.username, body.token, body.role, body.refreshToken));
+      // Best effort: the old refresh token isn't needed any more (a password change already revoked it)
+      if (oldRefreshToken) {
+        fetch(`${config.API_BASE_URL}/auth/logout`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({refreshToken: oldRefreshToken})
+        }).catch(() => {
+        });
+      }
+      return null;
+    } catch (e) {
+      return 'עדכון החשבון נכשל';
+    }
+  }
+
   async ensureValidSession(navigate?: (path: string) => void) {
     if (!this.isAuthenticated()) return;
     const valid = await this.ensureFreshToken();

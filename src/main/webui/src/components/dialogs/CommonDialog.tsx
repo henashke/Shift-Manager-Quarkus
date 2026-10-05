@@ -22,6 +22,8 @@ export interface CommonDialogProps {
     // Red icon and confirm button, for actions that delete or reset data
     danger?: boolean;
     disableConfirmButton?: boolean;
+    // False when the dialog closes itself after an async confirm (e.g. to stay open and show an error)
+    closeOnConfirm?: boolean;
 }
 
 const settle = keyframes`
@@ -67,11 +69,12 @@ const CommonDialog: React.FC<CommonDialogProps> = ({
                                                        confirmLabel = 'אישור',
                                                        cancelLabel = 'ביטול',
                                                        danger,
-                                                       disableConfirmButton
+                                                       disableConfirmButton,
+                                                       closeOnConfirm = true
                                                    }) => {
     const handleConfirmInternal = () => {
         handleConfirm?.();
-        handleDialogClose();
+        if (closeOnConfirm) handleDialogClose();
     };
     const titleId = useId();
 

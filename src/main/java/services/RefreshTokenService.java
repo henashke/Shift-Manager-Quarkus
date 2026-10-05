@@ -81,6 +81,12 @@ public class RefreshTokenService {
         dao.deleteByTokenHash(hash(rawToken));
     }
 
+    // Signs the user out everywhere, e.g. after a password change
+    @Transactional
+    public void revokeAll(User user) {
+        dao.deleteAllForUser(user);
+    }
+
     private static String hash(String rawToken) {
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256").digest(rawToken.getBytes(StandardCharsets.UTF_8));
