@@ -210,11 +210,13 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, Up
      * Replays all assigned shifts in chronological order. A user's starting score is the average score of the users
      * who already worked at the time of their first shift (instead of 0), so latecomers don't end up far below
      * everyone else. Users with no shifts yet get the current average (admins without shifts stay at 0).
+     * Reservists are left out entirely: their shifts don't count toward anyone's score or the averages, and their own
+     * score is kept as it is.
      */
     @Transactional
     public void recalculateAllUsersScores() {
         List<AssignedShift> shifts = dao.listAll().stream()
-                .filter(shift -> shift.assignedUser != null)
+                .filter(shift -> shift.assignedUser != null && !shift.assignedUser.reserve)
                 .sorted(Comparator.comparing((AssignedShift shift) -> shift.date).thenComparing(shift -> shift.type))
                 .toList();
 
@@ -230,6 +232,7 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, Up
 
         int average = averageScore(scores);
         for (User user : userDao.listAll()) {
+            if (user.reserve) continue;
             if (scores.containsKey(user.id)) {
                 user.score = scores.get(user.id);
             } else {

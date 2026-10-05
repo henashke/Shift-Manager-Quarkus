@@ -32,6 +32,7 @@ const UserList: React.FC<{ isDragged?: boolean, setIsDragged?: (val: boolean) =>
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [selectedUserName, setSelectedUserName] = useState<string | undefined>(undefined);
     const [infoDialogOpen, setInfoDialogOpen] = useState(false);
+    const selectedUser = users.find(u => u.name === selectedUserName);
 
     const deleteAreaOnDropHandler = (e: React.DragEvent) => {
         e.preventDefault();
@@ -157,7 +158,10 @@ const UserList: React.FC<{ isDragged?: boolean, setIsDragged?: (val: boolean) =>
                 open={deleteDialogOpen}
                 handleDialogClose={handleDeleteDialogClose}
                 handleConfirm={handleConfirmDelete}
-                selectedUsername={selectedUserName}/>
+                selectedUsername={selectedUserName}
+                onMoveToReserve={selectedUser && !selectedUser.reserve
+                    ? () => runAdminAction(() => usersStore.setReserve(selectedUser.name, true))
+                    : undefined}/>
             <UserInfoDialog open={infoDialogOpen} username={selectedUserName} onClose={() => setInfoDialogOpen(false)}/>
         </>
     );
