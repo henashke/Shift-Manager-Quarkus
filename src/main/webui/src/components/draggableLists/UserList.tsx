@@ -23,6 +23,7 @@ import {ContextMenuItem} from "./DraggableList";
 
 const UserList: React.FC<{ isDragged?: boolean, setIsDragged?: (val: boolean) => void }> = observer(({ isDragged, setIsDragged }) => {
     const {users} = usersStore;
+    const isAdmin = authStore.isAdmin();
     const regularUsers = users.filter(u => !u.reserve);
     const reserveUsers = users.filter(u => u.reserve);
     const theme = useTheme();
@@ -32,6 +33,7 @@ const UserList: React.FC<{ isDragged?: boolean, setIsDragged?: (val: boolean) =>
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [selectedUserName, setSelectedUserName] = useState<string | undefined>(undefined);
     const [infoDialogOpen, setInfoDialogOpen] = useState(false);
+    const selectedUser = users.find(u => u.name === selectedUserName);
 
     const deleteAreaOnDropHandler = (e: React.DragEvent) => {
         e.preventDefault();
@@ -105,9 +107,8 @@ const UserList: React.FC<{ isDragged?: boolean, setIsDragged?: (val: boolean) =>
         action();
     };
 
-    // Reserve and role actions, for admins only; nobody changes their own role
-    const adminMenuItems = (user: User): ContextMenuItem[] => {
-        if (!authStore.isAdmin()) return [];
+    // Reserve and role actions; nobody changes their own role
+    const reserveAndRoleItems = (user: User): ContextMenuItem[] => {
         const items: ContextMenuItem[] = [user.reserve
             ? {label: 'החזר לכוננים קבועים', icon: <UndoRounded fontSize="small"/>,
                 onClick: () => runAdminAction(() => usersStore.setReserve(user.name, false))}
@@ -131,13 +132,15 @@ const UserList: React.FC<{ isDragged?: boolean, setIsDragged?: (val: boolean) =>
         getLabel={u => u.name}
         onDragStart={onDragStart}
         onDrop={deleteAreaOnDropHandler}
-        onItemClick={(user) => handleInfoDialogOpen(user)}
-        contextMenuItems={(user) => [
+        // Regular users can only look: a tap opens the user's details, and there's nothing to drag them onto
+        onItemClick={handleInfoDialogOpen}
+        contextMenuItems={isAdmin ? (user) => [
             {label: 'פרטי משתמש', icon: <BadgeOutlined fontSize="small"/>, onClick: () => handleInfoDialogOpen(user)},
             {label: 'ערוך', icon: <EditOutlined fontSize="small"/>, onClick: () => handleEditDialogOpen(user)},
-            ...adminMenuItems(user),
+            ...reserveAndRoleItems(user),
             {label: 'מחק', icon: <DeleteOutlineRounded fontSize="small"/>, danger: true, onClick: () => handleDeleteDialogOpen(user)},
-        ]}
+        ] : undefined}
+        draggable={isAdmin}
         isDragged={isDragged}
         embedded={isNarrowScreen}
         renderItem={u => <UserCard name={u.name}/>}
@@ -157,7 +160,10 @@ const UserList: React.FC<{ isDragged?: boolean, setIsDragged?: (val: boolean) =>
                 open={deleteDialogOpen}
                 handleDialogClose={handleDeleteDialogClose}
                 handleConfirm={handleConfirmDelete}
-                selectedUsername={selectedUserName}/>
+                selectedUsername={selectedUserName}
+                onMoveToReserve={selectedUser && !selectedUser.reserve
+                    ? () => runAdminAction(() => usersStore.setReserve(selectedUser.name, true))
+                    : undefined}/>
             <UserInfoDialog open={infoDialogOpen} username={selectedUserName} onClose={() => setInfoDialogOpen(false)}/>
         </>
     );

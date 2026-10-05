@@ -157,9 +157,7 @@ const ConstraintTab: React.FC = observer(() => {
         e.target.value === '' ? setSelectedUser(authStore.username ?? '') : setSelectedUser(e.target.value)
     }
 
-    const getUsernames = () => {
-        return usersStore.users.filter(u => authStore.isAdmin() || u.name === authStore.username).map(u => u.name);
-    }
+    const getUsernames = () => usersStore.users.map(u => u.name);
 
     return (
         <Container maxWidth={"xl"} dir="rtl">
@@ -202,9 +200,14 @@ const ConstraintTab: React.FC = observer(() => {
                     renderAdditionalComponent={
                         <>
                             <Typography variant="h6">משבץ אילוצים עבור:</Typography>
-                            <NativeSelect title={"כל המשתמשים"}
-                                          options={getUsernames()}
-                                          onChange={selectedUserOnChange} hideTitleElement={!authStore.isAdmin()}/>
+                            {/* Regular users only set their own constraints, so there's nobody else to pick */}
+                            {authStore.isAdmin() ? (
+                                <NativeSelect title={"כל המשתמשים"}
+                                              options={getUsernames()}
+                                              onChange={selectedUserOnChange}/>
+                            ) : (
+                                <Typography variant="h6" sx={{fontWeight: 700}}>{authStore.username}</Typography>
+                            )}
                         </>
                     }
                 />

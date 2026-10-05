@@ -138,8 +138,10 @@ const SettingsTab: React.FC = observer(() => {
         return false;
     };
 
-    const showSaveButton = isSettingsDifferent();
-    const showMakeDefaultButton = !showSaveButton;
+    // Regular users can browse the presets but not change them, recalculate or back up
+    const isAdmin = authStore.isAdmin();
+    const showSaveButton = isAdmin && isSettingsDifferent();
+    const showMakeDefaultButton = isAdmin && !showSaveButton;
     const isDefaultPreset = preset === shiftWeightStore.currentPresetObject?.name;
     const presetOptions = Array.from(shiftWeightStore.presets.keys());
 
@@ -186,7 +188,7 @@ const SettingsTab: React.FC = observer(() => {
                                         <TableCell align="center" sx={{fontWeight: 700}}>{day}</TableCell>
                                         {shiftTypes.map(type => (
                                             <TableCell align="center" key={type}>
-                                                <TextField
+                                                {isAdmin ? <TextField
                                                     variant="outlined"
                                                     size="small"
                                                     value={settings[day] ? settings[day][type] : '0'}
@@ -194,7 +196,9 @@ const SettingsTab: React.FC = observer(() => {
                                                     sx={{width: '100px'}}
                                                     inputProps={{inputMode: 'numeric', pattern: '[0-9]*'}}
                                                     placeholder="0"
-                                                />
+                                                /> : <Typography sx={{fontWeight: 600}}>
+                                                    {settings[day]?.[type] ?? '0'}
+                                                </Typography>}
                                             </TableCell>
                                         ))}
                                     </TableRow>
@@ -204,14 +208,16 @@ const SettingsTab: React.FC = observer(() => {
                     </Table>
                 </TableContainer>
             </Box>
-            <Divider/>
-            <Typography style={{fontWeight: 700, fontSize: '1.2em'}}>אפשרויות נוספות</Typography>
-            <Box sx={{display: 'flex', gap: 1}}>
-                <DangerousButton title={"חשב מחדש את ניקוד המשמרות"}
-                                 onClick={() => setRecalculateScoresDialogOpen(true)}/>
-                <BasicButton title={"צור גיבוי של נתוני המערכת"}
-                             onClick={() => shiftWeightStore.backupSystemData()} />
-            </Box>
+            {isAdmin ? <>
+                <Divider/>
+                <Typography style={{fontWeight: 700, fontSize: '1.2em'}}>אפשרויות נוספות</Typography>
+                <Box sx={{display: 'flex', gap: 1}}>
+                    <DangerousButton title={"חשב מחדש את ניקוד המשמרות"}
+                                     onClick={() => setRecalculateScoresDialogOpen(true)}/>
+                    <BasicButton title={"צור גיבוי של נתוני המערכת"}
+                                 onClick={() => shiftWeightStore.backupSystemData()} />
+                </Box>
+            </> : null}
                 <RecalculateDialog handleConfirm={shiftStore.recalculateScores}
                                    open={recalculateScoresDialogOpen}
                                    handleDialogClose={() => setRecalculateScoresDialogOpen(false)}/>
