@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import enums.ConstraintType;
 import enums.Day;
+import enums.ShiftKind;
 import enums.ShiftType;
 import jakarta.enterprise.context.ApplicationScoped;
 
@@ -153,11 +154,18 @@ public class BackupSqlGenerator {
                 }
             }
 
-            sb.append("INSERT INTO assigned_shifts (user_id, date, type, preset_id) VALUES (")
+            // Backups from before shadow and jump shifts have no kind: those are all regular
+            String kind = s.get("kind") != null ? ShiftKind.valueOf(asString(s.get("kind"))).name() : ShiftKind.REGULAR.name();
+
+            String specialTableName = asString(s.get("specialTableName"));
+
+            sb.append("INSERT INTO assigned_shifts (user_id, date, type, preset_id, kind, special_table_name) VALUES (")
                     .append(userIdVal).append(", ")
                     .append(sqlString(dateStr)).append(", ")
                     .append(sqlString(type)).append(", ")
-                    .append(presetIdStr).append(");\n");
+                    .append(presetIdStr).append(", ")
+                    .append(sqlString(kind)).append(", ")
+                    .append(sqlString(specialTableName)).append(");\n");
         }
 
         return sb.toString();

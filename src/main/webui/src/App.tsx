@@ -9,7 +9,9 @@ import authStore from './stores/AuthStore';
 import ConstraintTab from './components/tabs/ConstraintTab';
 import AssignmentTab from './components/tabs/AssignmentTab';
 import SettingsTab from './components/tabs/SettingsTab';
+import StatsTab from './components/tabs/StatsTab';
 import {AppBarComponent} from "./components/AppBarComponent";
+import AnnouncementDialog from "./components/dialogs/AnnouncementDialog";
 import {primaryGradient} from './theme';
 
 const DARK_MODE_KEY = 'darkMode';
@@ -131,9 +133,11 @@ const App: React.FC = observer(() => {
                 <Route path="/login" element={<LoginSignup/>}/>
                 <Route path="/constraints" element={<ConstraintTab/>}/>
                 <Route path="/settings" element={<SettingsTab/>}/>
+                <Route path="/stats" element={<StatsTab/>}/>
                 <Route path="/" element={<AssignmentTab/>}/>
             </Routes>
             <NotificationDisplay/>
+            <AnnouncementDialog/>
         </ThemeProvider>
     );
 });

@@ -1,6 +1,7 @@
 package commands;
 
 import entities.AssignedShift;
+import enums.ShiftKind;
 import enums.ShiftType;
 
 import java.time.LocalDate;
@@ -10,4 +11,7 @@ public class AddShiftCommand extends AddCommand<AssignedShift> {
     public ShiftType type;
     public Long userId;
     public Long shiftWeightPresetId;
+    public ShiftKind kind = ShiftKind.REGULAR;
+    // Null for the regular table
+    public String specialTableName;
 }

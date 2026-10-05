@@ -77,6 +77,10 @@ public class BackupService {
         Map<String, Object> backup = shiftBackup(shift.date, shift.type);
         backup.put("assignedUsername", shift.assignedUser != null ? shift.assignedUser.name : null);
         backup.put("preset", shift.shiftWeightPreset != null ? toBackup(shift.shiftWeightPreset) : null);
+        // Not in the old format: regular, shadow or jump (older backups have none, meaning regular)
+        backup.put("kind", shift.kind.name());
+        // Also not in the old format: the week's extra table the shift belongs to (null: the regular table)
+        backup.put("specialTableName", shift.specialTableName);
         return backup;
     }
 

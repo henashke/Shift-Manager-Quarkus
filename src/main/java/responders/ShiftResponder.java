@@ -1,12 +1,16 @@
 package responders;
 
 import commands.AddShiftCommand;
+import commands.DeleteShiftsByWeekCommand;
+import commands.RenameShiftTableCommand;
 import commands.ShiftSuggestCommand;
 import commands.UpdateShiftCommand;
 import daos.UserDao;
 import dto.AssignedShiftDto;
+import dto.ShiftDto;
 import dto.ShiftSuggestDto;
 import entities.AssignedShift;
+import enums.ShiftKind;
 import enums.ShiftType;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -17,9 +21,11 @@ import jakarta.ws.rs.core.Response;
 import mappers.DtoToCommandMapper;
 import mappers.shift.ShiftDtoToCommandMapper;
 import services.ShiftConstraintViolationException;
+import services.ShiftRoleConflictException;
 import services.ShiftService;
+import services.ShiftTableNameTakenException;
+import util.ShiftTableNames;
 
-import java.time.LocalDate;
 import java.util.List;
 
 import static responders.ErrorResponses.error;
@@ -58,7 +64,7 @@ public class ShiftResponder extends BaseResponder<AssignedShift, AddShiftCommand
                 .toList();
         try {
             return ok(shiftDtoToCommandMapper.mapToDto(service.overrideShifts(commands)));
-        } catch (ShiftConstraintViolationException e) {
+        } catch (ShiftConstraintViolationException | ShiftRoleConflictException e) {
             // Rethrown (not returned) so the transaction is rolled back
             throw new BadRequestException(error(Response.Status.BAD_REQUEST, e.getMessage()));
         }
@@ -76,23 +82,34 @@ public class ShiftResponder extends BaseResponder<AssignedShift, AddShiftCommand
         cmd.endDate = dto.endDate;
 
         List<AssignedShift> suggestions = service.suggestAssignments(
-                cmd.userIds, cmd.startDate, cmd.endDate);
+                cmd.userIds, cmd.startDate, cmd.endDate, ShiftTableNames.normalize(dto.specialTableName));
         return ok(shiftDtoToCommandMapper.mapToDto(suggestions));
     }
 
     @Transactional
-    public Response deleteShiftsForWeek(LocalDate weekStart) {
-        service.deleteShiftsForWeek(weekStart);
+    public Response deleteShiftsForWeek(DeleteShiftsByWeekCommand command) {
+        service.deleteShiftsForWeek(command.weekStart, ShiftTableNames.normalize(command.specialTableName));
         return ok();
     }
 
-    @Transactional
-    public Response deleteByDateAndType(LocalDate date, ShiftType type) {
-        AssignedShift found = service.listAll().stream()
-                .filter(s -> s.date.equals(date) && s.type.equals(type))
-                .findFirst()
-                .orElseThrow(NotFoundException::new);
-        service.deleteById(found.id);
+    public Response renameTableForWeek(RenameShiftTableCommand command) {
+        String from = ShiftTableNames.normalize(command.from);
+        String to = ShiftTableNames.normalize(command.to);
+        if (command.weekStart == null || from == null || to == null) {
+            return error(Response.Status.BAD_REQUEST, "weekStart, from and to are required, and the regular table can't be renamed");
+        }
+        try {
+            service.renameTableForWeek(command.weekStart, from, to);
+            return ok();
+        } catch (ShiftTableNameTakenException e) {
+            return error(Response.Status.CONFLICT, e.getMessage());
+        }
+    }
+
+    public Response deleteSlot(ShiftDto shift) {
+        boolean deleted = service.deleteSlot(shift.date, ShiftType.fromHebrew(shift.type), ShiftKind.orRegular(shift.kind),
+                ShiftTableNames.normalize(shift.specialTableName));
+        if (!deleted) throw new NotFoundException();
         return ok();
     }
 

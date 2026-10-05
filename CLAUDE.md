@@ -53,7 +53,7 @@ constraints, and applies weight-based fairness scoring across a week.
 | Entity              | Purpose                                                     |
 |---------------------|-------------------------------------------------------------|
 | `User`              | Employee with hashed password, cumulative score, and role   |
-| `AssignedShift`     | Links User → date + ShiftType + ShiftWeightPreset           |
+| `AssignedShift`     | Links User → date + ShiftType + ShiftWeightPreset + ShiftKind |
 | `Shift`             | Base shift by date and ShiftType (DAY/NIGHT)                |
 | `Constraint`        | User's availability for a date: CANT / PREFER / PREFERS_NOT |
 | `ShiftWeightPreset` | Named set of per-day-of-week weights for fairness scoring   |
@@ -113,6 +113,17 @@ back-references).
 - `GET /api/users` returns only schedulable users (`users.schedulable`; false for the built-in system admin account).
   Being an admin is only a permission: promoted admins stay listed and scheduled. The backup export includes everyone.
 - Reservists (`users.reserve`) are listed separately in the UI and left out of weekly suggestions unless picked.
+- Every shift (date + DAY/NIGHT) has up to three assignments, one per `ShiftKind`: REGULAR, plus the optional SHADOW
+  (כונן צל) and JUMP (כונן הקפצה) set by hand. `kind` is on the shift DTOs (missing means REGULAR, also on
+  `DELETE /api/shifts`). All three count toward scores and respect CANT constraints; nobody fills two kinds of one
+  shift; suggestions only fill REGULAR and treat shadow/jump holders of a shift as unavailable for it.
+- A week can have extra shift tables (additional real schedules next to the regular one): `specialTableName` on
+  assigned shifts and the shift DTOs, also on `DELETE /api/shifts`, `DELETE /api/shifts/week` and `/suggest` (missing
+  means the regular table; "רגיל" is reserved, up to 50 characters). Each table has its own slots and counts toward
+  scores; a person may be in the same shift in several tables (the two-roles rule is per table). The client discovers a
+  week's tables from its shifts; a new, still-empty table is only remembered in the creating browser's localStorage.
+- `GET /api/stats` (everyone) feeds the stats page: per schedulable user and team totals, counting regular-role
+  shifts in every table up to today (shadow/jump counted separately), "last 30 days" as a rolling window.
 - `GET /api/shifts` and `GET /api/constraints` take `?weekOffset=N` and return a 5-week window around that week
   (`util/WeekWindow`: weeks start on Sunday, computed in the server's time zone). Without it they return the whole
   history, which the frontend never asks for.

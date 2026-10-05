@@ -62,8 +62,10 @@ const tabSx: SxProps<Theme> = {
     zIndex: 1,
     minHeight: 0,
     minWidth: 0,
-    px: 2,
+    // Narrower on phones, so four tabs fit between the theme toggle and the avatar
+    px: {xs: 1.25, sm: 2},
     py: 0.75,
+    fontSize: {xs: '0.85rem', sm: '0.875rem'},
     fontWeight: 600,
     color: 'text.secondary',
     '&.Mui-selected': {color: 'common.white'},
@@ -77,7 +79,8 @@ export const AppBarComponent = observer(({darkMode, setDarkMode}: {
     const navigate = useNavigate();
     const [tabValue, setTabValue] = useState(() => {
         if (window.location.pathname.startsWith('/constraints')) return 1;
-        if (window.location.pathname.startsWith('/settings')) return 2;
+        if (window.location.pathname.startsWith('/stats')) return 2;
+        if (window.location.pathname.startsWith('/settings')) return 3;
         return 0;
     });
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -92,7 +95,8 @@ export const AppBarComponent = observer(({darkMode, setDarkMode}: {
         startTransition(() => {
             if (newValue === 0) navigate('/');
             if (newValue === 1) navigate('/constraints');
-            if (newValue === 2) navigate('/settings');
+            if (newValue === 2) navigate('/stats');
+            if (newValue === 3) navigate('/settings');
         });
     };
 
@@ -103,9 +107,11 @@ export const AppBarComponent = observer(({darkMode, setDarkMode}: {
             </IconButton>
             <Box sx={{flex: 1, display: 'flex', justifyContent: 'center'}}>
                 <Tabs value={tabValue} onChange={handleTabChange} sx={tabsSx}>
-                    <Tab label="שיבוצים" sx={tabSx}/>
-                    <Tab label="אילוצים" sx={tabSx}/>
-                    <Tab label="הגדרות" sx={tabSx}/>
+                    {/* Laid out left to right (no RTL style plugin), so listed in reverse to read right to left */}
+                    <Tab value={3} label="הגדרות" sx={tabSx}/>
+                    <Tab value={2} label="נתונים" sx={tabSx}/>
+                    <Tab value={1} label="אילוצים" sx={tabSx}/>
+                    <Tab value={0} label="שיבוצים" sx={tabSx}/>
                 </Tabs>
             </Box>
             {authStore.isAuthenticated() ? (

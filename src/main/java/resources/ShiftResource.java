@@ -2,10 +2,10 @@ package resources;
 
 import auth.RoleConstants;
 import commands.DeleteShiftsByWeekCommand;
+import commands.RenameShiftTableCommand;
 import dto.AssignedShiftDto;
 import dto.ShiftDto;
 import dto.ShiftSuggestDto;
-import enums.ShiftType;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -40,14 +40,21 @@ public class ShiftResource {
     @DELETE
     @RolesAllowed({RoleConstants.ADMIN})
     public Response deleteShift(ShiftDto shift) {
-        return shiftResponder.deleteByDateAndType(shift.date, ShiftType.fromHebrew(shift.type));
+        return shiftResponder.deleteSlot(shift);
     }
 
     @DELETE
     @Path("/week")
     @RolesAllowed({RoleConstants.ADMIN})
     public Response deleteWeek(DeleteShiftsByWeekCommand command) {
-        return shiftResponder.deleteShiftsForWeek(command.weekStart);
+        return shiftResponder.deleteShiftsForWeek(command);
+    }
+
+    @PUT
+    @Path("/week/table")
+    @RolesAllowed({RoleConstants.ADMIN})
+    public Response renameTable(RenameShiftTableCommand command) {
+        return shiftResponder.renameTableForWeek(command);
     }
 
     @POST
