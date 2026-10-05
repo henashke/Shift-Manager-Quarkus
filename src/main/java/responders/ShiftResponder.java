@@ -7,6 +7,7 @@ import daos.UserDao;
 import dto.AssignedShiftDto;
 import dto.ShiftSuggestDto;
 import entities.AssignedShift;
+import enums.ShiftKind;
 import enums.ShiftType;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -17,6 +18,7 @@ import jakarta.ws.rs.core.Response;
 import mappers.DtoToCommandMapper;
 import mappers.shift.ShiftDtoToCommandMapper;
 import services.ShiftConstraintViolationException;
+import services.ShiftRoleConflictException;
 import services.ShiftService;
 
 import java.time.LocalDate;
@@ -58,7 +60,7 @@ public class ShiftResponder extends BaseResponder<AssignedShift, AddShiftCommand
                 .toList();
         try {
             return ok(shiftDtoToCommandMapper.mapToDto(service.overrideShifts(commands)));
-        } catch (ShiftConstraintViolationException e) {
+        } catch (ShiftConstraintViolationException | ShiftRoleConflictException e) {
             // Rethrown (not returned) so the transaction is rolled back
             throw new BadRequestException(error(Response.Status.BAD_REQUEST, e.getMessage()));
         }
@@ -86,13 +88,8 @@ public class ShiftResponder extends BaseResponder<AssignedShift, AddShiftCommand
         return ok();
     }
 
-    @Transactional
-    public Response deleteByDateAndType(LocalDate date, ShiftType type) {
-        AssignedShift found = service.listAll().stream()
-                .filter(s -> s.date.equals(date) && s.type.equals(type))
-                .findFirst()
-                .orElseThrow(NotFoundException::new);
-        service.deleteById(found.id);
+    public Response deleteSlot(LocalDate date, ShiftType type, ShiftKind kind) {
+        if (!service.deleteSlot(date, type, ShiftKind.orRegular(kind))) throw new NotFoundException();
         return ok();
     }
 

@@ -53,7 +53,7 @@ constraints, and applies weight-based fairness scoring across a week.
 | Entity              | Purpose                                                     |
 |---------------------|-------------------------------------------------------------|
 | `User`              | Employee with hashed password, cumulative score, and role   |
-| `AssignedShift`     | Links User → date + ShiftType + ShiftWeightPreset           |
+| `AssignedShift`     | Links User → date + ShiftType + ShiftWeightPreset + ShiftKind |
 | `Shift`             | Base shift by date and ShiftType (DAY/NIGHT)                |
 | `Constraint`        | User's availability for a date: CANT / PREFER / PREFERS_NOT |
 | `ShiftWeightPreset` | Named set of per-day-of-week weights for fairness scoring   |
@@ -113,6 +113,10 @@ back-references).
 - `GET /api/users` returns only schedulable users (`users.schedulable`; false for the built-in system admin account).
   Being an admin is only a permission: promoted admins stay listed and scheduled. The backup export includes everyone.
 - Reservists (`users.reserve`) are listed separately in the UI and left out of weekly suggestions unless picked.
+- Every shift (date + DAY/NIGHT) has up to three assignments, one per `ShiftKind`: REGULAR, plus the optional SHADOW
+  (כונן צל) and JUMP (כונן הקפצה) set by hand. `kind` is on the shift DTOs (missing means REGULAR, also on
+  `DELETE /api/shifts`). All three count toward scores and respect CANT constraints; nobody fills two kinds of one
+  shift; suggestions only fill REGULAR and treat shadow/jump holders of a shift as unavailable for it.
 - `GET /api/shifts` and `GET /api/constraints` take `?weekOffset=N` and return a 5-week window around that week
   (`util/WeekWindow`: weeks start on Sunday, computed in the server's time zone). Without it they return the whole
   history, which the frontend never asks for.

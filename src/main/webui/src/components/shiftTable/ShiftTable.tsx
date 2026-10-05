@@ -59,7 +59,13 @@ interface ShiftTableProps<T> {
         icon: React.ReactNode;
         action: (shift: Shift) => void;
         disabled?: (shift: Shift) => boolean;
-    }[]
+        // Left out of the menu for this shift
+        hidden?: (shift: Shift) => boolean;
+        // Shown in red with the remove action, after the divider
+        danger?: boolean;
+    }[];
+    // More content under the cell's item (or its empty prompt), e.g. the shift's shadow and jump assignees
+    renderCellExtras?: (shift: Shift) => React.ReactNode;
 }
 
 function ShiftTable<T>({
@@ -83,6 +89,7 @@ function ShiftTable<T>({
                            isLoading,
                            isWeekLoaded = () => true,
                            additionalContextMenuItems,
+                           renderCellExtras,
                        }: ShiftTableProps<T>) {
     const theme = useTheme();
     const isNarrowScreen = useMediaQuery(theme.breakpoints.down('md'), {noSsr: true}); // Switch to vertical on screens smaller than 'md' breakpoint
@@ -208,8 +215,10 @@ function ShiftTable<T>({
             return (
                 <TableCell key={'table-cell-' + dateKey(date) + shiftType} align="center" sx={cellSx}>
                     {!preview.loaded ? <CardSkeleton/>
-                        : previewItem ? renderItemElement(previewItem, shift)
-                            : emptyCell}
+                        : <>
+                            {previewItem ? renderItemElement(previewItem, shift) : emptyCell}
+                            {renderCellExtras?.(shift)}
+                        </>}
                 </TableCell>
             );
         }
@@ -227,6 +236,7 @@ function ShiftTable<T>({
             return (
                 <TableCell key={'table-cell-' + dateKey(date) + shiftType} align="center" sx={cellSx}>
                     {item ? renderItemElement(item, shift) : null}
+                    {renderCellExtras?.(shift)}
                 </TableCell>
             );
         }
@@ -250,6 +260,7 @@ function ShiftTable<T>({
                         {renderItemElement(item, shift)}
                     </Box>
                 ) : emptyCell}
+                {renderCellExtras?.(shift)}
             </TableCell>
         );
     }
@@ -282,12 +293,35 @@ function ShiftTable<T>({
         </Table>
     );
 
+    // A Menu takes its items as direct children, so these are rendered as an array rather than a fragment
+    const renderAdditionalMenuItems = (danger: boolean) => {
+        const shift = contextMenu?.shift;
+        if (!additionalContextMenuItems || !shift) return null;
+        return additionalContextMenuItems
+            .filter(menuItem => !!menuItem.danger === danger && !menuItem.hidden?.(shift))
+            .map(menuItem => (
+                <MenuItem
+                    key={menuItem.label}
+                    sx={danger ? dangerMenuItemSx : undefined}
+                    onClick={() => {
+                        menuItem.action(shift);
+                        handleCloseContextMenu();
+                    }}
+                    disabled={menuItem.disabled ? menuItem.disabled(shift) : false}
+                >
+                    <ListItemIcon>{menuItem.icon}</ListItemIcon>
+                    <ListItemText>{menuItem.label}</ListItemText>
+                </MenuItem>
+            ));
+    };
+
     const isAllContextMenuDisabledButAddItem = (shift: Shift) => {
         if (isRemoveItemDisabled === undefined || !(isRemoveItemDisabled(shift))) {
             return false
         }
         if (additionalContextMenuItems) {
             for (const menuItem of additionalContextMenuItems) {
+                if (menuItem.hidden?.(shift)) continue;
                 if (menuItem.disabled !== undefined && !menuItem.disabled(shift)) {
                     return false
                 }
@@ -350,20 +384,9 @@ function ShiftTable<T>({
                         <ListItemIcon><AddRounded fontSize="small"/></ListItemIcon>
                         <ListItemText>שבץ {itemName}</ListItemText>
                     </MenuItem>
-                    {additionalContextMenuItems && contextMenu?.shift ? additionalContextMenuItems.map((menuItem, index) => (
-                        <MenuItem
-                            key={index}
-                            onClick={() => {
-                                menuItem.action(contextMenu.shift!);
-                                handleCloseContextMenu();
-                            }}
-                            disabled={menuItem.disabled && contextMenu.shift ? menuItem.disabled(contextMenu.shift) : false}
-                        >
-                            <ListItemIcon>{menuItem.icon}</ListItemIcon>
-                            <ListItemText>{menuItem.label}</ListItemText>
-                        </MenuItem>
-                    )) : null}
+                    {renderAdditionalMenuItems(false)}
                     <Divider sx={{my: 0.5}}/>
+                    {renderAdditionalMenuItems(true)}
                     <MenuItem onClick={handleRemoveItem} sx={dangerMenuItemSx}
                               disabled={isRemoveItemDisabled && isRemoveItemDisabled(contextMenu?.shift!)}
                     >

@@ -20,11 +20,25 @@ export interface Shift {
     type: ShiftType;
 }
 
+// The role an assignment fills in its shift. Shadow and jump are optional extras set by hand (never suggested); every
+// shift has at most one of each, and nobody fills two roles of the same shift
+export type ShiftKind = 'REGULAR' | 'SHADOW' | 'JUMP';
+
+export const shiftKindLabels: Record<ShiftKind, string> = {
+    REGULAR: 'כונן',
+    SHADOW: 'כונן צל',
+    JUMP: 'כונן הקפצה',
+};
+
 export interface AssignedShift extends Shift {
     assignedUsername: string;
     preset: ShiftWeightPreset;
     isPending?: boolean;
+    // Missing means regular (older pending shifts in localStorage, and older servers)
+    kind?: ShiftKind;
 }
+
+export const kindOf = (shift: AssignedShift): ShiftKind => shift.kind ?? 'REGULAR';
 
 const PENDING_SHIFT_STORAGE_KEY = 'pendingAssignedShifts';
 
@@ -114,10 +128,11 @@ export class ShiftStore {
     get hasShiftsForCurrentWeek() {
         return isInWindow(this.weekOffset, this.loadedShiftsCenter);
     }
-    unassignUser = async (shift: Shift) => {
-        const pendingShiftToUnassign = this.pendingAssignedShifts.find(s => sameShift(s, shift));
+    unassignUser = async (shift: Shift, kind: ShiftKind = 'REGULAR') => {
+        const target = {date: shift.date, type: shift.type, kind};
+        const pendingShiftToUnassign = this.pendingAssignedShifts.find(s => sameAssignment(s, target));
         if (pendingShiftToUnassign) {
-            this.pendingAssignedShifts = this.pendingAssignedShifts.filter(s => !sameShift(s, pendingShiftToUnassign));
+            this.pendingAssignedShifts = this.pendingAssignedShifts.filter(s => !sameAssignment(s, target));
             return;
         }
         this.loading = true;
@@ -125,11 +140,11 @@ export class ShiftStore {
             const response = await authFetch(`${config.API_BASE_URL}/shifts`, {
                 method: 'DELETE',
                 headers: authStore.getAuthHeaders(),
-                body: JSON.stringify(shift),
+                body: JSON.stringify(target),
             });
             if (!response.ok) throw new Error('Failed to unassign shift');
             runInAction(() => {
-                this.assignedShifts = this.assignedShifts.filter(assignedShift => !sameShift(assignedShift, shift));
+                this.assignedShifts = this.assignedShifts.filter(assignedShift => !sameAssignment(assignedShift, target));
                 this.loading = false;
             });
         } catch (error) {
@@ -142,23 +157,28 @@ export class ShiftStore {
 
     // Computed lookups, so each table cell doesn't scan every shift; pending shifts take precedence
     get assignedShiftsByKey() {
-        return new Map(this.assignedShifts.map(s => [shiftKey(s), s]));
+        return new Map(this.assignedShifts.map(s => [assignmentKey(s, kindOf(s)), s]));
     }
 
     get assignedOrPendingShiftsByKey() {
         const map = new Map(this.assignedShiftsByKey);
-        this.pendingAssignedShifts.forEach(s => map.set(shiftKey(s), s));
+        this.pendingAssignedShifts.forEach(s => map.set(assignmentKey(s, kindOf(s)), s));
         return map;
     }
 
     // shift can be undefined at runtime (e.g. a closed context menu), like sameShift tolerates
-    getAssignedShift = (shift?: Shift): AssignedShift | undefined => {
-        return shift ? this.assignedShiftsByKey.get(shiftKey(shift)) : undefined;
+    getAssignedShift = (shift?: Shift, kind: ShiftKind = 'REGULAR'): AssignedShift | undefined => {
+        return shift ? this.assignedShiftsByKey.get(assignmentKey(shift, kind)) : undefined;
     }
 
-    getAssignedOrPendingShift = (shift?: Shift): AssignedShift | undefined => {
-        return shift ? this.assignedOrPendingShiftsByKey.get(shiftKey(shift)) : undefined;
+    getAssignedOrPendingShift = (shift?: Shift, kind: ShiftKind = 'REGULAR'): AssignedShift | undefined => {
+        return shift ? this.assignedOrPendingShiftsByKey.get(assignmentKey(shift, kind)) : undefined;
     }
+
+    // The role someone already fills in this shift (saved or pending), other than the given one
+    otherRoleOf = (shift: Shift, username: string, kind: ShiftKind): ShiftKind | undefined =>
+        (['REGULAR', 'SHADOW', 'JUMP'] as ShiftKind[])
+            .find(other => other !== kind && this.getAssignedOrPendingShift(shift, other)?.assignedUsername === username);
 
     // Tabs fetch their own data for the new week (see their weekOffset effects)
     setWeekOffset = (offset: number) => {
@@ -166,13 +186,13 @@ export class ShiftStore {
     }
 
     assignShiftPending = (shift: AssignedShift) => {
-        this.pendingAssignedShifts = this.pendingAssignedShifts.filter(s => !sameShift(s, shift));
+        this.pendingAssignedShifts = this.pendingAssignedShifts.filter(s => !sameAssignment(s, shift));
         this.pendingAssignedShifts.push({...shift, isPending: true});
     };
 
     mergePendingToAssigned = () => {
         this.pendingAssignedShifts.forEach(pending => {
-            this.assignedShifts = this.assignedShifts.filter(s => !sameShift(s, pending));
+            this.assignedShifts = this.assignedShifts.filter(s => !sameAssignment(s, pending));
             this.assignedShifts.push({...pending, isPending: false});
         });
         this.pendingAssignedShifts = [];
@@ -233,15 +253,18 @@ export class ShiftStore {
             }
             const data = await response.json();
             runInAction(() => {
-                this.pendingAssignedShifts = data.map((shift: any) => {
+                // Suggestions only fill the regular role, so pending shadow and jump assignments stay
+                const pendingExtras = this.pendingAssignedShifts.filter(s => kindOf(s) !== 'REGULAR');
+                this.pendingAssignedShifts = [...pendingExtras, ...data.map((shift: any) => {
                     return ({
                         date: new Date(shift.date),
                         type: shift.type,
                         assignedUsername: shift.assignedUsername || '',
                         preset: shift.preset,
+                        kind: 'REGULAR' as ShiftKind,
                         isPending: true
                     })
-                });
+                })];
                 this.loading = false;
             });
         } catch (error) {
@@ -345,6 +368,12 @@ export const shiftKey = (shift: Shift) => {
     const date = new Date(shift.date);
     return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}|${shift.type}`;
 };
+
+const assignmentKey = (shift: Shift, kind: ShiftKind) => `${shiftKey(shift)}|${kind}`;
+
+// Same shift and same role
+export const sameAssignment = (a: AssignedShift | (Shift & {kind?: ShiftKind}), b: AssignedShift | (Shift & {kind?: ShiftKind})) =>
+    sameShift(a, b) && (a.kind ?? 'REGULAR') === (b.kind ?? 'REGULAR');
 
 export const sameShift = (shift1: Shift, shift2: Shift) => {
     if (!shift1 || !shift2) return false;

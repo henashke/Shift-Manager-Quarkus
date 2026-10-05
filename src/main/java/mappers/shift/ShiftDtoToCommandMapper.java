@@ -8,6 +8,7 @@ import dto.AssignedShiftDto;
 import entities.AssignedShift;
 import entities.ShiftWeightPreset;
 import entities.User;
+import enums.ShiftKind;
 import enums.ShiftType;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -37,6 +38,7 @@ public class ShiftDtoToCommandMapper implements DtoToCommandMapper<AssignedShift
         AddShiftCommand cmd = new AddShiftCommand();
         cmd.date = dto.date;
         cmd.type = ShiftType.fromHebrew(dto.type);
+        cmd.kind = ShiftKind.orRegular(dto.kind);
         cmd.userId = user.id;
         cmd.shiftWeightPresetId = preset != null ? preset.id : null;
         return cmd;
@@ -59,6 +61,7 @@ public class ShiftDtoToCommandMapper implements DtoToCommandMapper<AssignedShift
         AssignedShiftDto dto = new AssignedShiftDto();
         dto.date = entity.date;
         dto.type = entity.type.getHebrewRepresentation();
+        dto.kind = entity.kind;
         dto.assignedUsername = entity.assignedUser != null ? entity.assignedUser.name : null;
         dto.preset = entity.shiftWeightPreset != null
                 ? shiftWeightPresetDtoToCommandMapper.mapToDto(entity.shiftWeightPreset) : null;

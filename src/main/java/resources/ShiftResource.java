@@ -40,7 +40,7 @@ public class ShiftResource {
     @DELETE
     @RolesAllowed({RoleConstants.ADMIN})
     public Response deleteShift(ShiftDto shift) {
-        return shiftResponder.deleteByDateAndType(shift.date, ShiftType.fromHebrew(shift.type));
+        return shiftResponder.deleteSlot(shift.date, ShiftType.fromHebrew(shift.type), shift.kind);
     }
 
     @DELETE
