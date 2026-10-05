@@ -19,4 +19,8 @@ public class AssignedShift extends Shift {
     @Enumerated(EnumType.STRING)
     public ShiftKind kind = ShiftKind.REGULAR;
 
+    // An extra table of the week (another real schedule next to the regular one); null is the regular table
+    @Column(name = "special_table_name")
+    public String specialTableName;
+
 }

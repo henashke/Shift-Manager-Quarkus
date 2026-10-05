@@ -17,14 +17,16 @@ const readSeen = (): Set<string> => {
 
 class AnnouncementStore {
     seenIds = readSeen();
+    // At most one announcement per visit: after one is dismissed, the next waits for the next time the app opens
+    dismissedThisVisit = false;
 
     constructor() {
         makeAutoObservable(this);
     }
 
-    // The next announcement for the signed-in user, oldest first, one at a time
+    // The oldest unseen announcement for the signed-in user (list order is feature order), one per visit
     get current(): Announcement | undefined {
-        if (!authStore.isAuthenticated()) return undefined;
+        if (!authStore.isAuthenticated() || this.dismissedThisVisit) return undefined;
         const today = new Date().toISOString().slice(0, 10);
         return announcements.find(a =>
             !this.seenIds.has(a.id)
@@ -33,6 +35,7 @@ class AnnouncementStore {
     }
 
     markSeen = (id: string) => {
+        this.dismissedThisVisit = true;
         if (this.seenIds.has(id)) return;
         this.seenIds = new Set(this.seenIds).add(id);
         try {

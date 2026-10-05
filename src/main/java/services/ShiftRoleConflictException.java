@@ -1,7 +1,7 @@
 package services;
 
 /**
- * Thrown when the same user would fill two roles (regular, shadow, jump) of the same shift.
+ * Thrown when the same user would fill two roles (regular, shadow, jump) of one shift in the same table.
  */
 public class ShiftRoleConflictException extends RuntimeException {
 

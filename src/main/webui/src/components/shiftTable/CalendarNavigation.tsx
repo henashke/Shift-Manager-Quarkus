@@ -197,7 +197,7 @@ const CalendarNavigation: React.FC<CalendarNavigationProps> = observer(({actions
                         <ChevronLeft/>
                     </IconButton>
                 </Box>
-                {actions ? <Box display="flex" gap={1.5} pt={2}>{actions}</Box> : null}
+                {actions ? <Box display="flex" flexWrap="wrap" gap={1.5} pt={2}>{actions}</Box> : null}
             </Paper>
 
             <Paper ref={pillRef} onClick={expandOnTap} sx={pillLayerSx(compact, animate)}>

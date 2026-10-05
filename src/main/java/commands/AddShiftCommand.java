@@ -12,4 +12,6 @@ public class AddShiftCommand extends AddCommand<AssignedShift> {
     public Long userId;
     public Long shiftWeightPresetId;
     public ShiftKind kind = ShiftKind.REGULAR;
+    // Null for the regular table
+    public String specialTableName;
 }
