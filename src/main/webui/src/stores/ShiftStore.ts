@@ -8,6 +8,9 @@ import {ShiftWeightPreset} from "./ShiftWeightStore";
 export interface User {
     name: string;
     score: number;
+    // Reservists (מילואים) are scheduled only when chosen
+    reserve?: boolean;
+    role?: string;
 }
 
 export type ShiftType = 'יום' | 'לילה';

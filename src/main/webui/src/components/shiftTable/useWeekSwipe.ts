@@ -30,7 +30,13 @@ interface Gesture {
 export const useWeekSwipe = <E extends HTMLElement>(weekOffset: number, onSwipe: (direction: 1 | -1) => void) => {
     const trackRef = useRef<E>(null);
     const gesture = useRef<Gesture | null>(null);
-    const [peek, setPeek] = useState<Peek>(0);
+    // The preview belongs to the week it was shown for (and to the current swipe, via the token), so a week switch hides
+    // it in the same render instead of needing another render of the whole table to remove it
+    const [peekState, setPeekState] = useState<{ week: number, dir: Peek, token: number }>({week: weekOffset, dir: 0, token: 0});
+    const token = useRef(0);
+    const weekRef = useRef(weekOffset);
+    weekRef.current = weekOffset;
+    const peek: Peek = peekState.week === weekOffset && peekState.token === token.current ? peekState.dir : 0;
     const peekRef = useRef<Peek>(0);
     // While a finished swipe slides into place, new touches wait for the week to change
     const settling = useRef(false);
@@ -38,7 +44,7 @@ export const useWeekSwipe = <E extends HTMLElement>(weekOffset: number, onSwipe:
     const showPeek = (value: Peek) => {
         if (peekRef.current === value) return;
         peekRef.current = value;
-        setPeek(value);
+        setPeekState({week: weekRef.current, dir: value, token: token.current});
     };
 
     // The new week has rendered: the neighbor we slid in is now the table itself, so drop the offset before painting
@@ -47,7 +53,8 @@ export const useWeekSwipe = <E extends HTMLElement>(weekOffset: number, onSwipe:
         el?.getAnimations().forEach(animation => animation.cancel());
         if (el) el.style.transform = '';
         settling.current = false;
-        showPeek(0);
+        token.current++;
+        peekRef.current = 0;
     }, [weekOffset]);
 
     // Decides the gesture's direction and, once it's a sideways swipe, stops the page from scrolling for the rest of

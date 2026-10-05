@@ -20,4 +20,12 @@ public class User extends BaseEntity {
     @Column(name = "role")
     public String role = "user";
 
+    // Reservists (מילואים) are scheduled only when chosen, e.g. left out of suggestions by default
+    @Column(name = "reserve")
+    public boolean reserve;
+
+    // False only for accounts that are never scheduled (the built-in system admin); being an admin doesn't affect it
+    @Column(name = "schedulable")
+    public boolean schedulable = true;
+
 }

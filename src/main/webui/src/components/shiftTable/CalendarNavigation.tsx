@@ -6,11 +6,12 @@ import IconButton from '@mui/material/IconButton';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import {alpha, SxProps, Theme} from '@mui/material/styles';
+import {SxProps, Theme} from '@mui/material/styles';
 import store from '../../stores/ShiftStore';
 import ChevronLeft from '@mui/icons-material/ChevronLeft';
 import ChevronRight from '@mui/icons-material/ChevronRight';
 import {useCompactOnScroll} from './useCompactOnScroll';
+import {formatPaddedDate} from '../../dateFormat';
 
 interface CalendarNavigationProps {
     actions?: React.ReactNode;
@@ -19,6 +20,58 @@ interface CalendarNavigationProps {
 // Sticks just below the top bar (56px tall, 1px border) with a small gap
 const STICKY_TOP_PX = 64;
 const EASING = 'cubic-bezier(0.2, 0.9, 0.3, 1)';
+const MOVE_MS = 380;
+// The outgoing layer fades quickly, the incoming one a little later, so they cross cleanly instead of overlapping
+const FADE_OUT = '150ms ease-in';
+const FADE_IN = '230ms ease-out 70ms';
+// How far the full card's date row sits below the pill's, measured and set on the wrapper: the full card slides up by
+// it while the pill comes up from it, so both date rows meet on one line and the switch reads as one row shrinking
+const GAP = 'var(--dates-gap, 0px)';
+
+// Both layers only animate transform and opacity, CSS transitions the GPU runs on its own, so it stays smooth on phones
+const fullLayerSx = (compact: boolean, animate: boolean): SxProps<Theme> => ({
+    position: 'relative',
+    mx: 'auto',
+    maxWidth: 600,
+    p: 2,
+    borderRadius: 3,
+    boxShadow: 3,
+    transformOrigin: 'top center',
+    transform: compact ? `translateY(calc(-1 * ${GAP})) scale(0.96)` : 'none',
+    opacity: compact ? 0 : 1,
+    transition: animate ? `transform ${MOVE_MS}ms ${EASING}, opacity ${compact ? FADE_OUT : FADE_IN}` : 'none',
+    willChange: 'transform, opacity',
+    pointerEvents: compact ? 'none' : 'auto',
+});
+
+// The compact pill sits over the top of the full card
+const pillLayerSx = (compact: boolean, animate: boolean): SxProps<Theme> => ({
+    position: 'absolute',
+    top: 0,
+    insetInline: 0,
+    mx: 'auto',
+    maxWidth: 360,
+    p: 0.75,
+    borderRadius: '28px',
+    boxShadow: '0 10px 28px rgba(0, 0, 0, 0.35)',
+    transform: compact ? 'none' : `translateY(${GAP}) scale(0.94)`,
+    opacity: compact ? 1 : 0,
+    transition: animate ? `transform ${MOVE_MS}ms ${EASING}, opacity ${compact ? FADE_IN : FADE_OUT}` : 'none',
+    willChange: 'transform, opacity',
+    pointerEvents: compact ? 'auto' : 'none',
+    cursor: 'pointer',
+});
+
+const fullNavButtonSx: SxProps<Theme> = {
+    width: 40,
+    height: 40,
+    borderRadius: 2,
+    border: '1px solid',
+    borderColor: 'divider',
+    flexShrink: 0,
+};
+
+const pillNavButtonSx: SxProps<Theme> = {...fullNavButtonSx, width: 32, height: 32, borderRadius: '50%'};
 
 // A thin filled pill (the theme's primary gradient) that fits on the caption line without making it taller
 const todayButtonSx = {
@@ -30,9 +83,8 @@ const todayButtonSx = {
     fontSize: '0.7rem',
     fontWeight: 600,
     lineHeight: 1,
+    whiteSpace: 'nowrap',
 } as const;
-
-const compactTodayButtonSx = {...todayButtonSx, whiteSpace: 'nowrap'} as const;
 
 const weekOffsetLabel = (offset: number) => {
     const weeks = Math.abs(offset);
@@ -41,16 +93,29 @@ const weekOffsetLabel = (offset: number) => {
     return offset < 0 ? `לפני ${amount}` : `עוד ${amount}`;
 };
 
-// Folds a section to zero height by animating its grid row (real height, not just a fade)
-const Collapsible: React.FC<{ open: boolean, transition: string, children: React.ReactNode }> = ({open, transition, children}) => (
-    <Box sx={{display: 'grid', gridTemplateRows: open ? '1fr' : '0fr', opacity: open ? 1 : 0, transition}}>
-        <Box sx={{overflow: 'hidden', minHeight: 0}}>{children}</Box>
-    </Box>
+const DateRange: React.FC<{ dates: Date[], fontSize: object | string }> = ({dates, fontSize}) => (
+    // Wraps onto two lines when narrow, so the dates never push the buttons out of the card
+    <Typography component="div" fontWeight={700} sx={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        justifyContent: 'center',
+        columnGap: 1,
+        lineHeight: 1.35,
+        fontSize,
+    }}>
+        <Box component="span" sx={{whiteSpace: 'nowrap'}}>{formatPaddedDate(dates[0])}</Box>
+        <Box component="span" sx={{whiteSpace: 'nowrap'}}>
+            <Typography component="span" variant="body2" color="text.secondary"
+                        sx={{marginInlineEnd: 1, fontSize: 'inherit'}}>עד</Typography>
+            {formatPaddedDate(dates[6])}
+        </Box>
+    </Typography>
 );
 
 /**
- * Sticks below the top bar. Scrolling down shrinks it into a compact, frosted pill (like Safari's toolbar on iPhone);
- * scrolling up, reaching the top or tapping it brings it back.
+ * Sticks below the top bar and, like Safari's toolbar on iPhone, switches to a compact pill when you scroll down and
+ * back to full size when you scroll up, reach the top or tap the pill. The full card and the pill are two layers that
+ * cross-fade and slide into each other.
  */
 const CalendarNavigation: React.FC<CalendarNavigationProps> = observer(({actions}) => {
     const weekDates = store.weekDates;
@@ -59,53 +124,45 @@ const CalendarNavigation: React.FC<CalendarNavigationProps> = observer(({actions
     const handleTodayClick = () => store.setWeekOffset(0);
 
     const [compact, setCompact] = useCompactOnScroll();
-    const showCompactToday = compact && store.weekOffset !== 0;
-    const reduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)', {noSsr: true});
-    const duration = reduceMotion ? 0 : 320;
-    const transition = (...properties: string[]) => properties.map(p => `${p} ${duration}ms ${EASING}`).join(', ');
+    const animate = !useMediaQuery('(prefers-reduced-motion: reduce)', {noSsr: true});
 
-    // The wrapper keeps the full-size height while compact, so the page below never jumps (and on short pages the
-    // scroll position can't snap back and flip the state again)
     const wrapperRef = useRef<HTMLDivElement>(null);
-    const paperRef = useRef<HTMLDivElement>(null);
-    // Only a fully expanded, settled card is measured: a height caught mid-animation would resize the reserved space,
-    // and the browser's scroll anchoring would then move the page and flip the state back
-    const settled = useRef(true);
-    const measureExpanded = () => {
-        if (settled.current && paperRef.current && wrapperRef.current) {
-            wrapperRef.current.style.minHeight = `${paperRef.current.offsetHeight}px`;
-        }
-    };
+    const fullRef = useRef<HTMLDivElement>(null);
+    const pillRef = useRef<HTMLDivElement>(null);
+    const fullDatesRef = useRef<HTMLDivElement>(null);
+    const pillDatesRef = useRef<HTMLDivElement>(null);
+
+    // The gap between the two date rows, kept current as the card's size changes. Offsets ignore transforms, and each
+    // row's offset parent is its layer. Written on the next frame, outside the observer's callback.
     useEffect(() => {
-        settled.current = false;
-        if (compact) return;
-        const timer = setTimeout(() => {
-            settled.current = true;
-            measureExpanded();
-        }, duration + 50);
-        return () => clearTimeout(timer);
-    }, [compact, duration]);
-    useEffect(() => {
-        const paper = paperRef.current;
-        if (!paper) return;
-        // Keeps the reserved space right when the full-size card changes, e.g. the admin buttons or a window resize
-        const observer = new ResizeObserver(measureExpanded);
-        observer.observe(paper);
-        return () => observer.disconnect();
+        const full = fullRef.current;
+        if (!full) return;
+        let frame = 0;
+        const observer = new ResizeObserver(() => {
+            cancelAnimationFrame(frame);
+            frame = requestAnimationFrame(() => {
+                const a = fullDatesRef.current;
+                const b = pillDatesRef.current;
+                if (!a || !b || !wrapperRef.current) return;
+                const gap = (a.offsetTop + a.offsetHeight / 2) - (b.offsetTop + b.offsetHeight / 2);
+                wrapperRef.current.style.setProperty('--dates-gap', `${gap}px`);
+            });
+        });
+        observer.observe(full);
+        return () => {
+            observer.disconnect();
+            cancelAnimationFrame(frame);
+        };
     }, []);
 
-    const expandOnTap = (e: React.MouseEvent) => {
-        if (compact && !(e.target as HTMLElement).closest('button')) setCompact(false);
-    };
+    // Only the visible layer can be reached by the keyboard or a screen reader
+    useEffect(() => {
+        fullRef.current?.toggleAttribute('inert', compact);
+        pillRef.current?.toggleAttribute('inert', !compact);
+    }, [compact]);
 
-    const navButtonSx: SxProps<Theme> = {
-        width: compact ? 32 : 40,
-        height: compact ? 32 : 40,
-        borderRadius: compact ? '50%' : 2,
-        border: '1px solid',
-        borderColor: 'divider',
-        flexShrink: 0,
-        transition: transition('width', 'height', 'border-radius'),
+    const expandOnTap = (e: React.MouseEvent) => {
+        if (!(e.target as HTMLElement).closest('button')) setCompact(false);
     };
 
     return (
@@ -114,94 +171,56 @@ const CalendarNavigation: React.FC<CalendarNavigationProps> = observer(({actions
             top: STICKY_TOP_PX,
             zIndex: theme => theme.zIndex.appBar - 3,
             mb: 2,
-            // Only the card takes clicks; the rest of the reserved space lets the table underneath be used
+            // Only the visible layer takes clicks; the rest lets the table underneath be used
             pointerEvents: 'none',
         }}>
-            <Paper ref={paperRef} onClick={expandOnTap} sx={{
-                pointerEvents: 'auto',
-                mx: 'auto',
-                maxWidth: compact ? 360 : 600,
-                p: compact ? 0.75 : 2,
-                borderRadius: compact ? '28px' : 3,
-                boxShadow: compact ? '0 10px 28px rgba(0, 0, 0, 0.35)' : 3,
-                // Compact, it floats over the table like a frosted pill
-                bgcolor: theme => compact ? alpha(theme.palette.background.paper, 0.78) : theme.palette.background.paper,
-                backdropFilter: compact ? 'blur(14px) saturate(1.4)' : 'none',
-                cursor: compact ? 'pointer' : 'default',
-                transition: transition('max-width', 'padding', 'border-radius', 'box-shadow', 'background-color'),
-            }}>
+            {/* The full card stays in the layout at full size the whole time, so the page below never moves */}
+            <Paper ref={fullRef} sx={fullLayerSx(compact, animate)}>
                 <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1}}>
-                    <IconButton sx={navButtonSx} onClick={handlePrevWeekClick} aria-label="שבוע קודם">
-                        <ChevronRight fontSize={compact ? 'small' : 'medium'}/>
+                    <IconButton sx={fullNavButtonSx} onClick={handlePrevWeekClick} aria-label="שבוע קודם">
+                        <ChevronRight/>
                     </IconButton>
                     <Box display="flex" flexDirection="column" alignItems="center" sx={{minWidth: 0, textAlign: 'center'}}>
-                        <Collapsible open={!compact} transition={transition('grid-template-rows', 'opacity')}>
-                            <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.75}}>
-                                <Typography variant="caption" color="primary.light" fontWeight={600}>
-                                    {weekOffsetLabel(store.weekOffset)}
-                                </Typography>
-                                {store.weekOffset !== 0 ? (
-                                    <Button variant="contained" onClick={handleTodayClick} sx={todayButtonSx}>
-                                        חזור להיום
-                                    </Button>
-                                ) : null}
-                            </Box>
-                        </Collapsible>
-                        <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                            {/* Wraps onto two lines when narrow, so the dates never push the buttons out of the card */}
-                            <Typography component="div" fontWeight={700} sx={{
-                                display: 'flex',
-                                flexWrap: 'wrap',
-                                justifyContent: 'center',
-                                columnGap: 1,
-                                lineHeight: 1.35,
-                                fontSize: compact ? {xs: '0.9rem', sm: '0.95rem'} : {xs: '1rem', sm: '1.15rem'},
-                                transition: transition('font-size'),
-                            }}>
-                                <Box component="span" sx={{whiteSpace: 'nowrap'}}>{formatNavDate(weekDates[0])}</Box>
-                                <Box component="span" sx={{whiteSpace: 'nowrap'}}>
-                                    <Typography component="span" variant="body2" color="text.secondary"
-                                                sx={{marginInlineEnd: 1, fontSize: 'inherit'}}>עד</Typography>
-                                    {formatNavDate(weekDates[6])}
-                                </Box>
+                        <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.75}}>
+                            <Typography variant="caption" color="primary.light" fontWeight={600}>
+                                {weekOffsetLabel(store.weekOffset)}
                             </Typography>
-                            {/* The caption with its "חזור להיום" is folded away in the compact pill, so it gets a short one here.
-                                It stays mounted and grows from zero width with the rest of the shrink, so the dates slide aside
-                                instead of jumping when it appears or disappears */}
-                            <Box aria-hidden={!showCompactToday} sx={{
-                                display: 'grid',
-                                gridTemplateColumns: showCompactToday ? '1fr' : '0fr',
-                                marginInlineStart: showCompactToday ? 0.75 : 0,
-                                opacity: showCompactToday ? 1 : 0,
-                                transition: transition('grid-template-columns', 'margin', 'opacity'),
-                            }}>
-                                <Box sx={{overflow: 'hidden', minWidth: 0}}>
-                                    <Button variant="contained" onClick={handleTodayClick} aria-label="חזרה לשבוע הנוכחי"
-                                            tabIndex={showCompactToday ? 0 : -1} sx={compactTodayButtonSx}>
-                                        היום
-                                    </Button>
-                                </Box>
-                            </Box>
+                            {store.weekOffset !== 0 ? (
+                                <Button variant="contained" onClick={handleTodayClick} sx={todayButtonSx}>
+                                    חזור להיום
+                                </Button>
+                            ) : null}
                         </Box>
+                        <Box ref={fullDatesRef}><DateRange dates={weekDates} fontSize={{xs: '1rem', sm: '1.15rem'}}/></Box>
                     </Box>
-                    <IconButton sx={navButtonSx} onClick={handleNextWeekClick} aria-label="שבוע הבא">
-                        <ChevronLeft fontSize={compact ? 'small' : 'medium'}/>
+                    <IconButton sx={fullNavButtonSx} onClick={handleNextWeekClick} aria-label="שבוע הבא">
+                        <ChevronLeft/>
                     </IconButton>
                 </Box>
-                {actions ? (
-                    <Collapsible open={!compact} transition={transition('grid-template-rows', 'opacity')}>
-                        <Box display="flex" gap={1.5} pt={2}>{actions}</Box>
-                    </Collapsible>
-                ) : null}
+                {actions ? <Box display="flex" gap={1.5} pt={2}>{actions}</Box> : null}
+            </Paper>
+
+            <Paper ref={pillRef} onClick={expandOnTap} sx={pillLayerSx(compact, animate)}>
+                <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1}}>
+                    <IconButton sx={pillNavButtonSx} onClick={handlePrevWeekClick} aria-label="שבוע קודם">
+                        <ChevronRight fontSize="small"/>
+                    </IconButton>
+                    <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.75, minWidth: 0}}>
+                        <Box ref={pillDatesRef}><DateRange dates={weekDates} fontSize={{xs: '0.9rem', sm: '0.95rem'}}/></Box>
+                        {store.weekOffset !== 0 ? (
+                            <Button variant="contained" onClick={handleTodayClick} aria-label="חזרה לשבוע הנוכחי"
+                                    sx={todayButtonSx}>
+                                היום
+                            </Button>
+                        ) : null}
+                    </Box>
+                    <IconButton sx={pillNavButtonSx} onClick={handleNextWeekClick} aria-label="שבוע הבא">
+                        <ChevronLeft fontSize="small"/>
+                    </IconButton>
+                </Box>
             </Paper>
         </Box>
     );
 });
-
-const formatNavDate = (date: Date) =>
-    date.toLocaleDateString('he-IL', {day: '2-digit', month: '2-digit', year: 'numeric'});
-
-export const formatDate = (date: Date) =>
-    date.toLocaleDateString('he-IL', {month: 'numeric', day: 'numeric', year: 'numeric'});
 
 export default CalendarNavigation;

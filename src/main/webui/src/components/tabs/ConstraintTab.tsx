@@ -1,5 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import {observer} from 'mobx-react-lite';
+import {reaction} from 'mobx';
 import CalendarNavigation from '../shiftTable/CalendarNavigation';
 import DraggableList from '../draggableLists/DraggableList';
 import ShiftTable from '../shiftTable/ShiftTable';
@@ -27,15 +28,15 @@ const ConstraintTab: React.FC = observer(() => {
     const theme = useTheme();
     const [isDragged, setIsDragged] = useState(false);
     const [selectedUser, setSelectedUser] = useState<string>(authStore.username || '');
-    const {weekOffset} = shiftStore;
-
     useEffect(() => {
         usersStore.fetchUsers();
     }, []);
+    // Follow the signed-in user's own rename
+    useEffect(() => reaction(() => authStore.username, (name, oldName) =>
+        setSelectedUser(selected => selected === oldName ? name ?? '' : selected)), []);
 
-    useEffect(() => {
-        constraintStore.fetchConstraint(weekOffset);
-    }, [weekOffset]);
+    // A reaction, not an effect on the week read in render, so a week switch doesn't re-render the whole tab
+    useEffect(() => reaction(() => shiftStore.weekOffset, offset => constraintStore.fetchConstraint(offset), {fireImmediately: true}), []);
 
     const onAssignedConstraintDragStart = (e: React.DragEvent, type: ConstraintType, fromShift?: Shift, username?: string) => {
         requestAnimationFrame(() => setIsDragged(true));
@@ -164,7 +165,7 @@ const ConstraintTab: React.FC = observer(() => {
         <Container maxWidth={"xl"} dir="rtl">
             <CalendarNavigation/>
             <ShiftTable itemList={constraintTypes}
-                        loading={constraintStore.isFetching && !constraintStore.hasConstraintsForWeek(weekOffset)}
+                        isLoading={() => constraintStore.isFetching && !constraintStore.hasConstraintsForWeek(shiftStore.weekOffset)}
                         isWeekLoaded={offset => constraintStore.hasConstraintsForWeek(offset)}
                         defaultItem={ConstraintType.CANT}
                         retrieveItemFromShift={retrieveConstraintTypeFromShift}

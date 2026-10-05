@@ -3,6 +3,7 @@ import {observer} from 'mobx-react-lite';
 import EventAvailableOutlined from '@mui/icons-material/EventAvailableOutlined';
 import {Shift} from '../../stores/ShiftStore';
 import CommonDialog from "./CommonDialog";
+import {formatWeekdayDayMonth} from "../../dateFormat";
 import DialogSelect from "./DialogSelect";
 
 interface AssignToShiftDialogProps<T> {
@@ -17,7 +18,7 @@ interface AssignToShiftDialogProps<T> {
 }
 
 export const formatShiftDescription = (shift: Shift) =>
-    `משמרת ${shift.type}, ${new Date(shift.date).toLocaleDateString('he-IL', {weekday: 'long', day: 'numeric', month: 'numeric'})}`;
+    `משמרת ${shift.type}, ${formatWeekdayDayMonth(new Date(shift.date))}`;
 
 function AssignToShiftDialog<T>({
                                     open,

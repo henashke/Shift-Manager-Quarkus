@@ -17,6 +17,10 @@ public class RefreshTokenDao implements BaseDao<RefreshToken> {
         delete("tokenHash", tokenHash);
     }
 
+    public void deleteAllForUser(User user) {
+        delete("user", user);
+    }
+
     public void deleteExpiredForUser(User user, Instant now) {
         delete("user = ?1 and expiresAt < ?2", user, now);
     }
