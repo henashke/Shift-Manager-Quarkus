@@ -164,7 +164,7 @@ const AssignmentTab: React.FC = observer(() => {
             sx={{display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1}}
         >
             <Box onDragStart={e => onDragStart(e, user, shift)}
-                 onDragEnd={onDragEnd} draggable
+                 onDragEnd={onDragEnd} draggable={authStore.isAdmin()}
             >
                 <UserCard name={user.name} subtitle={assignedShift.preset.name} isPending={assignedShift.isPending}/>
             </Box>

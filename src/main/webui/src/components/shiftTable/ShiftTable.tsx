@@ -92,6 +92,10 @@ function ShiftTable<T>({
     const showSkeletons = useDelayedFlag(isLoading ? isLoading() : false, SKELETON_DELAY_MS);
     const [assignDialogOpen, setAssignDialogOpen] = useState(false);
     const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
+    // Viewers who can't change this table (regular users on the assignments tab) only see it: no prompts, menus or dragging
+    const readOnly = requireAdmin && !authStore.isAdmin();
+    const emptyCell = readOnly ? null : <Typography variant="body1" sx={{color: 'primary.light'}}>{"שבץ " + itemName}</Typography>;
+
     const [contextMenu, setContextMenu] = useState<{
         mouseX: number;
         mouseY: number;
@@ -205,7 +209,7 @@ function ShiftTable<T>({
                 <TableCell key={'table-cell-' + dateKey(date) + shiftType} align="center" sx={cellSx}>
                     {!preview.loaded ? <CardSkeleton/>
                         : previewItem ? renderItemElement(previewItem, shift)
-                            : <Typography variant="body1" sx={{color: 'primary.light'}}>{"שבץ " + itemName}</Typography>}
+                            : emptyCell}
                 </TableCell>
             );
         }
@@ -219,6 +223,13 @@ function ShiftTable<T>({
             );
         }
         const item = getPendingOrAssignedItem(shift);
+        if (readOnly) {
+            return (
+                <TableCell key={'table-cell-' + dateKey(date) + shiftType} align="center" sx={cellSx}>
+                    {item ? renderItemElement(item, shift) : null}
+                </TableCell>
+            );
+        }
         return (
             <TableCell
                 key={'table-cell-' + dateKey(date) + shiftType}
@@ -238,9 +249,7 @@ function ShiftTable<T>({
                     >
                         {renderItemElement(item, shift)}
                     </Box>
-                ) : (
-                    <Typography variant="body1" sx={{color: 'primary.light'}}>{"שבץ " + itemName}</Typography>
-                )}
+                ) : emptyCell}
             </TableCell>
         );
     }

@@ -33,13 +33,15 @@ public class UserResource {
     }
 
     @POST
+    @RolesAllowed({RoleConstants.ADMIN})
     public Response create(UserDto dto) {
         return userResponder.create(dto);
     }
 
     @PUT
     @Path("/{username}")
-    public Response update(@PathParam("username") String username, UserDto dto) { // TODO change password feature
+    @RolesAllowed({RoleConstants.ADMIN})
+    public Response update(@PathParam("username") String username, UserDto dto) {
         return userResponder.updateByUsername(username, dto);
     }
 

@@ -25,7 +25,10 @@ interface DraggableListProps<T> {
     onDrop?: (e: React.DragEvent) => void;
     // danger items (delete and the like) are shown in red, after a divider
     contextMenuItems?: (item: T, close: () => void) => ContextMenuItem[];
+    // Used when there's no context menu
     onItemClick?: (item: T) => void;
+    // False when the viewer can't do anything by dragging the items (e.g. a regular user on the assignments tab)
+    draggable?: boolean;
     renderAdditionalComponent?: JSX.Element;
     isDragged?: boolean;
     renderItem?: (item: T) => JSX.Element;
@@ -50,7 +53,9 @@ function DraggableList<T>({
                               renderItem,
                               embedded,
                               secondaryItems,
-                              secondaryLabel
+                              secondaryLabel,
+                              onItemClick,
+                              draggable = true
                           }: DraggableListProps<T>) {
     const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
     const [selectedItem, setSelectedItem] = useState<T | null>(null);
@@ -79,12 +84,12 @@ function DraggableList<T>({
     const renderEntry = (item: T) => (
         <Box
             key={getKey(item)}
-            draggable
-            onDragStart={e => onDragStart(e, item)}
-            onClick={contextMenuItems ? e => handleContextMenu(e, item) : undefined}
+            draggable={draggable}
+            onDragStart={draggable ? e => onDragStart(e, item) : undefined}
+            onClick={contextMenuItems ? e => handleContextMenu(e, item) : onItemClick ? () => onItemClick(item) : undefined}
             onContextMenu={contextMenuItems ? e => handleContextMenu(e, item) : undefined}
             sx={renderItem ? {
-                cursor: 'grab',
+                cursor: draggable ? 'grab' : 'pointer',
                 transition: 'transform 0.2s',
                 '&:active': {transform: 'scale(0.97)'},
                 '&:hover': {transform: 'scale(1.04)', cursor: 'pointer'},
