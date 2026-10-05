@@ -1,4 +1,4 @@
-import React, {useLayoutEffect, useRef, useState} from 'react';
+import React, {useEffect, useLayoutEffect, useRef, useState} from 'react';
 
 // Space between the table and the neighboring week's table beside it, matching the page gutter
 export const SWIPE_PANE_GAP_PX = 16;
@@ -50,6 +50,28 @@ export const useWeekSwipe = <E extends HTMLElement>(weekOffset: number, onSwipe:
         showPeek(0);
     }, [weekOffset]);
 
+    // Decides the gesture's direction and, once it's a sideways swipe, stops the page from scrolling for the rest of
+    // it (iOS Safari would otherwise scroll with the thumb's vertical drift). React's touch listeners are passive and
+    // can't cancel scrolling, so this is a native one; it runs before React's handler, which then only follows the finger.
+    // Only a decided swipe is cancelled: on iOS cancelling a touch's first move can block scrolling for the whole touch.
+    useEffect(() => {
+        const el = trackRef.current;
+        if (!el) return;
+        const lockAndBlock = (e: TouchEvent) => {
+            const g = gesture.current;
+            if (!g || g.mode === 'scroll') return;
+            if (g.mode === 'pending') {
+                const dx = e.touches[0].clientX - g.x;
+                const dy = e.touches[0].clientY - g.y;
+                if (Math.abs(dx) < DIRECTION_LOCK_PX && Math.abs(dy) < DIRECTION_LOCK_PX) return;
+                g.mode = Math.abs(dx) > Math.abs(dy) ? 'swipe' : 'scroll';
+            }
+            if (g.mode === 'swipe' && e.cancelable) e.preventDefault();
+        };
+        el.addEventListener('touchmove', lockAndBlock, {passive: false});
+        return () => el.removeEventListener('touchmove', lockAndBlock);
+    }, []);
+
     const setX = (px: number) => {
         if (trackRef.current) trackRef.current.style.transform = px ? `translateX(${px}px)` : '';
     };
@@ -62,14 +84,9 @@ export const useWeekSwipe = <E extends HTMLElement>(weekOffset: number, onSwipe:
 
     const onTouchMove = (e: React.TouchEvent) => {
         const g = gesture.current;
-        if (!g || g.mode === 'scroll') return;
+        // The native listener above has already decided the direction
+        if (!g || g.mode !== 'swipe') return;
         const dx = e.touches[0].clientX - g.x;
-        const dy = e.touches[0].clientY - g.y;
-        if (g.mode === 'pending') {
-            if (Math.abs(dx) < DIRECTION_LOCK_PX && Math.abs(dy) < DIRECTION_LOCK_PX) return;
-            g.mode = Math.abs(dx) > Math.abs(dy) ? 'swipe' : 'scroll';
-            if (g.mode === 'scroll') return;
-        }
         g.samples.push({x: e.touches[0].clientX, time: e.timeStamp});
         if (g.samples.length > 20) g.samples.shift();
         if (prefersReducedMotion()) return;
