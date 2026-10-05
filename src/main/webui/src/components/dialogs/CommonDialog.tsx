@@ -24,6 +24,8 @@ export interface CommonDialogProps {
     disableConfirmButton?: boolean;
     // False when the dialog closes itself after an async confirm (e.g. to stay open and show an error)
     closeOnConfirm?: boolean;
+    // Only the confirm button, for dialogs with nothing to cancel (e.g. an announcement)
+    hideCancel?: boolean;
 }
 
 const settle = keyframes`
@@ -70,7 +72,8 @@ const CommonDialog: React.FC<CommonDialogProps> = ({
                                                        cancelLabel = 'ביטול',
                                                        danger,
                                                        disableConfirmButton,
-                                                       closeOnConfirm = true
+                                                       closeOnConfirm = true,
+                                                       hideCancel
                                                    }) => {
     const handleConfirmInternal = () => {
         handleConfirm?.();
@@ -119,9 +122,11 @@ const CommonDialog: React.FC<CommonDialogProps> = ({
                             sx={actionButtonSx}>
                         {confirmLabel}
                     </Button>
-                    <Button variant="outlined" color="inherit" onClick={handleDialogClose} sx={actionButtonSx}>
-                        {cancelLabel}
-                    </Button>
+                    {hideCancel ? null : (
+                        <Button variant="outlined" color="inherit" onClick={handleDialogClose} sx={actionButtonSx}>
+                            {cancelLabel}
+                        </Button>
+                    )}
                 </Box>
             ) : null}
         </Dialog>

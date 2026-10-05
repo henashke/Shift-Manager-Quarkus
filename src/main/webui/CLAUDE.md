@@ -25,6 +25,8 @@ and effect runs twice), so it is several times slower than production; judge per
 - `components/basicSharedComponents/`: `TintedCard` / `UserCard` (the card look), `BottomTray` (draggable users sheet
   on phones), `CardSkeleton`, `NativeSelect`.
 - `src/dateFormat.ts`: all date formatting. `src/theme.ts`: palette helpers used outside the theme.
+- `src/announcements.tsx`: one-time "what's new" dialogs (`AnnouncementDialog`). Add an entry with a new id to announce
+  a feature; seen ids are kept per device in localStorage (`seenAnnouncements`).
 
 ## Conventions
 
