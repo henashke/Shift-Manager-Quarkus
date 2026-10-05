@@ -31,6 +31,9 @@ const ConstraintTab: React.FC = observer(() => {
     useEffect(() => {
         usersStore.fetchUsers();
     }, []);
+    // Follow the signed-in user's own rename
+    useEffect(() => reaction(() => authStore.username, (name, oldName) =>
+        setSelectedUser(selected => selected === oldName ? name ?? '' : selected)), []);
 
     // A reaction, not an effect on the week read in render, so a week switch doesn't re-render the whole tab
     useEffect(() => reaction(() => shiftStore.weekOffset, offset => constraintStore.fetchConstraint(offset), {fireImmediately: true}), []);

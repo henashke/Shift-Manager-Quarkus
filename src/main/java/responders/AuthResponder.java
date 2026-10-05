@@ -3,10 +3,12 @@ package responders;
 import commands.LoginCommand;
 import commands.RefreshTokenCommand;
 import commands.SignupCommand;
+import commands.UpdateAccountCommand;
 import io.quarkus.security.AuthenticationFailedException;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.ws.rs.core.Response;
 import lombok.RequiredArgsConstructor;
+import services.AccountUpdateException;
 import services.AuthService;
 import services.UserAlreadyExistsException;
 
@@ -54,6 +56,18 @@ public class AuthResponder {
             return error(Response.Status.UNAUTHORIZED, "Invalid or expired refresh token");
         } catch (Exception e) {
             return error(Response.Status.INTERNAL_SERVER_ERROR, e.getMessage());
+        }
+    }
+
+    public Response updateAccount(String currentUsername, UpdateAccountCommand command) {
+        if (command == null) return error(Response.Status.BAD_REQUEST, "לא בוצע שינוי");
+        try {
+            return Response.ok(authService.updateAccount(currentUsername, command)).build();
+        } catch (AccountUpdateException e) {
+            // Not 401 for a wrong password: the frontend treats 401 as an expired session
+            return error(Response.Status.BAD_REQUEST, e.getMessage());
+        } catch (UserAlreadyExistsException e) {
+            return error(Response.Status.CONFLICT, "שם המשתמש כבר תפוס");
         }
     }
 

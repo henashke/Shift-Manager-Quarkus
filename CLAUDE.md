@@ -102,6 +102,10 @@ back-references).
 - Login returns a 1-hour access JWT plus a refresh token; all other endpoints require `Authorization: Bearer <token>`
 - `POST /api/auth/refresh` exchanges a refresh token (single-use, rotated, stored SHA-256 hashed in `refresh_tokens`)
   for a new pair; `POST /api/auth/logout` revokes it
+- `PUT /api/auth/account` lets the signed-in user (from the JWT) change their own name and/or password; it needs the
+  current password, returns a new token pair (the old access token carries the old name), and a password change
+  revokes all their refresh tokens. A wrong password is a 400, not a 401, since the frontend treats 401 as an expired
+  session
 - Roles are enforced via `@RolesAllowed` on resource methods; role constants in `auth/`
 
 ### API Behavior Worth Knowing

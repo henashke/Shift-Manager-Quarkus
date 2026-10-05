@@ -15,10 +15,13 @@ import DarkMode from '@mui/icons-material/DarkMode';
 import LightMode from '@mui/icons-material/LightMode';
 import LoginIcon from '@mui/icons-material/Login';
 import LogoutRounded from '@mui/icons-material/LogoutRounded';
+import ManageAccountsOutlined from '@mui/icons-material/ManageAccountsOutlined';
+import {observer} from 'mobx-react-lite';
 import {dangerMenuItemSx} from './basicSharedComponents/menuStyles';
 import {useNavigate} from 'react-router-dom';
 import authStore from "../stores/AuthStore";
 import LogoutDialog from "./dialogs/LogoutDialog";
+import AccountDialog from "./dialogs/AccountDialog";
 import {stringToColor} from "./shiftTable/ShiftTable";
 import {primaryGradient} from '../theme';
 
@@ -66,7 +69,8 @@ const tabSx: SxProps<Theme> = {
     '&.Mui-selected': {color: 'common.white'},
 };
 
-export const AppBarComponent = ({darkMode, setDarkMode}: {
+// An observer, so the avatar follows a rename
+export const AppBarComponent = observer(({darkMode, setDarkMode}: {
     darkMode: boolean,
     setDarkMode: (isDarkMode: boolean) => void
 }) => {
@@ -79,6 +83,7 @@ export const AppBarComponent = ({darkMode, setDarkMode}: {
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const menuOpen = Boolean(anchorEl);
     const [logoutOpen, setLogoutOpen] = useState(false);
+    const [accountOpen, setAccountOpen] = useState(false);
 
 
     const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
@@ -130,6 +135,13 @@ export const AppBarComponent = ({darkMode, setDarkMode}: {
                         anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
                         transformOrigin={{vertical: 'top', horizontal: 'right'}}
                     >
+                        <MenuItem onClick={() => {
+                            setAnchorEl(null);
+                            setAccountOpen(true);
+                        }}>
+                            <ListItemIcon><ManageAccountsOutlined fontSize="small"/></ListItemIcon>
+                            החשבון שלי
+                        </MenuItem>
                         <MenuItem sx={dangerMenuItemSx} onClick={() => {
                             setAnchorEl(null);
                             setLogoutOpen(true);
@@ -153,6 +165,7 @@ export const AppBarComponent = ({darkMode, setDarkMode}: {
                 }}
                 username={authStore.username || ''}
             />
+            <AccountDialog open={accountOpen} handleDialogClose={() => setAccountOpen(false)}/>
         </Toolbar>
     </AppBar>
-}
+});

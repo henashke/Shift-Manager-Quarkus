@@ -4,6 +4,7 @@ import auth.JwtTokenProvider;
 import commands.LoginCommand;
 import commands.RefreshTokenCommand;
 import commands.SignupCommand;
+import commands.UpdateAccountCommand;
 import daos.UserDao;
 import entities.User;
 import io.quarkus.runtime.annotations.RegisterForReflection;
@@ -56,6 +57,35 @@ public class AuthService {
     public AuthResponse refresh(RefreshTokenCommand command) throws AuthenticationFailedException {
         User user = refreshTokenService.consume(command.refreshToken);
         return issueTokens(user, "Token refreshed");
+    }
+
+    /**
+     * Renames the user and/or changes their password. The current password is required for either. A password change
+     * signs the user out everywhere else. Returns a new token pair, since the old access token carries the old name.
+     */
+    @Transactional
+    public AuthResponse updateAccount(String currentUsername, UpdateAccountCommand command) {
+        User user = userDao.findByUsername(currentUsername).orElseThrow(() -> new AccountUpdateException("המשתמש לא נמצא"));
+        if (command.currentPassword == null || user.password == null || !BCrypt.checkpw(command.currentPassword, user.password)) {
+            throw new AccountUpdateException("הסיסמה הנוכחית שגויה");
+        }
+
+        String newName = command.username == null ? null : command.username.trim();
+        boolean rename = newName != null && !newName.equals(user.name);
+        boolean passwordChange = command.newPassword != null;
+        if (!rename && !passwordChange) throw new AccountUpdateException("לא בוצע שינוי");
+
+        if (rename) {
+            if (newName.isEmpty()) throw new AccountUpdateException("שם המשתמש לא יכול להיות ריק");
+            if (userDao.findByUsername(newName).isPresent()) throw new UserAlreadyExistsException(newName);
+            user.name = newName;
+        }
+        if (passwordChange) {
+            if (command.newPassword.isBlank()) throw new AccountUpdateException("הסיסמה החדשה לא יכולה להיות ריקה");
+            user.password = BCrypt.hashpw(command.newPassword, BCrypt.gensalt());
+            refreshTokenService.revokeAll(user);
+        }
+        return issueTokens(user, "Account updated");
     }
 
     public void logout(RefreshTokenCommand command) {
