@@ -10,6 +10,7 @@ import ConstraintTab from './components/tabs/ConstraintTab';
 import AssignmentTab from './components/tabs/AssignmentTab';
 import SettingsTab from './components/tabs/SettingsTab';
 import {AppBarComponent} from "./components/AppBarComponent";
+import AnnouncementDialog from "./components/dialogs/AnnouncementDialog";
 import {primaryGradient} from './theme';
 
 const DARK_MODE_KEY = 'darkMode';
@@ -134,6 +135,7 @@ const App: React.FC = observer(() => {
                 <Route path="/" element={<AssignmentTab/>}/>
             </Routes>
             <NotificationDisplay/>
+            <AnnouncementDialog/>
         </ThemeProvider>
     );
 });
