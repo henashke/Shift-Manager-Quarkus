@@ -122,6 +122,8 @@ back-references).
   means the regular table; "רגיל" is reserved, up to 50 characters). Each table has its own slots and counts toward
   scores; a person may be in the same shift in several tables (the two-roles rule is per table). The client discovers a
   week's tables from its shifts; a new, still-empty table is only remembered in the creating browser's localStorage.
+- `GET /api/stats` (everyone) feeds the stats page: per schedulable user and team totals, counting regular-role
+  shifts in every table up to today (shadow/jump counted separately), "last 30 days" as a rolling window.
 - `GET /api/shifts` and `GET /api/constraints` take `?weekOffset=N` and return a 5-week window around that week
   (`util/WeekWindow`: weeks start on Sunday, computed in the server's time zone). Without it they return the whole
   history, which the frontend never asks for.
