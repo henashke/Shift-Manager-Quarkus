@@ -288,7 +288,7 @@ function ShiftTable<T>({
 
     return (
 
-        <Box sx={{display: 'flex', gap: 2, height: '100%', mb: 4, flexDirection: isNarrowScreen ? 'column' : 'row'}}>
+        <Box sx={{display: 'flex', gap: 2, height: '100%', mb: {xs: 2, md: 4}, flexDirection: isNarrowScreen ? 'column' : 'row'}}>
             {
                 isPendingItems && onSave && onCancel &&
                 <ShiftTableActions

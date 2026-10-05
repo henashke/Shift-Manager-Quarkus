@@ -189,7 +189,7 @@ const ConstraintTab: React.FC = observer(() => {
                         isRemoveItemDisabled={isRemoveItemDisabled}
                         getItemElement={getConstraintElement}
             />
-            <Box sx={{display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2}}>
+            <Box sx={{display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2, mb: 2}}>
                 <DraggableList
                     items={constraintTypes}
                     getKey={item => item}
