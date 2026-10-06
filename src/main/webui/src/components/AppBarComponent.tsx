@@ -1,4 +1,5 @@
-import React, {startTransition, useState} from 'react';
+import React, {startTransition, useEffect, useState} from 'react';
+import {flushSync} from 'react-dom';
 import AppBar from '@mui/material/AppBar';
 import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
@@ -18,21 +19,21 @@ import LogoutRounded from '@mui/icons-material/LogoutRounded';
 import ManageAccountsOutlined from '@mui/icons-material/ManageAccountsOutlined';
 import {observer} from 'mobx-react-lite';
 import {dangerMenuItemSx} from './basicSharedComponents/menuStyles';
-import {useNavigate} from 'react-router-dom';
+import {useLocation, useNavigate} from 'react-router-dom';
 import authStore from "../stores/AuthStore";
 import LogoutDialog from "./dialogs/LogoutDialog";
 import AccountDialog from "./dialogs/AccountDialog";
 import {stringToColor} from "./shiftTable/ShiftTable";
-import {primaryGradient} from '../theme';
+import {glass, primaryGradient} from '../theme';
 
-const appBarSx: SxProps<Theme> = {
+// A translucent bar: the page scrolls on under it, blurred, instead of disappearing behind a solid strip
+const appBarSx: SxProps<Theme> = theme => ({
     mb: 2,
-    bgcolor: 'background.default',
+    ...glass(theme, 0.72, theme.palette.background.default),
     backgroundImage: 'none',
     boxShadow: 'none',
-    borderBottom: '1px solid',
-    borderColor: 'divider',
-};
+    borderBottom: `1px solid ${theme.palette.divider}`,
+});
 
 const squareButtonSx: SxProps<Theme> = {
     width: 36,
@@ -58,6 +59,15 @@ const tabsSx: SxProps<Theme> = {
     },
 };
 
+const pathTab = (path: string) => {
+    if (path.startsWith('/constraints')) return 1;
+    if (path.startsWith('/stats')) return 2;
+    if (path.startsWith('/settings')) return 3;
+    return 0;
+};
+
+type ViewTransitionDocument = Document & { startViewTransition?: (update: () => void) => unknown };
+
 const tabSx: SxProps<Theme> = {
     zIndex: 1,
     minHeight: 0,
@@ -77,12 +87,19 @@ export const AppBarComponent = observer(({darkMode, setDarkMode}: {
     setDarkMode: (isDarkMode: boolean) => void
 }) => {
     const navigate = useNavigate();
-    const [tabValue, setTabValue] = useState(() => {
-        if (window.location.pathname.startsWith('/constraints')) return 1;
-        if (window.location.pathname.startsWith('/stats')) return 2;
-        if (window.location.pathname.startsWith('/settings')) return 3;
-        return 0;
-    });
+    const {pathname} = useLocation();
+    const [tabValue, setTabValue] = useState(() => pathTab(pathname));
+    // Follows navigation that doesn't come from the tabs (signing in, the back button)
+    useEffect(() => setTabValue(pathTab(pathname)), [pathname]);
+    const onLoginPage = pathname === '/login';
+
+    // Cross-fades the old theme into the new one where the browser can (see index.css), instead of a hard flash
+    const toggleDarkMode = () => {
+        const doc = document as ViewTransitionDocument;
+        const apply = () => flushSync(() => setDarkMode(!darkMode));
+        if (doc.startViewTransition) doc.startViewTransition(apply);
+        else apply();
+    };
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const menuOpen = Boolean(anchorEl);
     const [logoutOpen, setLogoutOpen] = useState(false);
@@ -102,17 +119,18 @@ export const AppBarComponent = observer(({darkMode, setDarkMode}: {
 
     return <AppBar position="sticky" color="inherit" sx={appBarSx}>
         <Toolbar variant="dense" sx={{gap: 1, minHeight: 56, px: {xs: 1.5, sm: 2}}}>
-            <IconButton aria-label="החלף ערכת צבעים" onClick={() => setDarkMode(!darkMode)} sx={squareButtonSx}>
+            <IconButton aria-label="החלף ערכת צבעים" onClick={toggleDarkMode} sx={squareButtonSx}>
                 {darkMode ? <LightMode fontSize="small" sx={{color: '#ffe066'}}/> : <DarkMode fontSize="small"/>}
             </IconButton>
             <Box sx={{flex: 1, display: 'flex', justifyContent: 'center'}}>
-                <Tabs value={tabValue} onChange={handleTabChange} sx={tabsSx}>
+                {/* Signed out, the tabs would only lead back here */}
+                {onLoginPage ? null : <Tabs value={tabValue} onChange={handleTabChange} sx={tabsSx}>
                     {/* Laid out left to right (no RTL style plugin), so listed in reverse to read right to left */}
                     <Tab value={3} label="הגדרות" sx={tabSx}/>
                     <Tab value={2} label="נתונים" sx={tabSx}/>
                     <Tab value={1} label="אילוצים" sx={tabSx}/>
                     <Tab value={0} label="שיבוצים" sx={tabSx}/>
-                </Tabs>
+                </Tabs>}
             </Box>
             {authStore.isAuthenticated() ? (
                 <>
