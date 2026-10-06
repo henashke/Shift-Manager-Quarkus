@@ -4,8 +4,10 @@ import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
-import {alpha, keyframes, SxProps, Theme} from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import {alpha, SxProps, Theme} from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
+import {EASE_EXIT, EASE_SHEET} from '../../theme';
 
 export interface CommonDialogProps {
     open: boolean;
@@ -28,16 +30,34 @@ export interface CommonDialogProps {
     hideCancel?: boolean;
 }
 
-const settle = keyframes`
-    from {
-        opacity: 0;
-        transform: translateY(12px) scale(0.98);
-    }
-    to {
-        opacity: 1;
-        transform: none;
-    }
-`;
+// The dialog rises into place as it fades in and sinks back the same way as it fades out. MUI fades the container;
+// these move the card itself.
+const ENTER_MS = 420;
+const EXIT_MS = 200;
+const RESTING_OFFSTAGE = 'translateY(16px) scale(0.96)';
+const paperOf = (node: HTMLElement) => node.querySelector<HTMLElement>('.MuiDialog-paper');
+const motionHandlers = {
+    onEnter: (node: HTMLElement) => {
+        const paper = paperOf(node);
+        if (!paper) return;
+        paper.style.transition = 'none';
+        paper.style.transform = RESTING_OFFSTAGE;
+    },
+    onEntering: (node: HTMLElement) => {
+        const paper = paperOf(node);
+        if (!paper) return;
+        void paper.offsetHeight;
+        paper.style.transition = `transform ${ENTER_MS}ms ${EASE_SHEET}`;
+        paper.style.transform = 'none';
+    },
+    onExit: (node: HTMLElement) => {
+        const paper = paperOf(node);
+        if (!paper) return;
+        paper.style.transition = `transform ${EXIT_MS}ms ${EASE_EXIT}`;
+        paper.style.transform = RESTING_OFFSTAGE;
+    },
+};
+const transitionDuration = {enter: ENTER_MS * 0.6, exit: EXIT_MS};
 
 const paperSx: SxProps<Theme> = {
     m: 2,
@@ -48,8 +68,6 @@ const paperSx: SxProps<Theme> = {
     borderColor: 'divider',
     backgroundImage: 'none',
     boxShadow: '0 24px 48px rgba(0, 0, 0, 0.35)',
-    animation: `${settle} 220ms cubic-bezier(0.2, 0.9, 0.3, 1)`,
-    '@media (prefers-reduced-motion: reduce)': {animation: 'none'},
 };
 
 const backdropSx: SxProps<Theme> = {
@@ -80,10 +98,15 @@ const CommonDialog: React.FC<CommonDialogProps> = ({
         if (closeOnConfirm) handleDialogClose();
     };
     const titleId = useId();
+    const reduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)', {noSsr: true});
 
     return (
-        <Dialog open={open} onClose={handleDialogClose} aria-labelledby={titleId}
-                slotProps={{paper: {dir: 'rtl', sx: paperSx}, backdrop: {sx: backdropSx}}}>
+        <Dialog open={open} onClose={handleDialogClose} aria-labelledby={titleId} transitionDuration={transitionDuration}
+                slotProps={{
+                    paper: {dir: 'rtl', sx: paperSx},
+                    backdrop: {sx: backdropSx},
+                    transition: reduceMotion ? undefined : motionHandlers,
+                }}>
             <Box sx={{display: 'flex', alignItems: 'flex-start', gap: 1.5, p: 2.5, pb: content ? 2 : 1}}>
                 {icon ? (
                     <Box sx={{

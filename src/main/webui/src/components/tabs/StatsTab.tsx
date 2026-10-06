@@ -10,7 +10,7 @@ import Paper from '@mui/material/Paper';
 import Skeleton from '@mui/material/Skeleton';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
-import {SxProps, Theme} from '@mui/material/styles';
+import {keyframes, SxProps, Theme} from '@mui/material/styles';
 import statsStore, {StatsSort, statsSortLabels, StatsView, UserStats} from '../../stores/StatsStore';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
@@ -18,6 +18,39 @@ import NativeSelect from '../basicSharedComponents/NativeSelect';
 import authStore from '../../stores/AuthStore';
 import {stringToColor} from '../shiftTable/ShiftTable';
 import {formatPaddedDate} from '../../dateFormat';
+import {EASE_SETTLE} from '../../theme';
+
+// Bars grow out from the start of their track (the right, in RTL) when the page opens
+const grow = keyframes`
+    from {
+        transform: scaleX(0);
+    }
+    to {
+        transform: none;
+    }
+`;
+
+const rise = keyframes`
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+`;
+
+const growSx = (delayMs: number) => ({
+    transformOrigin: 'right center',
+    animation: `${grow} 700ms ${EASE_SETTLE} ${delayMs}ms both`,
+    '@media (prefers-reduced-motion: reduce)': {animation: 'none'},
+});
+
+const riseSx = (delayMs: number) => ({
+    animation: `${rise} 500ms ${EASE_SETTLE} ${delayMs}ms both`,
+    '@media (prefers-reduced-motion: reduce)': {animation: 'none'},
+});
 
 const panelSx: SxProps<Theme> = {
     p: {xs: 2, sm: 3},
@@ -55,7 +88,7 @@ type SharedUser = StatsView['users'][number];
 
 const ShareRibbon: React.FC<{ users: SharedUser[] }> = ({users}) => (
     <Box role="img" aria-label="חלוקת המשמרות ב-30 הימים האחרונים"
-         sx={{display: 'flex', height: 18, borderRadius: 9, overflow: 'hidden', gap: '2px', bgcolor: 'action.hover'}}>
+         sx={{display: 'flex', height: 18, borderRadius: 9, overflow: 'hidden', gap: '2px', bgcolor: 'action.hover', ...growSx(0)}}>
         {users.map(user => (
             <Tooltip key={user.name} title={`${user.name}: ${percent(user.shareLast30Days)}`}>
                 <Box sx={{width: `${user.shareLast30Days}%`, bgcolor: stringToColor(user.name)}}/>
@@ -65,7 +98,7 @@ const ShareRibbon: React.FC<{ users: SharedUser[] }> = ({users}) => (
 );
 
 // One person's line: their share against the busiest person's, with a tick at an equal share
-const ShareRow: React.FC<{ user: SharedUser, maxShare: number, equalShare: number }> = ({user, maxShare, equalShare}) => {
+const ShareRow: React.FC<{ user: SharedUser, maxShare: number, equalShare: number, index: number }> = ({user, maxShare, equalShare, index}) => {
     const color = stringToColor(user.name);
     return (
         <Box sx={{display: 'grid', gridTemplateColumns: 'minmax(88px, 1fr) 1.8fr auto', alignItems: 'center', gap: 1.5}}>
@@ -75,7 +108,7 @@ const ShareRow: React.FC<{ user: SharedUser, maxShare: number, equalShare: numbe
             </Box>
             <Box sx={{position: 'relative', height: 10, borderRadius: 5, bgcolor: 'action.hover'}}>
                 <Box sx={{position: 'absolute', insetBlock: 0, insetInlineStart: 0, borderRadius: 5, bgcolor: color,
-                    width: `${maxShare ? user.shareLast30Days / maxShare * 100 : 0}%`}}/>
+                    width: `${maxShare ? user.shareLast30Days / maxShare * 100 : 0}%`, ...growSx(120 + index * 45)}}/>
                 <Box aria-hidden sx={{position: 'absolute', top: -3, bottom: -3, width: 2, borderRadius: 1,
                     bgcolor: 'text.secondary', insetInlineStart: `${equalShare / maxShare * 100}%`}}/>
             </Box>
@@ -110,8 +143,8 @@ const SharePanel: React.FC<{ stats: StatsView }> = ({stats}) => {
             {active.length > 0 ? <>
                 <ShareRibbon users={active}/>
                 <Box sx={{display: 'flex', flexDirection: 'column', gap: 1.25, mt: 2.5}}>
-                    {active.map(user => (
-                        <ShareRow key={user.name} user={user} maxShare={Math.max(maxShare, equalShare)}
+                    {active.map((user, index) => (
+                        <ShareRow key={user.name} user={user} index={index} maxShare={Math.max(maxShare, equalShare)}
                                   equalShare={equalShare}/>
                     ))}
                 </Box>
@@ -240,7 +273,7 @@ const StatsTab: React.FC = observer(() => {
                 </Alert>
             ) : !stats ? <LoadingState/> : (
                 <Box sx={{display: 'flex', flexDirection: 'column', gap: 3}}>
-                    <SharePanel stats={stats}/>
+                    <Box sx={riseSx(0)}><SharePanel stats={stats}/></Box>
                     <Box>
                         <Box sx={{display: 'flex', flexDirection: 'column', mb: 1.5}}>
                             <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2}}>
@@ -264,8 +297,10 @@ const StatsTab: React.FC = observer(() => {
                             ) : null}
                         </Box>
                         <Box sx={cardsGridSx}>
-                            {sorted(statsStore.listedUsers).map(user => (
-                                <UserStatsCard key={user.name} user={user} isMe={user.name === authStore.username}/>
+                            {sorted(statsStore.listedUsers).map((user, index) => (
+                                <Box key={user.name} sx={{display: 'grid', ...riseSx(Math.min(index, 8) * 50)}}>
+                                    <UserStatsCard user={user} isMe={user.name === authStore.username}/>
+                                </Box>
                             ))}
                         </Box>
                     </Box>

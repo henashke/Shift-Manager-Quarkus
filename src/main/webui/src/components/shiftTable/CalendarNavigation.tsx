@@ -12,6 +12,7 @@ import ChevronLeft from '@mui/icons-material/ChevronLeft';
 import ChevronRight from '@mui/icons-material/ChevronRight';
 import {useCompactOnScroll} from './useCompactOnScroll';
 import {formatPaddedDate} from '../../dateFormat';
+import {floatingSurface} from '../../theme';
 
 interface CalendarNavigationProps {
     actions?: React.ReactNode;
@@ -45,7 +46,9 @@ const fullLayerSx = (compact: boolean, animate: boolean): SxProps<Theme> => ({
 });
 
 // The compact pill sits over the top of the full card
-const pillLayerSx = (compact: boolean, animate: boolean): SxProps<Theme> => ({
+// The toast's surface: the table shows through it, blurred, as it scrolls under
+const pillLayerSx = (compact: boolean, animate: boolean): SxProps<Theme> => theme => ({
+    ...floatingSurface(theme),
     position: 'absolute',
     top: 0,
     insetInline: 0,
@@ -53,7 +56,6 @@ const pillLayerSx = (compact: boolean, animate: boolean): SxProps<Theme> => ({
     maxWidth: 360,
     p: 0.75,
     borderRadius: '28px',
-    boxShadow: '0 10px 28px rgba(0, 0, 0, 0.35)',
     transform: compact ? 'none' : `translateY(${GAP}) scale(0.94)`,
     opacity: compact ? 1 : 0,
     transition: animate ? `transform ${MOVE_MS}ms ${EASING}, opacity ${compact ? FADE_IN : FADE_OUT}` : 'none',

@@ -2,7 +2,7 @@ import React, {useEffect, useMemo, useState} from 'react';
 import NotificationDisplay from './components/NotificationDisplay';
 import {CssBaseline} from '@mui/material';
 import {observer} from 'mobx-react-lite';
-import {createTheme, ThemeProvider} from '@mui/material/styles';
+import {alpha, createTheme, ThemeProvider} from '@mui/material/styles';
 import {Route, Routes, useNavigate} from 'react-router-dom';
 import LoginSignup from './components/LoginSignup';
 import authStore from './stores/AuthStore';
@@ -12,7 +12,7 @@ import SettingsTab from './components/tabs/SettingsTab';
 import StatsTab from './components/tabs/StatsTab';
 import {AppBarComponent} from "./components/AppBarComponent";
 import AnnouncementDialog from "./components/dialogs/AnnouncementDialog";
-import {primaryGradient} from './theme';
+import {EASE_SETTLE, glass, pressable, primaryGradient} from './theme';
 
 const DARK_MODE_KEY = 'darkMode';
 
@@ -63,8 +63,58 @@ const App: React.FC = observer(() => {
                 'Arial',
                 'sans-serif',
             ].join(','),
+            // Tracking tightens as type grows; body text stays at 0
+            h4: {letterSpacing: '-0.02em'},
+            h5: {letterSpacing: '-0.015em'},
+            h6: {letterSpacing: '-0.01em'},
         },
         components: {
+            // No Material ripple: controls answer a press by scaling down instantly (see pressable), and keyboard focus
+            // gets a ring instead
+            MuiButtonBase: {
+                defaultProps: {disableRipple: true},
+                styleOverrides: {
+                    root: ({theme}) => ({
+                        '&.Mui-focusVisible': {outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: 2},
+                    }),
+                },
+            },
+            MuiIconButton: {
+                styleOverrides: {root: pressable(0.9)},
+            },
+            MuiTab: {
+                styleOverrides: {
+                    root: {
+                        transition: 'color 200ms, opacity 150ms',
+                        '&:active': {opacity: 0.6, transitionDuration: '0ms'},
+                    },
+                },
+            },
+            MuiTooltip: {
+                styleOverrides: {
+                    tooltip: ({theme}) => ({
+                        ...glass(theme, 0.85),
+                        color: theme.palette.text.primary,
+                        border: `1px solid ${theme.palette.divider}`,
+                        borderRadius: 8,
+                        fontSize: '0.8rem',
+                        fontWeight: 500,
+                        padding: '6px 10px',
+                        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
+                    }),
+                },
+            },
+            MuiOutlinedInput: {
+                styleOverrides: {
+                    root: ({theme}) => ({
+                        borderRadius: 10,
+                        transition: `box-shadow 200ms ${EASE_SETTLE}`,
+                        // A soft halo around the focused field, on top of MUI's border color
+                        '&.Mui-focused': {boxShadow: `0 0 0 4px ${alpha(theme.palette.primary.main, 0.18)}`},
+                        '&.Mui-error.Mui-focused': {boxShadow: `0 0 0 4px ${alpha(theme.palette.error.main, 0.18)}`},
+                    }),
+                },
+            },
             // Drop MUI's dark-mode elevation overlay so every surface is the same paper color
             MuiPaper: {
                 styleOverrides: {root: {backgroundImage: 'none'}},
@@ -80,6 +130,7 @@ const App: React.FC = observer(() => {
                         // MUI's icon margins don't flip without an RTL style plugin, so space icons with gap
                         gap: 8,
                         '& .MuiButton-startIcon, & .MuiButton-endIcon': {margin: 0},
+                        ...pressable(0.97),
                     },
                 },
                 variants: [
@@ -99,13 +150,15 @@ const App: React.FC = observer(() => {
             // Context menus share the dialogs' surface; they render in a portal, so set RTL here
             MuiMenu: {
                 styleOverrides: {
+                    // Translucent, like a context menu floating over the page; it grows out of what was tapped
                     paper: ({theme}) => ({
                         direction: 'rtl',
                         minWidth: 180,
-                        borderRadius: 12,
+                        borderRadius: 14,
                         border: `1px solid ${theme.palette.divider}`,
                         backgroundImage: 'none',
-                        boxShadow: '0 16px 32px rgba(0, 0, 0, 0.3)',
+                        ...glass(theme),
+                        boxShadow: '0 16px 40px rgba(0, 0, 0, 0.3)',
                     }),
                     list: {padding: 4},
                 },
@@ -119,6 +172,11 @@ const App: React.FC = observer(() => {
                         borderRadius: 8,
                         fontSize: '0.9rem',
                         fontWeight: 500,
+                        transition: 'background-color 150ms',
+                        // Highlights the moment it's touched, not after release
+                        '&:active': {backgroundColor: theme.palette.action.selected, transitionDuration: '0ms'},
+                        // Inside a menu, keyboard focus is a highlighted row rather than a ring
+                        '&.Mui-focusVisible': {outline: 'none', backgroundColor: theme.palette.action.focus},
                         '& .MuiListItemIcon-root': {minWidth: 0, color: theme.palette.text.secondary},
                     }),
                 },

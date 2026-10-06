@@ -116,7 +116,7 @@ class ConstraintStore {
             });
             if (res.ok) {
                 this.mergePendingToConstraints();
-                notificationStore.showSuccess('האילוצים נשמרו בהצלחה');
+                notificationStore.showSuccess('האילוצים נשמרו');
             } else if (res.status === 403) {
                 notificationStore.showConstraintUnauthorizedError();
             } else {
@@ -166,7 +166,7 @@ class ConstraintStore {
             });
             if (res.ok) {
                 this.removeConstraintFromStore(shift, targetUserId);
-                notificationStore.showSuccess('האילוץ נמחק בהצלחה');
+                notificationStore.showSuccess('האילוץ נמחק');
             } else if (res.status === 403) {
                 notificationStore.showConstraintUnauthorizedError();
             } else if (res.status === 404) {

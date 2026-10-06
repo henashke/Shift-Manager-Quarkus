@@ -14,7 +14,8 @@ interface UserCardProps {
 const UserCard: React.FC<UserCardProps> = ({name, subtitle, isPending, secondary}) => {
     const theme = useTheme();
     const color = isPending ? theme.palette.secondary.main : stringToColor(name);
-    return <TintedCard label={name} subtitle={subtitle} color={color} outlined={secondary} small={secondary}/>;
+    return <TintedCard label={name} subtitle={subtitle} color={color} outlined={secondary} small={secondary}
+                       appear={isPending}/>;
 };
 
 export default UserCard;

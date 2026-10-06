@@ -3,12 +3,10 @@ import CalendarNavigation from '../shiftTable/CalendarNavigation';
 import ShiftTable from '../shiftTable/ShiftTable';
 import UserCard from '../basicSharedComponents/UserCard';
 import UserList from '../draggableLists/UserList';
-import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import Container from "@mui/material/Container";
-import Snackbar from "@mui/material/Snackbar";
 import {SxProps, Theme} from "@mui/material/styles";
 import usersStore from "../../stores/UsersStore";
 import {observer} from 'mobx-react-lite';
@@ -79,8 +77,6 @@ const AssignmentTab: React.FC = observer(() => {
     // The extra table being renamed or deleted
     const [tableToRename, setTableToRename] = useState<string | null>(null);
     const [tableToDelete, setTableToDelete] = useState<string | null>(null);
-    const [resetSuccess, setResetSuccess] = useState(false);
-    const [resetError, setResetError] = useState(false);
 
     useEffect(() => {
         shiftWeightStore.fetchPresets();
@@ -217,12 +213,11 @@ const AssignmentTab: React.FC = observer(() => {
             notificationStore.showUnauthorizedError();
             return;
         }
-        setResetError(false);
         const result = await shiftStore.resetWeeklyShifts();
         if (result === 'success') {
-            setResetSuccess(true);
+            notificationStore.showSuccess('כל המשמרות של השבוע אופסו');
         } else {
-            setResetError(true);
+            notificationStore.showError('אירעה שגיאה בעת איפוס המשמרות');
         }
         setResetDialogOpen(false);
     };
@@ -332,12 +327,6 @@ const AssignmentTab: React.FC = observer(() => {
                                       users={users}/>
             <ResetWeeklyShiftsDialog handleConfirm={handleResetConfirm} open={resetDialogOpen}
                                      handleDialogClose={handleResetClose}/>
-            <Snackbar open={resetSuccess} autoHideDuration={3000} onClose={() => setResetSuccess(false)}>
-                <Alert severity="success" sx={{width: '100%'}}>כל המשמרות של השבוע אופסו בהצלחה</Alert>
-            </Snackbar>
-            <Snackbar open={resetError} autoHideDuration={3000} onClose={() => setResetError(false)}>
-                <Alert severity="error" sx={{width: '100%'}}>אירעה שגיאה בעת איפוס המשמרות</Alert>
-            </Snackbar>
             <ChangeAssignedShiftPresetDialog open={isChangePresetDialogOpen}
                                              onClose={() => setIsChangePresetDialogOpen(false)}
                                              assignedShift={selectedShift ?? {

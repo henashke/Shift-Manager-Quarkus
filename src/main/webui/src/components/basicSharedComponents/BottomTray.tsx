@@ -6,6 +6,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import {SxProps, Theme} from '@mui/material/styles';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import {stringToColor} from "../shiftTable/ShiftTable";
+import {floatingSurface, glass} from '../../theme';
 
 interface BottomTrayProps {
     title: string;
@@ -20,26 +21,32 @@ const HEADER_HEIGHT = 56;
 const MAX_DOTS = 6;
 // Decelerate into place, like a sheet settling
 const easing = 'cubic-bezier(0.2, 0.9, 0.3, 1)';
-// A release faster than this (px/ms) follows the flick's direction instead of the nearest position
-const FLICK_VELOCITY = 0.4;
+// Where a release would coast to, like a scroll decelerating (Apple's projection, for velocity in px/ms): the sheet
+// settles at whichever end is nearer that point, so a flick carries it even from a short drag
+const DECELERATION = 0.998;
+const project = (velocity: number) => velocity * DECELERATION / (1 - DECELERATION);
+// Past either end the sheet still follows the finger, but with growing resistance, instead of stopping dead
+const rubberband = (distance: number, dimension: number, constant = 0.55) =>
+    (distance * dimension * constant) / (dimension + constant * Math.abs(distance));
 // Less movement than this is a tap, which toggles the tray
 const TAP_SLOP_PX = 5;
 // Closed, the sheet is pushed down so only its header (and the safe area below it) shows
 const CLOSED_TRANSFORM = `translateY(calc(100% - ${HEADER_HEIGHT}px - env(safe-area-inset-bottom)))`;
 
-const traySx: SxProps<Theme> = {
+// The toast's surface (its shadow cast upward), so the page shows through the sheet, blurred
+const traySx: SxProps<Theme> = theme => ({
     position: 'fixed',
     insetInline: 0,
     bottom: 0,
     zIndex: theme => theme.zIndex.appBar - 1,
-    bgcolor: 'background.paper',
+    ...floatingSurface(theme, -12),
     backgroundImage: 'none',
-    borderTop: '1px solid',
-    borderColor: 'divider',
+    borderBottom: 'none',
     borderRadius: '16px 16px 0 0',
-    boxShadow: '0 -8px 24px rgba(0, 0, 0, 0.25)',
     pb: 'env(safe-area-inset-bottom)',
-};
+    // Fills in under the sheet when it's pulled up past its open position (rubber-banding)
+    '&::after': {content: '""', position: 'absolute', top: '100%', insetInline: 0, height: 120, ...glass(theme, 0.8)},
+});
 
 const headerSx: SxProps<Theme> = {
     width: '100%',
@@ -116,7 +123,9 @@ const BottomTray: React.FC<BottomTrayProps> = ({title, names, forceOpen, childre
     // While dragging, move the sheet and dim the page directly, without re-rendering
     const applyDragOffset = (offset: number, closedOffset: number) => {
         if (trayRef.current) trayRef.current.style.transform = `translateY(${offset}px)`;
-        if (backdropRef.current) backdropRef.current.style.opacity = String(1 - offset / closedOffset);
+        if (backdropRef.current) {
+            backdropRef.current.style.opacity = String(Math.min(Math.max(1 - offset / closedOffset, 0), 1));
+        }
     };
 
     const clearDragStyles = () => {
@@ -154,7 +163,11 @@ const BottomTray: React.FC<BottomTrayProps> = ({title, names, forceOpen, childre
         }
         d.samples.push({y: e.clientY, time: e.timeStamp});
         if (d.samples.length > 20) d.samples.shift();
-        d.offset = Math.min(Math.max(d.startOffset + dy, 0), d.closedOffset);
+        const raw = d.startOffset + dy;
+        const height = trayRef.current?.offsetHeight ?? d.closedOffset;
+        d.offset = raw < 0 ? -rubberband(-raw, height)
+            : raw > d.closedOffset ? d.closedOffset + rubberband(raw - d.closedOffset, height)
+                : raw;
         applyDragOffset(d.offset, d.closedOffset);
     };
 
@@ -164,7 +177,7 @@ const BottomTray: React.FC<BottomTrayProps> = ({title, names, forceOpen, childre
         if (!d?.moved) return;
         suppressClick.current = true;
         const velocity = releaseVelocity(d.samples);
-        const shouldOpen = Math.abs(velocity) > FLICK_VELOCITY ? velocity < 0 : d.offset < d.closedOffset / 2;
+        const shouldOpen = d.offset + project(velocity) < d.closedOffset / 2;
         if (backdropRef.current) backdropRef.current.style.pointerEvents = '';
         // Hand the position back to the styles below, whose transition settles the sheet
         clearDragStyles();
@@ -192,11 +205,10 @@ const BottomTray: React.FC<BottomTrayProps> = ({title, names, forceOpen, childre
                 pointerEvents: open ? 'auto' : 'none',
                 transition: `opacity ${duration}ms ${easing}`,
             }}/>
-            <Box ref={trayRef} sx={{
-                ...traySx,
+            <Box ref={trayRef} sx={[traySx, {
                 transform: open ? 'none' : CLOSED_TRANSFORM,
                 transition: `transform ${duration}ms ${easing}`,
-            } as SxProps<Theme>}>
+            }]}>
                 <ButtonBase onClick={onHeaderClick} aria-expanded={open} sx={headerSx}
                             onPointerDown={onPointerDown} onPointerMove={onPointerMove}
                             onPointerUp={endDrag} onPointerCancel={endDrag}>

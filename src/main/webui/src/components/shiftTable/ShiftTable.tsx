@@ -45,7 +45,7 @@ interface ShiftTableProps<T> {
     itemList: T[];
     defaultItem?: T;
     isPendingItems?: boolean;
-    onSave?: () => void;
+    onSave?: () => void | Promise<unknown>;
     onCancel?: () => void;
     retrievePendingItem?: (shift: Shift) => T | undefined;
     onDropHandler?: (e: React.DragEvent, shift: Shift) => void;
@@ -101,7 +101,11 @@ function ShiftTable<T>({
     const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
     // Viewers who can't change this table (regular users on the assignments tab) only see it: no prompts, menus or dragging
     const readOnly = requireAdmin && !authStore.isAdmin();
-    const emptyCell = readOnly ? null : <Typography variant="body1" sx={{color: 'primary.light'}}>{"שבץ " + itemName}</Typography>;
+    const emptyCell = readOnly ? null : (
+        <Box component="span" sx={emptyCellSx} aria-label={'שבץ ' + itemName}>
+            <AddRounded sx={{fontSize: 16}}/>{itemName}
+        </Box>
+    );
 
     const [contextMenu, setContextMenu] = useState<{
         mouseX: number;
@@ -248,7 +252,7 @@ function ShiftTable<T>({
                 onDragOver={onDragOver}
                 onClick={(e) => shift && isAllContextMenuDisabledButAddItem(shift) ? handleCellClick(shift) : handleContextMenu(e, shift)}
                 onContextMenu={e => shift && handleContextMenu(e, shift)}
-                sx={{...cellSx, cursor: 'pointer'}}
+                sx={{...cellSx, ...pressableCellSx}}
             >
                 {item ? (
                     <Box
@@ -333,14 +337,9 @@ function ShiftTable<T>({
     return (
 
         <Box sx={{display: 'flex', gap: 2, height: '100%', mb: {xs: 2, md: 4}, flexDirection: isNarrowScreen ? 'column' : 'row'}}>
-            {
-                isPendingItems && onSave && onCancel &&
-                <ShiftTableActions
-                    onSave={onSave}
-                    onCancel={onCancel}
-                    requireAdmin={requireAdmin}
-                />
-            }
+            {onSave && onCancel ? (
+                <ShiftTableActions open={!!isPendingItems} onSave={onSave} onCancel={onCancel} requireAdmin={requireAdmin}/>
+            ) : null}
             {/* The track moves under the finger; mid-swipe it also carries the neighboring week beside the table */}
             <Box ref={trackRef} {...swipeHandlers}
                  // Narrow screens: vertical scrolling stays with the browser, sideways gestures change the week
@@ -399,6 +398,38 @@ function ShiftTable<T>({
         </Box>
     );
 }
+
+// A quiet placeholder in every free slot: dashed, so it reads as "something can go here" without 14 cells shouting it
+const emptyCellSx = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 0.25,
+    px: 1.25,
+    py: 0.5,
+    borderRadius: 99,
+    border: '1px dashed',
+    borderColor: (theme: Theme) => alpha(theme.palette.primary.main, 0.4),
+    color: 'primary.light',
+    fontSize: '0.85rem',
+    fontWeight: 600,
+    transition: 'border-color 150ms, background-color 150ms',
+} as const;
+
+// Tapping a cell highlights it the moment the finger lands
+const pressableCellSx = {
+    cursor: 'pointer',
+    transition: 'background-color 200ms',
+    '&:active': {
+        bgcolor: (theme: Theme) => alpha(theme.palette.primary.main, 0.1),
+        transitionDuration: '0ms',
+    },
+    '@media (hover: hover)': {
+        '&:hover > span': {
+            borderColor: 'primary.main',
+            bgcolor: (theme: Theme) => alpha(theme.palette.primary.main, 0.08),
+        },
+    },
+} as const;
 
 const previewPaneSx = {
     position: 'absolute',

@@ -12,6 +12,15 @@ body {
   font-family: 'Rubik Variable', 'Segoe UI', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Controls give their own press feedback (see pressable in theme.ts); iOS's grey tap flash would double it */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Switching between light and dark cross-fades the whole page instead of flashing (see AppBarComponent) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 320ms;
+  animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1);
 }
 
 code {

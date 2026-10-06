@@ -334,9 +334,11 @@ export class ShiftStore {
                 }
                 return;
             }
+            const count = this.pendingAssignedShifts.length;
             runInAction(() => {
                 this.mergePendingToAssigned();
             });
+            notificationStore.showSuccess(count === 1 ? 'השיבוץ נשמר' : `${count} שיבוצים נשמרו`);
         } catch (error) {
             runInAction(() => {
                 this.loading = false;

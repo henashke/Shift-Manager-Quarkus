@@ -1,7 +1,8 @@
 import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import {alpha} from '@mui/material/styles';
+import {alpha, keyframes} from '@mui/material/styles';
+import {EASE_SETTLE} from '../../theme';
 
 interface TintedCardProps {
     label: string;
@@ -11,10 +12,23 @@ interface TintedCardProps {
     // Border only, no fill: a secondary item next to regular cards (e.g. a shift's shadow or jump assignee)
     outlined?: boolean;
     small?: boolean;
+    // Pops in when it mounts: for an item that was just placed (a pending assignment)
+    appear?: boolean;
 }
 
+const popIn = keyframes`
+    from {
+        opacity: 0;
+        transform: scale(0.85);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+`;
+
 // The card look shared by users (UserCard) and constraint types
-const TintedCard: React.FC<TintedCardProps> = ({label, subtitle, color, outlined, small}) => (
+const TintedCard: React.FC<TintedCardProps> = ({label, subtitle, color, outlined, small, appear}) => (
     <Box sx={{
         display: 'flex',
         alignItems: 'center',
@@ -28,7 +42,9 @@ const TintedCard: React.FC<TintedCardProps> = ({label, subtitle, color, outlined
         backgroundColor: outlined ? 'transparent' : alpha(color, 0.12),
         color: 'text.primary',
         userSelect: 'none',
-        transition: 'background-color 0.2s, border-color 0.2s',
+        transition: 'background-color 0.3s, border-color 0.3s',
+        animation: appear ? `${popIn} 380ms ${EASE_SETTLE}` : 'none',
+        '@media (prefers-reduced-motion: reduce)': {animation: 'none'},
         '&:hover': {
             borderColor: color,
             backgroundColor: alpha(color, outlined ? 0.08 : 0.2),
