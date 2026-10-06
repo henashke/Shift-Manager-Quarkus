@@ -1,5 +1,5 @@
 import {makeAutoObservable, runInAction} from 'mobx';
-import {authFetch} from '../api';
+import {authFetch, isUnchangedResponse, rememberResponse} from '../api';
 import config from '../config';
 import {ShiftType} from './ShiftStore';
 import authStore from './AuthStore';
@@ -38,10 +38,15 @@ class ShiftWeightStore {
                 headers: authStore.getAuthHeaders()
             });
             if (!res.ok) throw new Error('Failed to fetch shift weight presets');
-            const data = await res.json();
+            const body = await res.text();
             runInAction(() => {
-                this.presets = new Map(Object.entries(data.presets));
-                this.currentPresetObject = data.currentPresetObject;
+                // Unchanged presets keep their objects, so the settings page doesn't reset weights being typed
+                if (!isUnchangedResponse('presets', body, this.currentPresetObject)) {
+                    const data = JSON.parse(body);
+                    this.presets = new Map(Object.entries(data.presets));
+                    this.currentPresetObject = data.currentPresetObject;
+                    rememberResponse('presets', body, this.currentPresetObject);
+                }
                 this.loading = false;
             });
         } catch (e) {

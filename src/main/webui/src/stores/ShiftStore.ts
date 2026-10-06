@@ -1,5 +1,5 @@
 import {makeAutoObservable, reaction, runInAction} from "mobx";
-import {authFetch} from "../api";
+import {authFetch, isUnchangedResponse, rememberResponse} from '../api';
 import config from "../config";
 import authStore from "./AuthStore";
 import notificationStore from "./NotificationStore";
@@ -115,14 +115,17 @@ export class ShiftStore {
                 headers: authStore.getAuthHeaders(),
             });
             if (!response.ok) throw new Error('Failed to fetch shifts');
-            const data = await response.json();
+            const body = await response.text();
             runInAction(() => {
                 this.loading = false;
                 if (requestId !== this.latestShiftRequest) return;
-                this.assignedShifts = data.map((shift: any) => ({
-                    ...shift,
-                    date: new Date(shift.date)
-                }));
+                if (!isUnchangedResponse('shifts', body, this.assignedShifts)) {
+                    this.assignedShifts = JSON.parse(body).map((shift: any) => ({
+                        ...shift,
+                        date: new Date(shift.date)
+                    }));
+                    rememberResponse('shifts', body, this.assignedShifts);
+                }
                 this.loadedShiftsCenter = weekOffset;
             });
         } catch (error) {

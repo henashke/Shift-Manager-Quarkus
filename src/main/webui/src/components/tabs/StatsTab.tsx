@@ -8,7 +8,6 @@ import Container from '@mui/material/Container';
 import Divider from '@mui/material/Divider';
 import Paper from '@mui/material/Paper';
 import Skeleton from '@mui/material/Skeleton';
-import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import {keyframes, SxProps, Theme} from '@mui/material/styles';
 import statsStore, {StatsSort, statsSortLabels, StatsView, UserStats} from '../../stores/StatsStore';
@@ -40,6 +39,8 @@ const rise = keyframes`
         transform: none;
     }
 `;
+
+const ANIMATED_CARDS = 4;
 
 const growSx = (delayMs: number) => ({
     transformOrigin: 'right center',
@@ -89,10 +90,9 @@ type SharedUser = StatsView['users'][number];
 const ShareRibbon: React.FC<{ users: SharedUser[] }> = ({users}) => (
     <Box role="img" aria-label="חלוקת המשמרות ב-30 הימים האחרונים"
          sx={{display: 'flex', height: 18, borderRadius: 9, overflow: 'hidden', gap: '2px', bgcolor: 'action.hover', ...growSx(0)}}>
+        {/* No tooltips: the rows below give each person's share, and phones can't hover */}
         {users.map(user => (
-            <Tooltip key={user.name} title={`${user.name}: ${percent(user.shareLast30Days)}`}>
-                <Box sx={{width: `${user.shareLast30Days}%`, bgcolor: stringToColor(user.name)}}/>
-            </Tooltip>
+            <Box key={user.name} sx={{width: `${user.shareLast30Days}%`, bgcolor: stringToColor(user.name)}}/>
         ))}
     </Box>
 );
@@ -112,12 +112,10 @@ const ShareRow: React.FC<{ user: SharedUser, maxShare: number, equalShare: numbe
                 <Box aria-hidden sx={{position: 'absolute', top: -3, bottom: -3, width: 2, borderRadius: 1,
                     bgcolor: 'text.secondary', insetInlineStart: `${equalShare / maxShare * 100}%`}}/>
             </Box>
-            <Tooltip title={`${user.shiftsLast30Days} משמרות`}>
-                <Typography sx={{...numberSx, fontSize: '0.85rem', minWidth: 64, textAlign: 'end'}}>
-                    <Box component="span" sx={{fontWeight: 700}}>{percent(user.shareLast30Days)}</Box>
-                    <Box component="span" sx={{color: 'text.secondary'}}> ({user.shiftsLast30Days})</Box>
-                </Typography>
-            </Tooltip>
+            <Typography sx={{...numberSx, fontSize: '0.85rem', minWidth: 64, textAlign: 'end'}}>
+                <Box component="span" sx={{fontWeight: 700}}>{percent(user.shareLast30Days)}</Box>
+                <Box component="span" sx={{color: 'text.secondary'}}> ({user.shiftsLast30Days})</Box>
+            </Typography>
         </Box>
     );
 };
@@ -298,7 +296,8 @@ const StatsTab: React.FC = observer(() => {
                         </Box>
                         <Box sx={cardsGridSx}>
                             {sorted(statsStore.listedUsers).map((user, index) => (
-                                <Box key={user.name} sx={{display: 'grid', ...riseSx(Math.min(index, 8) * 50)}}>
+                                // Only the first cards, the ones on screen, animate in; each animation costs style work
+                                <Box key={user.name} sx={index < ANIMATED_CARDS ? {display: 'grid', ...riseSx(index * 50)} : {display: 'grid'}}>
                                     <UserStatsCard user={user} isMe={user.name === authStore.username}/>
                                 </Box>
                             ))}

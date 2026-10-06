@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import ButtonBase from '@mui/material/ButtonBase';
@@ -11,9 +11,7 @@ import {User} from "../../stores/ShiftStore";
 import {stringToColor} from "../shiftTable/ShiftTable";
 
 interface SuggestAssignmentsDialogProps extends Pick<CommonDialogProps, 'open' | 'handleDialogClose'> {
-    handleConfirm: () => void;
-    handleUserToggle: (userId: string) => void;
-    selectedUserIds: string[];
+    handleConfirm: (selectedUserIds: string[]) => void;
     users: User[];
 }
 
@@ -72,10 +70,18 @@ const SuggestAssignmentsDialog: React.FC<SuggestAssignmentsDialogProps> = ({
                                                                                open,
                                                                                handleDialogClose,
                                                                                handleConfirm,
-                                                                               handleUserToggle,
-                                                                               selectedUserIds,
                                                                                users
                                                                            }) => {
+    // The picks live here, so ticking a person re-renders only this dialog, not the tab and its table
+    const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+    // Every opening starts from everyone except reservists, who join only when picked
+    useEffect(() => {
+        if (open) setSelectedUserIds(users.filter(u => !u.reserve).map(u => u.name));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open]);
+    const handleUserToggle = (userId: string) => setSelectedUserIds(prev =>
+        prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]);
+
     const regularUsers = users.filter(user => !user.reserve);
     const reserveUsers = users.filter(user => user.reserve);
     const allSelected = users.every(user => selectedUserIds.includes(user.name));
@@ -114,7 +120,7 @@ const SuggestAssignmentsDialog: React.FC<SuggestAssignmentsDialogProps> = ({
                       }
                       confirmLabel="הצע שיבוץ"
                       disableConfirmButton={selectedUserIds.length === 0}
-                      handleConfirm={handleConfirm}
+                      handleConfirm={() => handleConfirm(selectedUserIds)}
                       handleDialogClose={handleDialogClose}/>
     );
 }
