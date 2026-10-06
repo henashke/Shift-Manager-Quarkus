@@ -1,5 +1,5 @@
 import {makeAutoObservable, runInAction} from 'mobx';
-import {authFetch} from '../api';
+import {authFetch, isUnchangedResponse, rememberResponse} from '../api';
 import config from '../config';
 import authStore from './AuthStore';
 import notificationStore from "./NotificationStore";
@@ -26,9 +26,12 @@ class UserStore {
       if (!res.ok) {
         throw new Error(`Failed to fetch users: ${res.status}`);
       }
-      const data = await res.json();
+      const body = await res.text();
       runInAction(() => {
-        this.users = data.sort((a: User, b: User) => a.name.localeCompare(b.name)) as User[];
+        if (!isUnchangedResponse('users', body, this.users)) {
+          this.users = (JSON.parse(body) as User[]).sort((a, b) => a.name.localeCompare(b.name));
+          rememberResponse('users', body, this.users);
+        }
         this.loading = false;
       });
     } catch (e) {

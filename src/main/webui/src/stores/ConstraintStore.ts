@@ -1,6 +1,6 @@
 import {makeAutoObservable, reaction, runInAction} from 'mobx';
 import {isInWindow, sameShift, Shift, shiftKey} from "./ShiftStore";
-import {authFetch} from "../api";
+import {authFetch, isUnchangedResponse, rememberResponse} from '../api';
 import config from "../config";
 import authStore from "./AuthStore";
 import notificationStore from "./NotificationStore";
@@ -202,14 +202,16 @@ class ConstraintStore {
                 headers: authStore.getAuthHeaders()
             });
             if (!res.ok) throw new Error('Failed to fetch constraints');
-            const json = await res.json();
-            const data: Constraint[] = (json);
+            const body = await res.text();
             runInAction(() => {
                 if (requestId !== this.latestRequest) return;
-                this.constraints = data.map((c: Constraint) => ({
-                    ...c,
-                    date: new Date(c.shift.date)
-                }));
+                if (!isUnchangedResponse('constraints', body, this.constraints)) {
+                    this.constraints = (JSON.parse(body) as Constraint[]).map(c => ({
+                        ...c,
+                        date: new Date(c.shift.date)
+                    }));
+                    rememberResponse('constraints', body, this.constraints);
+                }
                 this.loadedCenter = weekOffset;
             });
         } catch (error) {

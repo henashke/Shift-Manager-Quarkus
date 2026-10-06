@@ -1,5 +1,5 @@
 import {makeAutoObservable, runInAction} from 'mobx';
-import {authFetch} from '../api';
+import {authFetch, isUnchangedResponse, rememberResponse} from '../api';
 import config from '../config';
 import authStore from './AuthStore';
 
@@ -142,8 +142,12 @@ class StatsStore {
         try {
             const res = await authFetch(`${config.API_BASE_URL}/stats`, {headers: authStore.getAuthHeaders()});
             if (!res.ok) throw new Error('Failed to fetch stats');
-            const stats: Stats = await res.json();
-            runInAction(() => this.stats = stats);
+            const body = await res.text();
+            runInAction(() => {
+                if (isUnchangedResponse('stats', body, this.stats)) return;
+                this.stats = JSON.parse(body) as Stats;
+                rememberResponse('stats', body, this.stats);
+            });
         } catch (e) {
             runInAction(() => this.failed = true);
         } finally {

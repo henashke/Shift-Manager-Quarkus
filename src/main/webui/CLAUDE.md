@@ -118,5 +118,14 @@ Found by profiling tab switches; keep these when touching the shift and constrai
   tray and dialogs included. Start fetches with a MobX `reaction`, and pass functions (`isLoading`, `isWeekLoaded`) that
   the table reads itself, so only the table re-renders.
 - Don't define components inside components (it remounts their whole subtree every render).
+- Keep UI state that has nothing to do with the table out of the table's parents. Dialogs and menus own their open
+  state (`CellActions` in `ShiftTable`, the suggest dialog's picks); the assignments tab renders the table through
+  `AssignmentTable`, an observer that gets only stable props (state setters, `useCallback`). Otherwise every menu tap or
+  checkbox re-rendered all the cards.
+- Stores keep their objects when a refetch returns the same JSON (`isUnchangedResponse` / `rememberResponse` in
+  `api.ts`), since every tab refetches when it opens. This relies on local changes assigning a new array or object
+  (`filter`, `map`, spread), never mutating the fetched one in place.
+- Measure on a production build: the dev server's React development mode and `StrictMode` make everything several times
+  slower, so hiccups seen only on `:3000` may not exist in production.
 - The theme in `App.tsx` stays memoized, route changes run in `startTransition`, and `useMediaQuery` gets
   `{noSsr: true}` to skip its extra render.

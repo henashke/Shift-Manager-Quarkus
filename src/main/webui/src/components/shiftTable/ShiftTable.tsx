@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import {observer} from 'mobx-react-lite';
 import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
@@ -31,6 +31,17 @@ import {SWIPE_PANE_GAP_PX, useWeekSwipe} from "./useWeekSwipe";
 const days = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 const shiftTypes = ['יום', 'לילה'] as const;
 
+interface ContextMenuItem {
+    label: string;
+    icon: React.ReactNode;
+    action: (shift: Shift) => void;
+    disabled?: (shift: Shift) => boolean;
+    // Left out of the menu for this shift
+    hidden?: (shift: Shift) => boolean;
+    // Shown in red with the remove action, after the divider
+    danger?: boolean;
+}
+
 interface ShiftTableProps<T> {
     // While it returns true (and only once that has lasted a moment), every cell shows a skeleton card. A function read
     // here, so loading changes re-render only the table, not the tab around it
@@ -54,16 +65,7 @@ interface ShiftTableProps<T> {
     itemName: string;
     requireAdmin?: boolean;
     isRemoveItemDisabled?: (shift: Shift) => boolean;
-    additionalContextMenuItems?: {
-        label: string;
-        icon: React.ReactNode;
-        action: (shift: Shift) => void;
-        disabled?: (shift: Shift) => boolean;
-        // Left out of the menu for this shift
-        hidden?: (shift: Shift) => boolean;
-        // Shown in red with the remove action, after the divider
-        danger?: boolean;
-    }[];
+    additionalContextMenuItems?: ContextMenuItem[];
     // More content under the cell's item (or its empty prompt), e.g. the shift's shadow and jump assignees
     renderCellExtras?: (shift: Shift) => React.ReactNode;
 }
@@ -97,8 +99,8 @@ function ShiftTable<T>({
     const {trackRef, peek, handlers: swipeHandlers} =
         useWeekSwipe<HTMLDivElement>(store.weekOffset, direction => store.setWeekOffset(store.weekOffset + direction));
     const showSkeletons = useDelayedFlag(isLoading ? isLoading() : false, SKELETON_DELAY_MS);
-    const [assignDialogOpen, setAssignDialogOpen] = useState(false);
-    const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
+    // The cell menu and the assign dialog keep their own state (CellActions), so opening them doesn't re-render the cells
+    const actions = useRef<CellActionsController | null>(null);
     // Viewers who can't change this table (regular users on the assignments tab) only see it: no prompts, menus or dragging
     const readOnly = requireAdmin && !authStore.isAdmin();
     const emptyCell = readOnly ? null : (
@@ -106,13 +108,6 @@ function ShiftTable<T>({
             <AddRounded sx={{fontSize: 16}}/>{itemName}
         </Box>
     );
-
-    const [contextMenu, setContextMenu] = useState<{
-        mouseX: number;
-        mouseY: number;
-        shift: Shift | null
-    } | null>(null);
-
 
     const onDrop = (e: React.DragEvent, shift: Shift) => {
         if (requireAdmin && !authStore.isAdmin()) {
@@ -132,8 +127,7 @@ function ShiftTable<T>({
             notificationStore.showUnauthorizedError();
             return;
         }
-        setSelectedShift(shift);
-        setAssignDialogOpen(true);
+        actions.current?.openAssign(shift);
     };
 
     const onDragStart = (e: React.DragEvent, draggedItem: T, fromShift?: Shift) => {
@@ -142,42 +136,7 @@ function ShiftTable<T>({
 
     const handleContextMenu = (event: React.MouseEvent, shift: Shift) => {
         event.preventDefault();
-        setContextMenu(
-            contextMenu === null
-                ? {
-                    mouseX: event.clientX - 2,
-                    mouseY: event.clientY - 4,
-                    shift,
-                }
-                : null,
-        );
-    };
-
-    const handleCloseContextMenu = () => {
-        setContextMenu(null);
-    };
-
-    const handleAssignUser = () => {
-        if (requireAdmin && !authStore.isAdmin()) {
-            notificationStore.showUnauthorizedError();
-            return;
-        }
-        if (contextMenu?.shift) {
-            setSelectedShift(contextMenu.shift);
-            setAssignDialogOpen(true);
-        }
-        handleCloseContextMenu();
-    };
-
-    const handleRemoveItem = () => {
-        if (requireAdmin && !authStore.isAdmin()) {
-            notificationStore.showUnauthorizedError();
-            return;
-        }
-        if (contextMenu?.shift) {
-            unassignHandler?.(contextMenu.shift);
-        }
-        handleCloseContextMenu();
+        actions.current?.openMenu(event.clientX - 2, event.clientY - 4, shift);
     };
 
     const getPendingOrAssignedItem = (shift: Shift) => {
@@ -297,28 +256,6 @@ function ShiftTable<T>({
         </Table>
     );
 
-    // A Menu takes its items as direct children, so these are rendered as an array rather than a fragment
-    const renderAdditionalMenuItems = (danger: boolean) => {
-        const shift = contextMenu?.shift;
-        if (!additionalContextMenuItems || !shift) return null;
-        return additionalContextMenuItems
-            .filter(menuItem => !!menuItem.danger === danger && !menuItem.hidden?.(shift))
-            .map(menuItem => (
-                <MenuItem
-                    key={menuItem.label}
-                    sx={danger ? dangerMenuItemSx : undefined}
-                    onClick={() => {
-                        menuItem.action(shift);
-                        handleCloseContextMenu();
-                    }}
-                    disabled={menuItem.disabled ? menuItem.disabled(shift) : false}
-                >
-                    <ListItemIcon>{menuItem.icon}</ListItemIcon>
-                    <ListItemText>{menuItem.label}</ListItemText>
-                </MenuItem>
-            ));
-    };
-
     const isAllContextMenuDisabledButAddItem = (shift: Shift) => {
         if (isRemoveItemDisabled === undefined || !(isRemoveItemDisabled(shift))) {
             return false
@@ -358,41 +295,10 @@ function ShiftTable<T>({
                             sx={{borderRadius: 3, boxShadow: 3, direction: 'rtl', height: '100%'}}
                             dir="rtl">
                 {renderTable(weekDates)}
-                <AssignToShiftDialog
-                    open={assignDialogOpen}
-                    onClose={() => setAssignDialogOpen(false)}
-                    shift={selectedShift}
-                    itemList={itemList}
-                    defaultItem={defaultItem}
-                    itemTitle={itemName}
-                    getItemName={getItemName}
-                    assignFunction={assignHandler}
-                />
-
-                <Menu
-                    open={contextMenu !== null}
-                    onClose={handleCloseContextMenu}
-                    anchorReference="anchorPosition"
-                    anchorPosition={
-                        contextMenu !== null
-                            ? {top: contextMenu.mouseY, left: contextMenu.mouseX}
-                            : undefined
-                    }
-                >
-                    <MenuItem onClick={handleAssignUser}>
-                        <ListItemIcon><AddRounded fontSize="small"/></ListItemIcon>
-                        <ListItemText>שבץ {itemName}</ListItemText>
-                    </MenuItem>
-                    {renderAdditionalMenuItems(false)}
-                    <Divider sx={{my: 0.5}}/>
-                    {renderAdditionalMenuItems(true)}
-                    <MenuItem onClick={handleRemoveItem} sx={dangerMenuItemSx}
-                              disabled={isRemoveItemDisabled && isRemoveItemDisabled(contextMenu?.shift!)}
-                    >
-                        <ListItemIcon><DeleteOutlineRounded fontSize="small"/></ListItemIcon>
-                        <ListItemText>הסר {itemName}</ListItemText>
-                    </MenuItem>
-                </Menu>
+                <CellActions controller={actions} itemList={itemList} defaultItem={defaultItem} itemName={itemName}
+                             getItemName={getItemName} assignHandler={assignHandler} unassignHandler={unassignHandler}
+                             requireAdmin={requireAdmin} isRemoveItemDisabled={isRemoveItemDisabled}
+                             additionalContextMenuItems={additionalContextMenuItems}/>
             </TableContainer>
             </Box>
         </Box>
@@ -430,6 +336,92 @@ const pressableCellSx = {
         },
     },
 } as const;
+
+interface CellActionsController {
+    openMenu: (x: number, y: number, shift: Shift) => void;
+    openAssign: (shift: Shift) => void;
+}
+
+interface CellActionsProps<T> extends Pick<ShiftTableProps<T>, 'itemList' | 'defaultItem' | 'itemName' | 'getItemName'
+    | 'assignHandler' | 'unassignHandler' | 'requireAdmin' | 'isRemoveItemDisabled' | 'additionalContextMenuItems'> {
+    controller: React.MutableRefObject<CellActionsController | null>;
+}
+
+// A cell's menu and the assign dialog. Their open state lives here rather than in the table, so opening or closing
+// them re-renders only this, not every cell.
+function CellActionsImpl<T>({controller, itemList, defaultItem, itemName, getItemName, assignHandler, unassignHandler,
+                                requireAdmin = true, isRemoveItemDisabled, additionalContextMenuItems}: CellActionsProps<T>) {
+    const [menu, setMenu] = useState<{ x: number, y: number, shift: Shift } | null>(null);
+    const [assignShift, setAssignShift] = useState<Shift | null>(null);
+    const [assignOpen, setAssignOpen] = useState(false);
+
+    useLayoutEffect(() => {
+        controller.current = {
+            openMenu: (x, y, shift) => setMenu({x, y, shift}),
+            openAssign: shift => {
+                setAssignShift(shift);
+                setAssignOpen(true);
+            },
+        };
+        return () => {
+            controller.current = null;
+        };
+    }, [controller]);
+
+    const closeMenu = () => setMenu(null);
+    const guarded = (action: () => void) => () => {
+        if (requireAdmin && !authStore.isAdmin()) {
+            notificationStore.showUnauthorizedError();
+            return;
+        }
+        action();
+        closeMenu();
+    };
+
+    // A Menu takes its items as direct children, so these are rendered as an array rather than a fragment
+    const renderAdditionalMenuItems = (danger: boolean) => {
+        const shift = menu?.shift;
+        if (!additionalContextMenuItems || !shift) return null;
+        return additionalContextMenuItems
+            .filter(menuItem => !!menuItem.danger === danger && !menuItem.hidden?.(shift))
+            .map(menuItem => (
+                <MenuItem key={menuItem.label} sx={danger ? dangerMenuItemSx : undefined}
+                          onClick={() => {
+                              menuItem.action(shift);
+                              closeMenu();
+                          }}
+                          disabled={menuItem.disabled ? menuItem.disabled(shift) : false}>
+                    <ListItemIcon>{menuItem.icon}</ListItemIcon>
+                    <ListItemText>{menuItem.label}</ListItemText>
+                </MenuItem>
+            ));
+    };
+
+    return (
+        <>
+            <AssignToShiftDialog open={assignOpen} onClose={() => setAssignOpen(false)} shift={assignShift}
+                                 itemList={itemList} defaultItem={defaultItem} itemTitle={itemName}
+                                 getItemName={getItemName} assignFunction={assignHandler}/>
+            <Menu open={menu !== null} onClose={closeMenu} anchorReference="anchorPosition"
+                  anchorPosition={menu ? {top: menu.y, left: menu.x} : undefined}>
+                <MenuItem onClick={guarded(() => menu && controller.current?.openAssign(menu.shift))}>
+                    <ListItemIcon><AddRounded fontSize="small"/></ListItemIcon>
+                    <ListItemText>שבץ {itemName}</ListItemText>
+                </MenuItem>
+                {renderAdditionalMenuItems(false)}
+                <Divider sx={{my: 0.5}}/>
+                {renderAdditionalMenuItems(true)}
+                <MenuItem onClick={guarded(() => menu && unassignHandler(menu.shift))} sx={dangerMenuItemSx}
+                          disabled={!!menu && !!isRemoveItemDisabled?.(menu.shift)}>
+                    <ListItemIcon><DeleteOutlineRounded fontSize="small"/></ListItemIcon>
+                    <ListItemText>הסר {itemName}</ListItemText>
+                </MenuItem>
+            </Menu>
+        </>
+    );
+}
+
+const CellActions = observer(CellActionsImpl) as typeof CellActionsImpl;
 
 const previewPaneSx = {
     position: 'absolute',
