@@ -50,7 +50,9 @@ export const useWeekSwipe = <E extends HTMLElement>(weekOffset: number, onSwipe:
     // The new week has rendered: the neighbor we slid in is now the table itself, so drop the offset before painting
     useLayoutEffect(() => {
         const el = trackRef.current;
-        el?.getAnimations().forEach(animation => animation.cancel());
+        // Only a finished swipe leaves an animation behind; getAnimations() forces a style recalculation, so it's skipped
+        // for week changes from the buttons
+        if (settling.current) el?.getAnimations().forEach(animation => animation.cancel());
         if (el) el.style.transform = '';
         settling.current = false;
         token.current++;

@@ -68,8 +68,18 @@ and effect runs twice), so it is several times slower than production; judge per
   `ml`/`mr`. Icon buttons are 36–40px rounded squares with a `divider` outline.
 - **Surfaces:** rounded `Paper` (`borderRadius: 3`) with a thin `divider` border. A tinted item uses its color at
   ~12–16% alpha for the fill and ~60% for the border (see `UserCard`).
-- **Motion** only answers an action (opening, expanding, switching). Use `cubic-bezier(0.2, 0.9, 0.3, 1)` and turn it off
-  under `prefers-reduced-motion`.
+- **Motion** only answers an action (opening, expanding, switching). Use the curves in `src/theme.ts` (`EASE_SETTLE`
+  for settling, `EASE_SHEET` for things presented, the quicker `EASE_EXIT` for things leaving) and turn movement off
+  under `prefers-reduced-motion`. Things leave along the path they came in by (dialogs, toasts, the save bar), so
+  keep a component mounted until its exit has played.
+- **Press feedback** lands on touch-down: there are no Material ripples (`disableRipple` in the theme); buttons and icon
+  buttons scale down while pressed (`pressable` in `src/theme.ts`), menu items and table cells highlight. Keyboard
+  focus gets a ring instead.
+- **Translucent surfaces** (`glass` in `src/theme.ts`): the top bar, menus, tooltips, toasts and the save bar float over
+  the page with a blurred background. The toast, the compact date pill, the users tray and the save bar share one exact
+  surface (`floatingSurface`). Don't put one translucent surface on another, and don't animate the blur.
+- **Feedback for actions** goes through `notificationStore` (`showSuccess` / `showError`), shown as toasts that drop in
+  from the top (`NotificationDisplay`); don't add page-level `Snackbar`s. Errors inside a dialog stay inline in it.
 - **Copy:** Hebrew, sentence-like and plain. Buttons name what they do ("מחק", "שבץ", "אפס משמרות"), not "אישור".
   Don't start a sentence with a Latin name (usernames are Latin), since the mixed direction reads wrong; put it inside
   the sentence. Form labels go above inputs.
@@ -108,5 +118,14 @@ Found by profiling tab switches; keep these when touching the shift and constrai
   tray and dialogs included. Start fetches with a MobX `reaction`, and pass functions (`isLoading`, `isWeekLoaded`) that
   the table reads itself, so only the table re-renders.
 - Don't define components inside components (it remounts their whole subtree every render).
+- Keep UI state that has nothing to do with the table out of the table's parents. Dialogs and menus own their open
+  state (`CellActions` in `ShiftTable`, the suggest dialog's picks); the assignments tab renders the table through
+  `AssignmentTable`, an observer that gets only stable props (state setters, `useCallback`). Otherwise every menu tap or
+  checkbox re-rendered all the cards.
+- Stores keep their objects when a refetch returns the same JSON (`isUnchangedResponse` / `rememberResponse` in
+  `api.ts`), since every tab refetches when it opens. This relies on local changes assigning a new array or object
+  (`filter`, `map`, spread), never mutating the fetched one in place.
+- Measure on a production build: the dev server's React development mode and `StrictMode` make everything several times
+  slower, so hiccups seen only on `:3000` may not exist in production.
 - The theme in `App.tsx` stays memoized, route changes run in `startTransition`, and `useMediaQuery` gets
   `{noSsr: true}` to skip its extra render.

@@ -1,14 +1,12 @@
-import React, {useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import CalendarNavigation from '../shiftTable/CalendarNavigation';
 import ShiftTable from '../shiftTable/ShiftTable';
 import UserCard from '../basicSharedComponents/UserCard';
 import UserList from '../draggableLists/UserList';
-import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import Container from "@mui/material/Container";
-import Snackbar from "@mui/material/Snackbar";
 import {SxProps, Theme} from "@mui/material/styles";
 import usersStore from "../../stores/UsersStore";
 import {observer} from 'mobx-react-lite';
@@ -65,40 +63,71 @@ const suggestButtonSx: SxProps<Theme> = {
     },
 };
 
-const AssignmentTab: React.FC = observer(() => {
+// Nobody fills two roles of one shift in the same table (the server checks too); other tables don't matter
+const assignHandler = (shift: Shift, user: User, kind: ShiftKind = 'REGULAR') => {
+    const table = shiftStore.activeTable;
+    const conflict = shiftStore.conflictingAssignment(shift, user.name, kind, table);
+    if (conflict) {
+        notificationStore.showError(`המשתמש ${user.name} כבר ${shiftKindLabels[kindOf(conflict)]} במשמרת הזו`);
+        return;
+    }
+    shiftStore.assignShiftPending({
+        date: shift.date,
+        type: shift.type,
+        assignedUsername: user.name,
+        preset: shiftWeightStore.currentPresetObject,
+        kind,
+        specialTableName: table ?? undefined
+    });
+};
+
+const renderExtraRoles = (shift: Shift) => {
+    const extras = extraKinds
+        .map(kind => shiftStore.getAssignedOrPendingShift(shift, kind))
+        .filter((extra): extra is AssignedShift => !!extra);
+    if (extras.length === 0) return null;
+    return (
+        <Box sx={cellExtrasSx}>
+            {extras.map(extra => (
+                <UserCard key={extra.kind} name={extra.assignedUsername}
+                          subtitle={shiftKindLabels[extra.kind ?? 'REGULAR']} isPending={extra.isPending} secondary/>
+            ))}
+        </Box>
+    );
+};
+
+const removeExtraRoleMenuItems = extraKinds.map(kind => ({
+    label: `הסר ${shiftKindLabels[kind]}`,
+    icon: <DeleteOutlineRounded fontSize="small"/>,
+    action: (shift: Shift) => shiftStore.unassignUser(shift, kind),
+    hidden: (shift: Shift) => !shiftStore.getAssignedOrPendingShift(shift, kind),
+    danger: true,
+}));
+
+const getPendingOrAssignedShift = (shift: Shift): AssignedShift | undefined => shiftStore.getAssignedOrPendingShift(shift);
+
+const getItemName = (user: User, shift?: Shift) => {
+    if (!shift || !shiftStore.getAssignedShift(shift)) return user.name;
+    return user.name + ' (' + shiftStore.getAssignedOrPendingShift(shift)?.preset?.name + ')';
+};
+
+interface AssignmentTableProps {
+    setIsDragged: (dragged: boolean) => void;
+    onChangePreset: (shift: AssignedShift | undefined) => void;
+    onSetExtraRole: (target: { shift: Shift, kind: ShiftKind }) => void;
+}
+
+// The week table with its handlers. Its own observer with only stable props, so the tab's dialogs opening and closing
+// (state in AssignmentTab) don't re-render the table.
+const AssignmentTable: React.FC<AssignmentTableProps> = observer(({setIsDragged, onChangePreset, onSetExtraRole}) => {
     const {users} = usersStore;
-    const [isDragged, setIsDragged] = useState(false);
-    const [isChangePresetDialogOpen, setIsChangePresetDialogOpen] = useState(false);
-    const [selectedShift, setSelectedShift] = useState<AssignedShift | undefined>(undefined);
-    const [suggestDialogOpen, setSuggestDialogOpen] = useState(false);
-    const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
-    const [resetDialogOpen, setResetDialogOpen] = useState(false);
-    // The shadow or jump role being set, from the shift's menu
-    const [extraRoleTarget, setExtraRoleTarget] = useState<{ shift: Shift, kind: ShiftKind } | null>(null);
-    const [createTableOpen, setCreateTableOpen] = useState(false);
-    // The extra table being renamed or deleted
-    const [tableToRename, setTableToRename] = useState<string | null>(null);
-    const [tableToDelete, setTableToDelete] = useState<string | null>(null);
-    const [resetSuccess, setResetSuccess] = useState(false);
-    const [resetError, setResetError] = useState(false);
-
-    useEffect(() => {
-        shiftWeightStore.fetchPresets();
-        usersStore.fetchUsers();
-    }, []);
-
-    // A reaction, not an effect on the week read in render: reading it here would re-render the whole tab (tray, cards,
-    // dialogs) on every week switch
-    useEffect(() => reaction(() => shiftStore.weekOffset, offset => shiftStore.fetchShifts(offset), {fireImmediately: true}), []);
 
     const onDragStart = (e: React.DragEvent, user: User, fromShift?: Shift) => {
         requestAnimationFrame(() => setIsDragged(true));
         e.dataTransfer.setData('application/json', JSON.stringify({user: user, fromShift: fromShift || null}));
     };
 
-    const onDragEnd = () => {
-        setIsDragged(false);
-    };
+    const onDragEnd = () => setIsDragged(false);
 
     const handleDrop = (e: React.DragEvent, shift: Shift) => {
         e.preventDefault();
@@ -114,93 +143,111 @@ const AssignmentTab: React.FC = observer(() => {
         }
     };
 
-    const assignHandler = (shift: Shift, user: User, kind: ShiftKind = 'REGULAR') => {
-        // Nobody fills two roles of one shift in the same table (the server checks too); other tables don't matter
-        const table = shiftStore.activeTable;
-        const conflict = shiftStore.conflictingAssignment(shift, user.name, kind, table);
-        if (conflict) {
-            notificationStore.showError(`המשתמש ${user.name} כבר ${shiftKindLabels[kindOf(conflict)]} במשמרת הזו`);
-            return;
-        }
-        shiftStore.assignShiftPending({
-            date: shift.date,
-            type: shift.type,
-            assignedUsername: user.name,
-            preset: shiftWeightStore.currentPresetObject,
-            kind,
-            specialTableName: table ?? undefined
-        });
-    }
-
-    const renderExtraRoles = (shift: Shift) => {
-        const extras = extraKinds
-            .map(kind => shiftStore.getAssignedOrPendingShift(shift, kind))
-            .filter((extra): extra is AssignedShift => !!extra);
-        if (extras.length === 0) return null;
-        return (
-            <Box sx={cellExtrasSx}>
-                {extras.map(extra => (
-                    <UserCard key={extra.kind} name={extra.assignedUsername}
-                              subtitle={shiftKindLabels[extra.kind ?? 'REGULAR']} isPending={extra.isPending} secondary/>
-                ))}
-            </Box>
-        );
-    }
-
     const extraRoleMenuItems = extraKinds.map(kind => ({
         label: `הגדר ${shiftKindLabels[kind]}`,
         icon: extraKindIcons[kind],
-        action: (shift: Shift) => setExtraRoleTarget({shift, kind}),
+        action: (shift: Shift) => onSetExtraRole({shift, kind}),
         // Always available, so tapping a shift opens the menu instead of going straight to the regular assignment
         disabled: () => false,
-    }));
-
-    const removeExtraRoleMenuItems = extraKinds.map(kind => ({
-        label: `הסר ${shiftKindLabels[kind]}`,
-        icon: <DeleteOutlineRounded fontSize="small"/>,
-        action: (shift: Shift) => shiftStore.unassignUser(shift, kind),
-        hidden: (shift: Shift) => !shiftStore.getAssignedOrPendingShift(shift, kind),
-        danger: true,
     }));
 
     const getUserFromShift = (shift: Shift): User | undefined => {
         const assignedUsername = shiftStore.getAssignedShift(shift)?.assignedUsername;
         return users.find(u => u.name === assignedUsername);
-    }
+    };
 
     const getPendingOrAssignedUserFromShift = (shift: Shift): User | undefined => {
         const assignedUsername = shiftStore.getAssignedOrPendingShift(shift)?.assignedUsername;
         return users.find(u => u.name === assignedUsername);
-    }
+    };
 
-    const getPendingOrAssignedShift = (shift: Shift): AssignedShift | undefined => {
-        return shiftStore.getAssignedOrPendingShift(shift);
-    }
+    const getAssignmentElement = (user: User, shift: Shift) => {
+        const assignedShift = getPendingOrAssignedShift(shift);
+        if (!assignedShift) return <></>;
+        return <Box
+            sx={{display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1}}
+        >
+            <Box onDragStart={e => onDragStart(e, user, shift)}
+                 onDragEnd={onDragEnd} draggable={authStore.isAdmin()}
+            >
+                <UserCard name={user.name} subtitle={assignedShift.preset.name} isPending={assignedShift.isPending}/>
+            </Box>
+        </Box>
+    };
+
+    return (
+        <ShiftTable onDropHandler={handleDrop}
+                    isLoading={() => shiftStore.isFetchingShifts && !shiftStore.hasShiftsForCurrentWeek}
+                    isWeekLoaded={offset => isInWindow(offset, shiftStore.loadedShiftsCenter)}
+                    onDragStartHandler={onDragStart}
+                    onDragEndHandler={onDragEnd}
+                    assignHandler={assignHandler}
+                    unassignHandler={shift => shiftStore.unassignUser(shift)}
+                    retrievePendingItem={getPendingOrAssignedUserFromShift}
+                    retrieveItemFromShift={getUserFromShift}
+                    getItemName={getItemName}
+                    itemList={users}
+                    isPendingItems={shiftStore.pendingAssignedShifts.length > 0}
+                    onSave={shiftStore.savePendingAssignments}
+                    onCancel={() => shiftStore.pendingAssignedShifts = []}
+                    itemName="כונן"
+                    renderCellExtras={renderExtraRoles}
+                    additionalContextMenuItems={[...extraRoleMenuItems, {
+                        label: 'שנה פריסט',
+                        action: (shift: Shift) => onChangePreset(getPendingOrAssignedShift(shift)),
+                        icon: <TuneRounded fontSize="small"/>,
+                        disabled: (shift: Shift) => !shiftStore.getAssignedShift(shift)
+                    }, ...removeExtraRoleMenuItems]}
+                    isRemoveItemDisabled={(shift: Shift) => !shiftStore.getAssignedOrPendingShift(shift)}
+                    getItemElement={getAssignmentElement}
+        />
+    );
+});
+
+const AssignmentTab: React.FC = observer(() => {
+    const {users} = usersStore;
+    const [isDragged, setIsDragged] = useState(false);
+    const [isChangePresetDialogOpen, setIsChangePresetDialogOpen] = useState(false);
+    const [selectedShift, setSelectedShift] = useState<AssignedShift | undefined>(undefined);
+    const [suggestDialogOpen, setSuggestDialogOpen] = useState(false);
+    const [resetDialogOpen, setResetDialogOpen] = useState(false);
+    // The shadow or jump role being set, from the shift's menu
+    const [extraRoleTarget, setExtraRoleTarget] = useState<{ shift: Shift, kind: ShiftKind } | null>(null);
+    const [createTableOpen, setCreateTableOpen] = useState(false);
+    // The extra table being renamed or deleted
+    const [tableToRename, setTableToRename] = useState<string | null>(null);
+    const [tableToDelete, setTableToDelete] = useState<string | null>(null);
+
+    useEffect(() => {
+        shiftWeightStore.fetchPresets();
+        usersStore.fetchUsers();
+    }, []);
+
+    // A reaction, not an effect on the week read in render: reading it here would re-render the whole tab (tray, cards,
+    // dialogs) on every week switch
+    useEffect(() => reaction(() => shiftStore.weekOffset, offset => shiftStore.fetchShifts(offset), {fireImmediately: true}), []);
+
+    // Stable, so the table (a memoized observer) doesn't re-render when the tab does
+    const openChangePreset = useCallback((shift: AssignedShift | undefined) => {
+        setSelectedShift(shift);
+        setIsChangePresetDialogOpen(true);
+    }, []);
 
     const handleSuggestOpen = () => {
         if (!authStore.isAdmin()) {
             notificationStore.showUnauthorizedError();
             return;
         }
-        // Reservists join only when picked
-        setSelectedUserIds(users.filter(u => !u.reserve).map(u => u.name));
         setSuggestDialogOpen(true);
     };
     const handleSuggestClose = () => setSuggestDialogOpen(false);
-    const handleUserToggle = (userId: string) => {
-        setSelectedUserIds(prev =>
-            prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
-        );
-    };
-    const handleSuggestConfirm = async () => {
+    const handleSuggestConfirm = async (selectedUserIds: string[]) => {
         if (!authStore.isAdmin()) {
             notificationStore.showUnauthorizedError();
             return;
         }
         const weekDates = shiftStore.weekDates;
-        const startDate = weekDates[0];
-        const endDate = weekDates[6];
-        await shiftStore.suggestShiftAssignments(selectedUserIds, startDate, endDate);
+        await shiftStore.suggestShiftAssignments(selectedUserIds, weekDates[0], weekDates[6]);
         setSuggestDialogOpen(false);
     };
 
@@ -217,34 +264,14 @@ const AssignmentTab: React.FC = observer(() => {
             notificationStore.showUnauthorizedError();
             return;
         }
-        setResetError(false);
         const result = await shiftStore.resetWeeklyShifts();
         if (result === 'success') {
-            setResetSuccess(true);
+            notificationStore.showSuccess('כל המשמרות של השבוע אופסו');
         } else {
-            setResetError(true);
+            notificationStore.showError('אירעה שגיאה בעת איפוס המשמרות');
         }
         setResetDialogOpen(false);
     };
-
-    const getItemName = (user: User, shift?: Shift) => {
-        if (!shift || !shiftStore.getAssignedShift(shift)) return user.name;
-        return user.name + ' (' + shiftStore.getAssignedOrPendingShift(shift)?.preset?.name + ')'
-    }
-
-    const getAssignmentElement = (user: User, shift: Shift) => {
-        const assignedShift = getPendingOrAssignedShift(shift);
-        if (!assignedShift) return <></>;
-        return <Box
-            sx={{display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1}}
-        >
-            <Box onDragStart={e => onDragStart(e, user, shift)}
-                 onDragEnd={onDragEnd} draggable={authStore.isAdmin()}
-            >
-                <UserCard name={user.name} subtitle={assignedShift.preset.name} isPending={assignedShift.isPending}/>
-            </Box>
-        </Box>
-    }
 
     return (
         <Container maxWidth={"xl"} dir={"rtl"}>
@@ -265,34 +292,8 @@ const AssignmentTab: React.FC = observer(() => {
                 <ExtraTableButtons onRename={setTableToRename} onDelete={setTableToDelete}/>
             </> : undefined}/>
             <ShiftTableTabs/>
-            <ShiftTable onDropHandler={handleDrop}
-                        isLoading={() => shiftStore.isFetchingShifts && !shiftStore.hasShiftsForCurrentWeek}
-                        isWeekLoaded={offset => isInWindow(offset, shiftStore.loadedShiftsCenter)}
-                        onDragStartHandler={onDragStart}
-                        onDragEndHandler={onDragEnd}
-                        assignHandler={assignHandler}
-                        unassignHandler={shift => shiftStore.unassignUser(shift)}
-                        retrievePendingItem={getPendingOrAssignedUserFromShift}
-                        retrieveItemFromShift={getUserFromShift}
-                        getItemName={getItemName}
-                        itemList={users}
-                        isPendingItems={shiftStore.pendingAssignedShifts.length > 0}
-                        onSave={shiftStore.savePendingAssignments}
-                        onCancel={() => shiftStore.pendingAssignedShifts = []}
-                        itemName="כונן"
-                        renderCellExtras={renderExtraRoles}
-                        additionalContextMenuItems={[...extraRoleMenuItems, {
-                            label: 'שנה פריסט',
-                            action: (shift: Shift) => {
-                                setSelectedShift(getPendingOrAssignedShift(shift));
-                                setIsChangePresetDialogOpen(true);
-                            },
-                            icon: <TuneRounded fontSize="small"/>,
-                            disabled: (shift: Shift) => !shiftStore.getAssignedShift(shift)
-                        }, ...removeExtraRoleMenuItems]}
-                        isRemoveItemDisabled={(shift: Shift) => !shiftStore.getAssignedOrPendingShift(shift)}
-                        getItemElement={getAssignmentElement}
-            />
+            <AssignmentTable setIsDragged={setIsDragged} onChangePreset={openChangePreset}
+                             onSetExtraRole={setExtraRoleTarget}/>
             <AssignToShiftDialog
                 open={extraRoleTarget !== null}
                 onClose={() => setExtraRoleTarget(null)}
@@ -327,17 +328,9 @@ const AssignmentTab: React.FC = observer(() => {
             <SuggestAssignmentsDialog handleConfirm={handleSuggestConfirm}
                                       open={suggestDialogOpen}
                                       handleDialogClose={handleSuggestClose}
-                                      selectedUserIds={selectedUserIds}
-                                      handleUserToggle={handleUserToggle}
                                       users={users}/>
             <ResetWeeklyShiftsDialog handleConfirm={handleResetConfirm} open={resetDialogOpen}
                                      handleDialogClose={handleResetClose}/>
-            <Snackbar open={resetSuccess} autoHideDuration={3000} onClose={() => setResetSuccess(false)}>
-                <Alert severity="success" sx={{width: '100%'}}>כל המשמרות של השבוע אופסו בהצלחה</Alert>
-            </Snackbar>
-            <Snackbar open={resetError} autoHideDuration={3000} onClose={() => setResetError(false)}>
-                <Alert severity="error" sx={{width: '100%'}}>אירעה שגיאה בעת איפוס המשמרות</Alert>
-            </Snackbar>
             <ChangeAssignedShiftPresetDialog open={isChangePresetDialogOpen}
                                              onClose={() => setIsChangePresetDialogOpen(false)}
                                              assignedShift={selectedShift ?? {

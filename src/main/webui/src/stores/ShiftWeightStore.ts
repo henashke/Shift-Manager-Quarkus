@@ -1,5 +1,5 @@
 import {makeAutoObservable, runInAction} from 'mobx';
-import {authFetch} from '../api';
+import {authFetch, isUnchangedResponse, rememberResponse} from '../api';
 import config from '../config';
 import {ShiftType} from './ShiftStore';
 import authStore from './AuthStore';
@@ -20,7 +20,6 @@ class ShiftWeightStore {
     currentPresetObject: ShiftWeightPreset = {name: '', weights: []};
     presets: Map<string, ShiftWeightPreset> = new Map();
     loading: boolean = false;
-    pendingPreset: ShiftWeightPreset | null = null;
 
     constructor() {
         makeAutoObservable(this);
@@ -39,10 +38,15 @@ class ShiftWeightStore {
                 headers: authStore.getAuthHeaders()
             });
             if (!res.ok) throw new Error('Failed to fetch shift weight presets');
-            const data = await res.json();
+            const body = await res.text();
             runInAction(() => {
-                this.presets = new Map(Object.entries(data.presets));
-                this.currentPresetObject = data.currentPresetObject;
+                // Unchanged presets keep their objects, so the settings page doesn't reset weights being typed
+                if (!isUnchangedResponse('presets', body, this.currentPresetObject)) {
+                    const data = JSON.parse(body);
+                    this.presets = new Map(Object.entries(data.presets));
+                    this.currentPresetObject = data.currentPresetObject;
+                    rememberResponse('presets', body, this.currentPresetObject);
+                }
                 this.loading = false;
             });
         } catch (e) {
@@ -68,10 +72,11 @@ class ShiftWeightStore {
                 }
                 return;
             }
-            // Optionally, refresh presets from server
             await this.fetchPresets();
+            notificationStore.showSuccess(`הפריסט ${preset.name} נשמר`);
         } catch (e) {
             console.error('Failed to save preset', e);
+            notificationStore.showError('שמירת הפריסט נכשלה');
         }
     }
 
@@ -86,30 +91,16 @@ class ShiftWeightStore {
                 body: JSON.stringify({currentPreset: presetName})
             });
             if (res.ok) {
-                this.currentPresetObject = this.presets.get(presetName)!;
+                runInAction(() => {
+                    this.currentPresetObject = this.presets.get(presetName)!;
+                });
+                notificationStore.showSuccess(`ברירת המחדל היא עכשיו ${presetName}`);
             } else if (res.status === 403) {
                 notificationStore.showUnauthorizedError();
             }
         } catch (e) {
             console.error('Failed to set default preset', e);
         }
-    }
-
-    setPendingPresetFromName(name: string) {
-        const found = this.presets.get(name);
-        if (found) {
-            this.pendingPreset = JSON.parse(JSON.stringify(found));
-        } else {
-            // If not found, create a new preset with default weights
-            this.pendingPreset = {
-                name,
-                weights: []
-            };
-        }
-    }
-
-    setPendingPreset(preset: ShiftWeightPreset) {
-        this.pendingPreset = {...preset, weights: preset.weights.map(w => ({...w}))};
     }
 
     async backupSystemData() {

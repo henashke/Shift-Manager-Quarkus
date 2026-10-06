@@ -1,37 +1,34 @@
 import {makeAutoObservable} from 'mobx';
 
+export type NotificationType = 'error' | 'success' | 'warning';
+
 export interface Notification {
-    id: string;
+    id: number;
     message: string;
-    type: 'error' | 'success' | 'warning';
-    duration?: number;
+    type: NotificationType;
+    // How long it stays, in ms; NotificationDisplay times it, pausing while a finger holds it
+    duration: number;
 }
+
+// More than this and the oldest makes room
+const MAX_VISIBLE = 3;
 
 class NotificationStore {
     notifications: Notification[] = [];
+    private nextId = 1;
 
     constructor() {
         makeAutoObservable(this);
     }
 
-    addNotification(message: string, type: 'error' | 'success' | 'warning' = 'error', duration: number = 5000) {
-        const notification: Notification = {
-            id: Date.now().toString(),
-            message,
-            type,
-            duration
-        };
-        this.notifications.push(notification);
-
-        // Auto-remove notification after duration
-        if (duration > 0) {
-            setTimeout(() => {
-                this.removeNotification(notification.id);
-            }, duration);
-        }
+    addNotification(message: string, type: NotificationType = 'error', duration: number = 4000) {
+        // The same message twice in a row (e.g. a double tap) shows once
+        if (this.notifications.some(n => n.message === message && n.type === type)) return;
+        this.notifications.push({id: this.nextId++, message, type, duration});
+        if (this.notifications.length > MAX_VISIBLE) this.notifications.shift();
     }
 
-    removeNotification(id: string) {
+    removeNotification(id: number) {
         this.notifications = this.notifications.filter(n => n.id !== id);
     }
 
@@ -44,11 +41,11 @@ class NotificationStore {
     }
 
     showError(message: string) {
-        this.addNotification(message, 'error');
+        this.addNotification(message, 'error', 5000);
     }
 
     showSuccess(message: string) {
-        this.addNotification(message, 'success');
+        this.addNotification(message, 'success', 2800);
     }
 
     showWarning(message: string) {
@@ -61,4 +58,4 @@ class NotificationStore {
 }
 
 const notificationStore = new NotificationStore();
-export default notificationStore; 
+export default notificationStore;
