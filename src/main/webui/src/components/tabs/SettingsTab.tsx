@@ -14,6 +14,7 @@ import ChevronLeftRounded from '@mui/icons-material/ChevronLeftRounded';
 import DarkModeOutlined from '@mui/icons-material/DarkModeOutlined';
 import FileDownloadOutlined from '@mui/icons-material/FileDownloadOutlined';
 import LightModeOutlined from '@mui/icons-material/LightModeOutlined';
+import SmartToyOutlined from '@mui/icons-material/SmartToyOutlined';
 import shiftWeightStore, {ShiftWeight, ShiftWeightPreset} from '../../stores/ShiftWeightStore';
 import PresetNameDialog from '../dialogs/PresetNameDialog';
 import shiftStore, {ShiftType} from "../../stores/ShiftStore";
@@ -21,6 +22,7 @@ import authStore from '../../stores/AuthStore';
 import RecalculateDialog from "../dialogs/RecalculateDialog";
 import NativeSelect from "../basicSharedComponents/NativeSelect";
 import ShiftTableActions from "../shiftTable/ShiftTableActions";
+import McpConnectDialog from "../dialogs/McpConnectDialog";
 
 const daysOfWeek = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 const shiftTypes: ShiftType[] = ['יום', 'לילה'];
@@ -128,6 +130,7 @@ const SettingsTab: React.FC = observer(() => {
     const [settings, setSettings] = useState<Weights>(() => weightsOf(presetObj));
     const [presetNameDialogOpen, setPresetNameDialogOpen] = useState(false);
     const [recalculateScoresDialogOpen, setRecalculateScoresDialogOpen] = useState(false);
+    const [connectDialogOpen, setConnectDialogOpen] = useState(false);
 
     useEffect(() => {
         shiftWeightStore.fetchPresets();
@@ -168,7 +171,14 @@ const SettingsTab: React.FC = observer(() => {
 
     return (
         <Container maxWidth="sm" dir="rtl" sx={{display: 'flex', flexDirection: 'column', gap: 1.5, pb: 4}}>
-            <Box>
+            <Typography component="h2" sx={sectionTitleSx}>עוזר AI</Typography>
+            <Paper elevation={0} sx={groupSx}>
+                <ActionRow icon={<SmartToyOutlined fontSize="small"/>} label="חיבור לעוזר AI"
+                           detail="שאלו על המשמרות שלכם בצ'אט, ב־Claude, ב־ChatGPT או ב־Gemini"
+                           onClick={() => setConnectDialogOpen(true)}/>
+            </Paper>
+
+            <Box sx={{mt: 2}}>
                 <Typography component="h2" sx={sectionTitleSx}>פריסט ניקוד</Typography>
                 <Typography variant="body2" color="text.secondary">כמה נקודות שווה כל משמרת בחישוב ההוגנות</Typography>
             </Box>
@@ -247,6 +257,7 @@ const SettingsTab: React.FC = observer(() => {
                                onCancel={() => setSettings(weightsOf(presetObj))}/>
             <PresetNameDialog open={presetNameDialogOpen} defaultValue={preset}
                               onClose={() => setPresetNameDialogOpen(false)} onSave={handlePresetNameSave}/>
+            <McpConnectDialog open={connectDialogOpen} onClose={() => setConnectDialogOpen(false)}/>
             <RecalculateDialog handleConfirm={shiftStore.recalculateScores}
                                open={recalculateScoresDialogOpen}
                                handleDialogClose={() => setRecalculateScoresDialogOpen(false)}/>

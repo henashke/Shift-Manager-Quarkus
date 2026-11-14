@@ -3,8 +3,9 @@ import NotificationDisplay from './components/NotificationDisplay';
 import {CssBaseline} from '@mui/material';
 import {observer} from 'mobx-react-lite';
 import {alpha, createTheme, ThemeProvider} from '@mui/material/styles';
-import {Route, Routes, useNavigate} from 'react-router-dom';
+import {Route, Routes, useLocation, useNavigate} from 'react-router-dom';
 import LoginSignup from './components/LoginSignup';
+import ConnectApp from './components/ConnectApp';
 import authStore from './stores/AuthStore';
 import ConstraintTab from './components/tabs/ConstraintTab';
 import AssignmentTab from './components/tabs/AssignmentTab';
@@ -18,6 +19,7 @@ const DARK_MODE_KEY = 'darkMode';
 
 const App: React.FC = observer(() => {
     const navigate = useNavigate();
+    const {pathname} = useLocation();
     const [darkMode, setDarkMode] = useState(() => {
         const savedMode = localStorage.getItem(DARK_MODE_KEY);
         return savedMode ? JSON.parse(savedMode) : true;
@@ -28,6 +30,8 @@ const App: React.FC = observer(() => {
     }, [darkMode]);
 
     useEffect(() => {
+        // The connect page (a chat app asking for access) works signed in or out
+        if (window.location.pathname === '/connect') return;
         authStore.ensureValidSession(navigate);
         if (!authStore.isAuthenticated() && window.location.pathname !== '/login') {
             navigate('/login');
@@ -189,13 +193,15 @@ const App: React.FC = observer(() => {
             <AppBarComponent darkMode={darkMode} setDarkMode={setDarkMode}/>
             <Routes>
                 <Route path="/login" element={<LoginSignup/>}/>
+                <Route path="/connect" element={<ConnectApp/>}/>
                 <Route path="/constraints" element={<ConstraintTab/>}/>
                 <Route path="/settings" element={<SettingsTab/>}/>
                 <Route path="/stats" element={<StatsTab/>}/>
                 <Route path="/" element={<AssignmentTab/>}/>
             </Routes>
             <NotificationDisplay/>
-            <AnnouncementDialog/>
+            {/* Not over the connect page, which a chat app opens just to approve it */}
+            {pathname === '/connect' ? null : <AnnouncementDialog/>}
         </ThemeProvider>
     );
 });

@@ -17,7 +17,9 @@ import VisibilityOffOutlined from '@mui/icons-material/VisibilityOffOutlined';
 import config from '../config';
 import authStore from '../stores/AuthStore';
 import DialogTextField from './dialogs/DialogTextField';
-import {EASE_SETTLE, primaryGradient} from '../theme';
+import {EASE_SETTLE, primaryGradient, segmentedSx, segmentSx} from '../theme';
+
+const loginSegmentedSx: SxProps<Theme> = {...segmentedSx, mb: 2.5} as SxProps<Theme>;
 
 type Mode = 'login' | 'signup';
 
@@ -70,27 +72,6 @@ const cardSx = (failures: number): SxProps<Theme> => ({
         : `${rise} 500ms ${EASE_SETTLE} 80ms both`,
     '@media (prefers-reduced-motion: reduce)': {animation: 'none'},
 });
-
-// The same segmented control as the top bar's tabs
-const segmentedSx: SxProps<Theme> = {
-    minHeight: 0,
-    p: 0.5,
-    mb: 2.5,
-    borderRadius: 3,
-    bgcolor: 'action.hover',
-    '& .MuiTabs-indicator': {height: '100%', borderRadius: 2, zIndex: 0, background: primaryGradient},
-    '& .MuiTabs-flexContainer': {gap: 0.5},
-};
-
-const segmentSx: SxProps<Theme> = {
-    zIndex: 1,
-    flex: 1,
-    minHeight: 0,
-    py: 0.9,
-    fontWeight: 600,
-    color: 'text.secondary',
-    '&.Mui-selected': {color: 'common.white'},
-};
 
 const iconSx: SxProps<Theme> = {
     width: 76,
@@ -168,7 +149,7 @@ const LoginSignup: React.FC = observer(() => {
                 {mode === 'login' ? 'התחברו כדי לראות את השיבוצים' : 'פותחים חשבון ונכנסים מיד'}
             </Typography>
             <Paper elevation={0} sx={cardSx(failures)}>
-                <Tabs value={mode} onChange={handleModeChange} variant="fullWidth" sx={segmentedSx}>
+                <Tabs value={mode} onChange={handleModeChange} variant="fullWidth" sx={loginSegmentedSx}>
                     {/* Laid out left to right (no RTL style plugin), so listed in reverse to read right to left */}
                     <Tab value="signup" label="הרשמה" sx={segmentSx}/>
                     <Tab value="login" label="התחברות" sx={segmentSx}/>
