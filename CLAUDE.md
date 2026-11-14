@@ -31,6 +31,7 @@ docker build -t shift-manager .
 - `.env` in the project root with `GEMINI_API_KEY=...` (gitignored; Quarkus loads it in dev mode)
 - API available at `http://localhost:8080/api/`, frontend at `http://localhost:8080/`
 - Node.js + npm (Quinoa installs and builds the frontend)
+- JDK 21+ (on JDK 23+ Lombok runs because the compiler plugin lists it under `annotationProcessorPaths`)
 
 ## Architecture
 
@@ -107,6 +108,27 @@ back-references).
   revokes all their refresh tokens. A wrong password is a 400, not a 401, since the frontend treats 401 as an expired
   session
 - Roles are enforced via `@RolesAllowed` on resource methods; role constants in `auth/`
+
+### MCP Server (chat apps)
+
+Users connect Claude, ChatGPT, Gemini etc. once (a custom connector pointed at `https://<host>/mcp`) and then ask about
+their shifts from any chat. Built on the Quarkiverse `quarkus-mcp-server-http` extension (version from the Quarkus
+platform's `quarkus-mcp-server-bom`).
+
+- **Tools** are in `mcp/ShiftManagerTools.java` (one-liners, like resources) with the logic in
+  `responders/McpResponder.java` and model-friendly DTOs in `dto/mcp/` (English enum names, ISO dates, one object per
+  answer, since a bare `List` return is sent as one content block per item). Permissions mirror the REST API: anyone
+  reads and manages their own constraints, admin-only tools check `McpCaller.admin()`. Failures throw
+  `ToolCallException` (`McpResponder.run` converts the REST layer's exceptions). Tool descriptions and the server
+  `instructions` in `application.properties` are what the model reads, so keep them accurate.
+- **Auth** is OAuth 2.1 with the app as its own authorization server (`services/OAuthService.java`): dynamic client
+  registration (`POST /oauth/register`), authorization code + PKCE S256 (`GET /oauth/authorize` forwards to the React
+  `/connect` page, which posts the user's approval to `/api/oauth/authorize`), and `POST /oauth/token`. Discovery is
+  under `/.well-known/` (`WellKnownResource`); a 401 on `/mcp` carries `WWW-Authenticate: Bearer resource_metadata=...`
+  (`auth/McpAuthChallenge.java`). Access tokens are the usual 1-hour JWTs; refresh tokens are `refresh_tokens` rows
+  tied to the client (`oauth_client_id`, 180-day sliding lifetime) and don't work for the web app or other clients.
+- Public URLs come from the request (proxy `X-Forwarded-*` headers are trusted), or set `APP_PUBLIC_URL`.
+- `/oauth`, `/.well-known` and `/mcp` are excluded from Quinoa's SPA fallback.
 
 ### API Behavior Worth Knowing
 

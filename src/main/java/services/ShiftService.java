@@ -124,6 +124,10 @@ public class ShiftService extends BaseService<AssignedShift, AddShiftCommand, Up
         return dao.deleteSlot(date, type, kind, specialTableName) > 0;
     }
 
+    public List<AssignedShift> listBetween(LocalDate start, LocalDate end) {
+        return dao.findBetween(start, end);
+    }
+
     public List<AssignedShift> listByWeekOffset(int weekOffset) {
         WeekWindow window = WeekWindow.centeredOn(weekOffset);
         return dao.findBetween(window.start(), window.end());

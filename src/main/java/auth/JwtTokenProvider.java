@@ -24,4 +24,8 @@ public class JwtTokenProvider {
                 .expiresAt(Instant.now().plusSeconds(Integer.parseInt(tokenLifespan)))
                 .sign();
     }
+
+    public long lifespanSeconds() {
+        return Long.parseLong(tokenLifespan);
+    }
 }
