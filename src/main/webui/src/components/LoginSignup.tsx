@@ -110,8 +110,15 @@ const LoginSignup: React.FC = observer(() => {
         setError('');
     };
 
+    // A name like "Varvara " looks the same as "Varvara" but is a different user, so signup doesn't take one
+    const nameError = mode === 'signup' && username !== username.trim() ? 'שם המשתמש לא יכול להתחיל או להסתיים ברווח' : '';
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (nameError) {
+            setFailures(count => count + 1);
+            return;
+        }
         setError('');
         setLoading(true);
         try {
@@ -157,6 +164,7 @@ const LoginSignup: React.FC = observer(() => {
                 <Box component="form" onSubmit={handleSubmit} sx={{display: 'flex', flexDirection: 'column', gap: 2}}>
                     <DialogTextField label="שם משתמש" value={username} autoFocus required
                                      autoComplete="username" autoCapitalize="none"
+                                     error={!!nameError} helperText={nameError || undefined}
                                      onChange={e => setUsername(e.target.value)}/>
                     <DialogTextField label="סיסמה" type={showPassword ? 'text' : 'password'} value={password} required
                                      autoComplete={mode === 'login' ? 'current-password' : 'new-password'}

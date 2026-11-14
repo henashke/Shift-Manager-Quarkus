@@ -14,6 +14,7 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.mindrot.jbcrypt.BCrypt;
+import util.UserNames;
 
 @ApplicationScoped
 @RequiredArgsConstructor
@@ -31,6 +32,7 @@ public class AuthService {
     @Transactional
     public void signup(SignupCommand command) {
         requireCredentials(command.name, command.password);
+        if (UserNames.hasEdgeWhitespace(command.name)) throw new IllegalArgumentException(UserNames.EDGE_WHITESPACE_ERROR);
         if (userDao.findByUsername(command.name).isPresent()) {
             throw new UserAlreadyExistsException(command.name);
         }
