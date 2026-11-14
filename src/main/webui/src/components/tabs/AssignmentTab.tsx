@@ -1,5 +1,6 @@
 import React, {useCallback, useEffect, useState} from 'react';
 import CalendarNavigation from '../shiftTable/CalendarNavigation';
+import AddToCalendarButton from '../shiftTable/AddToCalendarButton';
 import ShiftTable from '../shiftTable/ShiftTable';
 import UserCard from '../basicSharedComponents/UserCard';
 import UserList from '../draggableLists/UserList';
@@ -40,6 +41,9 @@ import TableChartOutlined from '@mui/icons-material/TableChartOutlined';
 import ResetWeeklyShiftsDialog from "../dialogs/ResetWeeklyShiftsDialog";
 import SuggestAssignmentsDialog from "../dialogs/SuggestAssignmentsDialog";
 import {primaryGradient} from '../../theme';
+
+// Static, so the table doesn't get a new element on every render of the tab
+const addToCalendarButton = <AddToCalendarButton/>;
 
 const actionButtonSx = {flex: 1, py: 1.25} as const;
 // Its own row under the two main actions
@@ -177,6 +181,7 @@ const AssignmentTable: React.FC<AssignmentTableProps> = observer(({setIsDragged,
 
     return (
         <ShiftTable onDropHandler={handleDrop}
+                    corner={addToCalendarButton}
                     isLoading={() => shiftStore.isFetchingShifts && !shiftStore.hasShiftsForCurrentWeek}
                     isWeekLoaded={offset => isInWindow(offset, shiftStore.loadedShiftsCenter)}
                     onDragStartHandler={onDragStart}
