@@ -42,7 +42,7 @@ import ResetWeeklyShiftsDialog from "../dialogs/ResetWeeklyShiftsDialog";
 import SuggestAssignmentsDialog from "../dialogs/SuggestAssignmentsDialog";
 import {primaryGradient} from '../../theme';
 
-// Static, so the navigation doesn't get a new element on every render of the tab
+// Static, so the table doesn't get a new element on every render of the tab
 const addToCalendarButton = <AddToCalendarButton/>;
 
 const actionButtonSx = {flex: 1, py: 1.25} as const;
@@ -181,6 +181,7 @@ const AssignmentTable: React.FC<AssignmentTableProps> = observer(({setIsDragged,
 
     return (
         <ShiftTable onDropHandler={handleDrop}
+                    corner={addToCalendarButton}
                     isLoading={() => shiftStore.isFetchingShifts && !shiftStore.hasShiftsForCurrentWeek}
                     isWeekLoaded={offset => isInWindow(offset, shiftStore.loadedShiftsCenter)}
                     onDragStartHandler={onDragStart}
@@ -279,7 +280,7 @@ const AssignmentTab: React.FC = observer(() => {
 
     return (
         <Container maxWidth={"xl"} dir={"rtl"}>
-            <CalendarNavigation captionAction={addToCalendarButton} actions={authStore.isAdmin() ? <>
+            <CalendarNavigation actions={authStore.isAdmin() ? <>
                 <Button variant="contained" onClick={handleSuggestOpen} sx={suggestButtonSx}
                         disabled={shiftStore.isSuggesting} aria-busy={shiftStore.isSuggesting}
                         startIcon={shiftStore.isSuggesting ? <CircularProgress size={20} color="inherit"/> : <AutoAwesome/>}>

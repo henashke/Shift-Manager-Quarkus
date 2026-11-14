@@ -1,37 +1,35 @@
 import React from 'react';
-import {observer} from 'mobx-react-lite';
-import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
-import EventOutlined from '@mui/icons-material/EventOutlined';
+import IconButton from '@mui/material/IconButton';
+import {createSvgIcon} from '@mui/material/utils';
 import shiftStore, {kindOf} from '../../stores/ShiftStore';
 import authStore from '../../stores/AuthStore';
 import notificationStore from '../../stores/NotificationStore';
 import {buildShiftsCalendar, calendarFileName, downloadCalendar} from '../../calendarExport';
 import {dateKey} from '../../dateFormat';
 
-// A thin outlined pill that fits on the navigation's caption line next to "חזור להיום", without making it taller
+// A calendar page with a plus (MUI's set has no such icon)
+const CalendarPlusIcon = createSvgIcon(
+    <g fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="5" width="18" height="16" rx="2"/>
+        <path d="M8 3v4M16 3v4M3 10h18M12 13v6M9 16h6"/>
+    </g>,
+    'CalendarPlus',
+);
+
+// The usual icon button: a rounded square with a divider outline
 const buttonSx = {
-    minWidth: 0,
-    height: 20,
-    px: 1,
-    py: 0,
-    gap: 0.5,
-    borderRadius: 10,
-    fontSize: '0.7rem',
-    fontWeight: 600,
-    lineHeight: 1,
-    whiteSpace: 'nowrap',
-    '& .MuiButton-startIcon': {m: 0},
-    '& .MuiButton-startIcon > svg': {fontSize: 14},
+    width: 40,
+    height: 40,
+    borderRadius: 2,
+    border: '1px solid',
+    borderColor: 'divider',
 } as const;
 
-// On phones, weeks other than this one also show "חזור להיום" on the caption line, so the pill drops its text there
-const labelSx = {display: 'inline'} as const;
-const labelHiddenOnPhonesSx = {display: {xs: 'none', sm: 'inline'}} as const;
+const LABEL = 'הוספת המשמרות שלי בשבוע הזה ליומן';
 
 // Downloads the signed-in user's saved regular shifts of the displayed week (every table) as an .ics file.
-// Reads the shifts only when clicked; only the button itself re-renders when the week changes.
-const AddToCalendarButton: React.FC = observer(() => {
+// Reads the store only when clicked, so it never re-renders with the week.
+const AddToCalendarButton: React.FC = () => {
     const handleClick = () => {
         if (!shiftStore.hasShiftsForCurrentWeek) {
             notificationStore.showWarning('המשמרות של השבוע עוד נטענות, נסו שוב בעוד רגע');
@@ -52,11 +50,10 @@ const AddToCalendarButton: React.FC = observer(() => {
     };
 
     return (
-        <Button variant="outlined" color="inherit" onClick={handleClick} startIcon={<EventOutlined/>} sx={buttonSx}
-                aria-label="הוספת המשמרות שלי בשבוע הזה ליומן" title="הוספת המשמרות שלי בשבוע הזה ליומן">
-            <Box component="span" sx={shiftStore.weekOffset !== 0 ? labelHiddenOnPhonesSx : labelSx}>הוסף ליומן</Box>
-        </Button>
+        <IconButton onClick={handleClick} sx={buttonSx} aria-label={LABEL} title={LABEL}>
+            <CalendarPlusIcon/>
+        </IconButton>
     );
-});
+};
 
 export default AddToCalendarButton;

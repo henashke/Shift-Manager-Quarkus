@@ -68,6 +68,8 @@ interface ShiftTableProps<T> {
     additionalContextMenuItems?: ContextMenuItem[];
     // More content under the cell's item (or its empty prompt), e.g. the shift's shadow and jump assignees
     renderCellExtras?: (shift: Shift) => React.ReactNode;
+    // Fills the blank header corner (top right) of the displayed week's table
+    corner?: React.ReactNode;
 }
 
 function ShiftTable<T>({
@@ -92,6 +94,7 @@ function ShiftTable<T>({
                            isWeekLoaded = () => true,
                            additionalContextMenuItems,
                            renderCellExtras,
+                           corner,
                        }: ShiftTableProps<T>) {
     const theme = useTheme();
     const isNarrowScreen = useMediaQuery(theme.breakpoints.down('md'), {noSsr: true}); // Switch to vertical on screens smaller than 'md' breakpoint
@@ -232,7 +235,7 @@ function ShiftTable<T>({
         <Table className="shift-table">
             <TableHead>
                 <TableRow>
-                    <TableCell></TableCell>
+                    <TableCell align="center">{preview ? null : corner ?? null}</TableCell>
                     {isNarrowScreen
                         ? shiftTypes.map(shiftType => <ShiftTypeHeaderTableCell key={shiftType} shiftType={shiftType}/>)
                         : dates.map(date => <WeekDayHeaderTableCell key={dateKey(date)} date={date}/>)}

@@ -24,8 +24,8 @@ and effect runs twice), so it is several times slower than production; judge per
   cross-faded by `useCompactOnScroll` (compact on scroll down, full on scroll up, at the top or on tap).
 - `components/basicSharedComponents/`: `TintedCard` / `UserCard` (the card look), `BottomTray` (draggable users sheet
   on phones), `CardSkeleton`, `NativeSelect`.
-- `src/calendarExport.ts`: builds the `.ics` file behind "הוסף ליומן" (`shiftTable/AddToCalendarButton.tsx`, on the
-  shifts tab's navigation caption): the signed-in user's saved regular shifts of the displayed week, every table, in
+- `src/calendarExport.ts`: builds the `.ics` file behind "הוסף ליומן" (`shiftTable/AddToCalendarButton.tsx`, a
+  calendar-plus icon in the shifts table's top-right header corner): the signed-in user's saved regular shifts of the displayed week, every table, in
   Asia/Jerusalem (day 08:00-20:00, night 20:00-08:00 the next day). Generated in the browser, no server call.
 - `src/dateFormat.ts`: all date formatting. `src/theme.ts`: palette helpers used outside the theme.
 - `src/announcements.tsx`: one-time "what's new" dialogs (`AnnouncementDialog`). Add an entry with a new id at the end
