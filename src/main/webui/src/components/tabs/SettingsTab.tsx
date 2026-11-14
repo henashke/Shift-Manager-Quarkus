@@ -15,6 +15,7 @@ import ChevronLeftRounded from '@mui/icons-material/ChevronLeftRounded';
 import DarkModeOutlined from '@mui/icons-material/DarkModeOutlined';
 import FileDownloadOutlined from '@mui/icons-material/FileDownloadOutlined';
 import LightModeOutlined from '@mui/icons-material/LightModeOutlined';
+import NewReleasesOutlined from '@mui/icons-material/NewReleasesOutlined';
 import SmartToyOutlined from '@mui/icons-material/SmartToyOutlined';
 import shiftWeightStore, {ShiftWeight, ShiftWeightPreset} from '../../stores/ShiftWeightStore';
 import PresetNameDialog from '../dialogs/PresetNameDialog';
@@ -24,6 +25,7 @@ import RecalculateDialog from "../dialogs/RecalculateDialog";
 import NativeSelect from "../basicSharedComponents/NativeSelect";
 import ShiftTableActions from "../shiftTable/ShiftTableActions";
 import McpConnectDialog, {isOpenConnectState} from "../dialogs/McpConnectDialog";
+import AnnouncementBrowserDialog from "../dialogs/AnnouncementBrowserDialog";
 
 const daysOfWeek = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 const shiftTypes: ShiftType[] = ['יום', 'לילה'];
@@ -136,9 +138,14 @@ const SettingsTab: React.FC = observer(() => {
     const navigate = useNavigate();
     const [connectDialogOpen, setConnectDialogOpen] = useState(() => isOpenConnectState(location.state));
 
-    // Forget the request once it's handled, so a reload or going back doesn't open the dialog again
+    const [announcementsOpen, setAnnouncementsOpen] = useState(false);
+
+    // Also when already on this page (the MCP announcement browsed from here). Forget the request once it's handled,
+    // so a reload or going back doesn't open the dialog again
     useEffect(() => {
-        if (isOpenConnectState(location.state)) navigate('.', {replace: true, state: null});
+        if (!isOpenConnectState(location.state)) return;
+        setConnectDialogOpen(true);
+        navigate('.', {replace: true, state: null});
     }, [location.state, navigate]);
 
     useEffect(() => {
@@ -180,7 +187,14 @@ const SettingsTab: React.FC = observer(() => {
 
     return (
         <Container maxWidth="sm" dir="rtl" sx={{display: 'flex', flexDirection: 'column', gap: 1.5, pb: 4}}>
-            <Typography component="h2" sx={sectionTitleSx}>עוזר AI</Typography>
+            <Typography component="h2" sx={sectionTitleSx}>מה חדש</Typography>
+            <Paper elevation={0} sx={groupSx}>
+                <ActionRow icon={<NewReleasesOutlined fontSize="small"/>} label="פיצ׳רים חדשים"
+                           detail="כל ההודעות על מה שנוסף לאפליקציה"
+                           onClick={() => setAnnouncementsOpen(true)}/>
+            </Paper>
+
+            <Typography component="h2" sx={{...sectionTitleSx, mt: 2} as SxProps<Theme>}>עוזר AI</Typography>
             <Paper elevation={0} sx={groupSx}>
                 <ActionRow icon={<SmartToyOutlined fontSize="small"/>} label="חיבור לעוזר AI"
                            detail="שאלו על המשמרות שלכם בצ'אט, ב־Claude, ב־ChatGPT או ב־Gemini"
@@ -266,6 +280,7 @@ const SettingsTab: React.FC = observer(() => {
                                onCancel={() => setSettings(weightsOf(presetObj))}/>
             <PresetNameDialog open={presetNameDialogOpen} defaultValue={preset}
                               onClose={() => setPresetNameDialogOpen(false)} onSave={handlePresetNameSave}/>
+            <AnnouncementBrowserDialog open={announcementsOpen} onClose={() => setAnnouncementsOpen(false)}/>
             <McpConnectDialog open={connectDialogOpen} onClose={() => setConnectDialogOpen(false)}/>
             <RecalculateDialog handleConfirm={shiftStore.recalculateScores}
                                open={recalculateScoresDialogOpen}

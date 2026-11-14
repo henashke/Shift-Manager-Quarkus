@@ -1,6 +1,6 @@
 import {makeAutoObservable} from 'mobx';
 import authStore from './AuthStore';
-import {Announcement, announcements} from '../announcements';
+import {Announcement, announcements, isRecent} from '../announcements';
 
 // Seen announcement ids, per device
 const SEEN_STORAGE_KEY = 'seenAnnouncements';
@@ -24,14 +24,18 @@ class AnnouncementStore {
         makeAutoObservable(this);
     }
 
-    // The oldest unseen announcement for the signed-in user (list order is feature order), one per visit
+    // Every announcement for the signed-in user, newest first (browsed from settings)
+    get all(): Announcement[] {
+        return announcements.filter(a => a.audience !== 'admin' || authStore.isAdmin()).reverse();
+    }
+
+    // The oldest unseen, still recent announcement for the signed-in user (list order is feature order), one per visit
     get current(): Announcement | undefined {
         if (!authStore.isAuthenticated() || this.dismissedThisVisit) return undefined;
-        const today = new Date().toISOString().slice(0, 10);
         return announcements.find(a =>
             !this.seenIds.has(a.id)
             && (a.audience !== 'admin' || authStore.isAdmin())
-            && (!a.showUntil || today <= a.showUntil));
+            && isRecent(a));
     }
 
     markSeen = (id: string) => {
