@@ -16,6 +16,7 @@ import mappers.user.UserDtoToCommandMapper;
 import services.BaseService;
 import services.UserRoleChangeException;
 import services.UserService;
+import util.UserNames;
 
 import java.util.List;
 
@@ -38,6 +39,16 @@ public class UserResponder extends BaseResponder<User, AddUserCommand, UpdateUse
     @Override
     protected UserDtoToCommandMapper getDtoToCommandMapper() {
         return dtoToCommandMapper;
+    }
+
+    // Admins adding a user or renaming one follow the same name rule as signup
+    @Override
+    @Transactional
+    public Response create(UserDto dto) {
+        if (dto != null && UserNames.hasEdgeWhitespace(dto.name)) {
+            return error(Response.Status.BAD_REQUEST, UserNames.EDGE_WHITESPACE_ERROR);
+        }
+        return super.create(dto);
     }
 
     public List<UserDto> listSchedulable() {
@@ -76,6 +87,10 @@ public class UserResponder extends BaseResponder<User, AddUserCommand, UpdateUse
     public Response updateByUsername(String username, UserDto dto) {
         User entity = service.findByUsername(username);
         if (entity == null) throw new NotFoundException("User not found: " + username);
+        // Only a new name is checked, so a user whose name predates the rule can still be edited
+        if (dto != null && dto.name != null && !dto.name.equals(entity.name) && UserNames.hasEdgeWhitespace(dto.name)) {
+            return error(Response.Status.BAD_REQUEST, UserNames.EDGE_WHITESPACE_ERROR);
+        }
         UpdateUserCommand updateUserCommand = dtoToCommandMapper.mapToUpdateCommand(dto);
         User updatedUser = service.update(entity.id, updateUserCommand);
         return Response.ok(dtoToCommandMapper.mapToDto(updatedUser)).build();
