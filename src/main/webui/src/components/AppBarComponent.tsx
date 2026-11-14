@@ -91,7 +91,7 @@ export const AppBarComponent = observer(({darkMode, setDarkMode}: {
     const [tabValue, setTabValue] = useState(() => pathTab(pathname));
     // Follows navigation that doesn't come from the tabs (signing in, the back button)
     useEffect(() => setTabValue(pathTab(pathname)), [pathname]);
-    const onLoginPage = pathname === '/login';
+    const onLoginPage = pathname === '/login' || pathname === '/connect';
 
     // Cross-fades the old theme into the new one where the browser can (see index.css), instead of a hard flash
     const toggleDarkMode = () => {
@@ -123,7 +123,7 @@ export const AppBarComponent = observer(({darkMode, setDarkMode}: {
                 {darkMode ? <LightMode fontSize="small" sx={{color: '#ffe066'}}/> : <DarkMode fontSize="small"/>}
             </IconButton>
             <Box sx={{flex: 1, display: 'flex', justifyContent: 'center'}}>
-                {/* Signed out, the tabs would only lead back here */}
+                {/* Signed out or connecting a chat app, the tabs would only lead away */}
                 {onLoginPage ? null : <Tabs value={tabValue} onChange={handleTabChange} sx={tabsSx}>
                     {/* Laid out left to right (no RTL style plugin), so listed in reverse to read right to left */}
                     <Tab value={3} label="הגדרות" sx={tabSx}/>

@@ -17,4 +17,9 @@ public class RefreshToken extends BaseEntity {
 
     @Column(name = "expires_at", nullable = false)
     public Instant expiresAt;
+
+    // The OAuth client (a chat app connected over MCP) the token was issued to; null for the web app's own sessions
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "oauth_client_id")
+    public OAuthClient oauthClient;
 }

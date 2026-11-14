@@ -1,4 +1,4 @@
-import {alpha, Theme} from '@mui/material/styles';
+import {alpha, SxProps, Theme} from '@mui/material/styles';
 
 // Palette tokens shared by the theme (App.tsx) and the few components that need them directly.
 // User card colors are not here: they come from stringToColor and must stay as they are.
@@ -49,3 +49,26 @@ export const floatingSurface = (theme: Theme, shadowY = 12) => ({
     border: `1px solid ${theme.palette.divider}`,
     boxShadow: `0 ${shadowY}px 36px rgba(0, 0, 0, 0.28)`,
 });
+
+// A segmented control (the login page's mode switch, the connect dialog's app picker): MUI Tabs with these styles on
+// the Tabs and on each Tab. Whether the tabs run right to left depends on the surrounding dir, so check the order on screen.
+export const segmentedSx: SxProps<Theme> = {
+    minHeight: 0,
+    p: 0.5,
+    borderRadius: 3,
+    bgcolor: 'action.hover',
+    '& .MuiTabs-indicator': {height: '100%', borderRadius: 2, zIndex: 0, background: primaryGradient},
+    '& .MuiTabs-flexContainer': {gap: 0.5},
+};
+
+export const segmentSx: SxProps<Theme> = {
+    zIndex: 1,
+    flex: 1,
+    minHeight: 0,
+    py: 0.9,
+    fontWeight: 600,
+    color: 'text.secondary',
+    // Keeps Latin labels (app names) as written; MUI capitalizes tab labels
+    textTransform: 'none',
+    '&.Mui-selected': {color: 'common.white'},
+};

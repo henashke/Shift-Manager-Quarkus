@@ -50,6 +50,17 @@ public class ConstraintService extends BaseService<Constraint, AddConstraintComm
         return dao.findByUserIdBetween(userId, window.start(), window.end());
     }
 
+    public List<Constraint> listBetween(LocalDate start, LocalDate end) {
+        return dao.findBetween(start, end);
+    }
+
+    // A user has at most one constraint per shift, so a new one replaces theirs
+    @Transactional
+    public Constraint replace(AddConstraintCommand command) {
+        dao.deleteByUserIdDateAndType(command.userId, command.date, command.type);
+        return create(command);
+    }
+
     public List<Constraint> findByUserIdBetween(Long userId, LocalDate start, LocalDate end) {
         return dao.findByUserIdBetween(userId, start, end);
     }
