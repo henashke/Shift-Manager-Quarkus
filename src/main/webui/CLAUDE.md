@@ -28,9 +28,10 @@ and effect runs twice), so it is several times slower than production; judge per
   calendar-plus icon in the shifts table's top-right header corner): the signed-in user's saved regular shifts of the displayed week, every table, in
   Asia/Jerusalem (day 08:00-20:00, night 20:00-08:00 the next day). Generated in the browser, no server call.
 - `src/dateFormat.ts`: all date formatting. `src/theme.ts`: palette helpers used outside the theme.
-- `src/announcements.tsx`: one-time "what's new" dialogs (`AnnouncementDialog`). Add an entry with a new id at the end
-  to announce a feature; at most one shows per visit (the oldest unseen), and seen ids are kept per device in
-  localStorage (`seenAnnouncements`).
+- `src/announcements.tsx`: one-time "what's new" dialogs (`AnnouncementDialog`). Add an entry with a new id and the
+  ship `date` at the end to announce a feature; at most one pops up per visit (the oldest unseen one under 30 days
+  old), and seen ids are kept per device in localStorage (`seenAnnouncements`). Settings → "פיצ׳רים חדשים"
+  (`AnnouncementBrowserDialog`) cycles through all of them, newest first.
 
 ## Conventions
 

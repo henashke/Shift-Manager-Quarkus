@@ -11,9 +11,10 @@ import {alpha, Theme} from '@mui/material/styles';
 import {primaryGradient} from './theme';
 
 /**
- * "What's new" announcements, each shown once per device (seen ids are kept in localStorage). Only one shows per visit:
- * the oldest one not seen yet, so keep the list in the order the features shipped. To announce a feature, add an entry
- * at the end with a new, never reused id; delete entries once they're old.
+ * "What's new" announcements, each popping up once per device (seen ids are kept in localStorage), only during the
+ * AUTO_SHOW_DAYS after its date. Only one pops up per visit: the oldest one not seen yet, so keep the list in the order
+ * the features shipped. All of them can be browsed any time from settings ("פיצ׳רים חדשים"). To announce a feature, add
+ * an entry at the end with a new, never reused id and the day it ships.
  */
 export interface Announcement {
     id: string;
@@ -23,8 +24,9 @@ export interface Announcement {
     icon?: React.ReactNode;
     // Defaults to everyone
     audience?: 'all' | 'admin';
-    // Not shown after this date (yyyy-mm-dd), so people who join much later don't get stale news
-    showUntil?: string;
+    // When the feature shipped (yyyy-mm-dd). It pops up only for AUTO_SHOW_DAYS after that, so people who join much
+    // later don't get stale news; settings still lists it
+    date: string;
     confirmLabel?: string;
     // A button that takes the user to the feature (then a cancel button, "אחר כך", dismisses it instead)
     action?: { label: string, path: string, state?: unknown };
@@ -104,13 +106,22 @@ const sampleEventSx = {
     bgcolor: (theme: Theme) => alpha(theme.palette.primary.main, 0.14),
 } as const;
 
+export const AUTO_SHOW_DAYS = 30;
+
+// True while the announcement is less than AUTO_SHOW_DAYS old (counted in local days)
+export const isRecent = (announcement: Announcement, now: Date = new Date()) => {
+    const [y, m, d] = announcement.date.split('-').map(Number);
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return Math.round((today.getTime() - new Date(y, m - 1, d).getTime()) / 86_400_000) < AUTO_SHOW_DAYS;
+};
+
 export const announcements: Announcement[] = [
     {
         id: 'shadow-and-jump-shifts',
         title: 'חדש: כונן צל וכונן הקפצה',
         description: 'לכל משמרת אפשר עכשיו לשבץ גם כונן צל וכונן הקפצה.',
         icon: <NewReleasesOutlined/>,
-        showUntil: '2026-12-31',
+        date: '2026-10-06',
         content: isAdmin => (
             <>
                 {/* A shift cell as it looks in the table */}
@@ -137,7 +148,7 @@ export const announcements: Announcement[] = [
         title: 'חדש: טבלאות נוספות לשבוע',
         description: 'לשבוע יכולות להיות עכשיו טבלאות משמרות נוספות, לצד הטבלה הרגילה.',
         icon: <TableChartOutlined/>,
-        showUntil: '2026-12-31',
+        date: '2026-10-06',
         content: isAdmin => (
             <>
                 {/* The sub-tabs and a shift in the extra table, as they look on the shifts screen */}
@@ -167,7 +178,7 @@ export const announcements: Announcement[] = [
         title: 'חדש: שאלו על המשמרות מהצ\'אט',
         description: 'אפשר עכשיו לחבר את כוננים ל־Claude, ל־ChatGPT או ל־Gemini ולשאול שם על המשמרות.',
         icon: <SmartToyOutlined/>,
-        showUntil: '2027-03-31',
+        date: '2026-11-14',
         action: {label: 'להוראות החיבור', path: '/settings', state: OPEN_CONNECT_STATE},
         content: () => (
             <>
@@ -190,7 +201,7 @@ export const announcements: Announcement[] = [
         title: 'חדש: המשמרות שלכם ביומן',
         description: 'אפשר עכשיו להוסיף את המשמרות שלכם ליומן בטלפון או במחשב.',
         icon: <CalendarPlusIcon/>,
-        showUntil: '2027-03-31',
+        date: '2026-11-15',
         content: () => (
             <>
                 <Box sx={previewSx} aria-hidden>
