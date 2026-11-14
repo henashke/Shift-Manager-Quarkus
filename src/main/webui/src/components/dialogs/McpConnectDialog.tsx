@@ -18,6 +18,11 @@ import {segmentedSx, segmentSx} from '../../theme';
 
 type App = 'claude' | 'chatgpt' | 'gemini';
 
+// Navigation state that opens this dialog when arriving at the settings page (from the feature's announcement)
+export const OPEN_CONNECT_STATE = {openConnect: true};
+export const isOpenConnectState = (state: unknown) =>
+    (state as typeof OPEN_CONNECT_STATE | null)?.openConnect === true;
+
 // Menu names are the apps' own (English) labels, so users can find them; they change now and then, hence the note
 const steps: Record<App, { steps: React.ReactNode[], note: string }> = {
     claude: {
@@ -49,7 +54,14 @@ const steps: Record<App, { steps: React.ReactNode[], note: string }> = {
     },
 };
 
-const examples = ['מתי יש לי משמרות בשבוע הבא?', 'מי הכונן הלילה?', 'אני לא יכול ביום שלישי בלילה, תעדכן אילוץ'];
+// Also shown in the announcement of this feature (announcements.tsx). The calendar one works when the chat app has a
+// calendar connected too.
+export const mcpExamples = [
+    'מתי יש לי משמרות בשבוע הבא?',
+    'מי הכונן הלילה?',
+    'תכניס את כל המשמרות שלי של שבוע הבא ליומן',
+    'אני לא יכול ביום שלישי בלילה, תעדכן אילוץ',
+];
 const adminExamples = ['מי עוד לא שובץ בשבוע הבא?', 'תחליף בין יוסי לדנה ביום רביעי'];
 
 const labelSx: SxProps<Theme> = {display: 'block', fontWeight: 600, fontSize: '0.9rem', mb: 0.75};
@@ -148,10 +160,13 @@ const McpConnectDialog: React.FC<{ open: boolean, onClose: () => void }> = ({ope
             <Box>
                 <Typography component="span" sx={labelSx}>דוגמאות לשאלות</Typography>
                 <Box sx={examplesSx}>
-                    {(authStore.isAdmin() ? [...examples, ...adminExamples] : examples).map(example => (
+                    {(authStore.isAdmin() ? [...mcpExamples, ...adminExamples] : mcpExamples).map(example => (
                         <Box key={example} sx={exampleSx}>{example}</Box>
                     ))}
                 </Box>
+                <Typography variant="caption" color="text.secondary" sx={{display: 'block', mt: 1}}>
+                    כדי להכניס משמרות ליומן, חברו לאותה אפליקציה גם את היומן שלכם (למשל Google Calendar).
+                </Typography>
             </Box>
 
             <Typography variant="caption" color="text.secondary">
