@@ -16,6 +16,8 @@ import {floatingSurface} from '../../theme';
 
 interface CalendarNavigationProps {
     actions?: React.ReactNode;
+    // A small pill on the full card's caption line, next to the week label
+    captionAction?: React.ReactNode;
 }
 
 // Sticks just below the top bar (56px tall, 1px border) with a small gap
@@ -119,7 +121,7 @@ const DateRange: React.FC<{ dates: Date[], fontSize: object | string }> = ({date
  * back to full size when you scroll up, reach the top or tap the pill. The full card and the pill are two layers that
  * cross-fade and slide into each other.
  */
-const CalendarNavigation: React.FC<CalendarNavigationProps> = observer(({actions}) => {
+const CalendarNavigation: React.FC<CalendarNavigationProps> = observer(({actions, captionAction}) => {
     const weekDates = store.weekDates;
     const handlePrevWeekClick = () => store.setWeekOffset(store.weekOffset - 1);
     const handleNextWeekClick = () => store.setWeekOffset(store.weekOffset + 1);
@@ -192,6 +194,7 @@ const CalendarNavigation: React.FC<CalendarNavigationProps> = observer(({actions
                                     חזור להיום
                                 </Button>
                             ) : null}
+                            {captionAction ?? null}
                         </Box>
                         <Box ref={fullDatesRef}><DateRange dates={weekDates} fontSize={{xs: '1rem', sm: '1.15rem'}}/></Box>
                     </Box>
