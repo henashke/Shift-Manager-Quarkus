@@ -1,5 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import {observer} from 'mobx-react-lite';
+import {useLocation, useNavigate} from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import ButtonBase from '@mui/material/ButtonBase';
@@ -22,7 +23,7 @@ import authStore from '../../stores/AuthStore';
 import RecalculateDialog from "../dialogs/RecalculateDialog";
 import NativeSelect from "../basicSharedComponents/NativeSelect";
 import ShiftTableActions from "../shiftTable/ShiftTableActions";
-import McpConnectDialog from "../dialogs/McpConnectDialog";
+import McpConnectDialog, {isOpenConnectState} from "../dialogs/McpConnectDialog";
 
 const daysOfWeek = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 const shiftTypes: ShiftType[] = ['יום', 'לילה'];
@@ -130,7 +131,15 @@ const SettingsTab: React.FC = observer(() => {
     const [settings, setSettings] = useState<Weights>(() => weightsOf(presetObj));
     const [presetNameDialogOpen, setPresetNameDialogOpen] = useState(false);
     const [recalculateScoresDialogOpen, setRecalculateScoresDialogOpen] = useState(false);
-    const [connectDialogOpen, setConnectDialogOpen] = useState(false);
+    // Opened from elsewhere too (the MCP announcement), through the navigation state
+    const location = useLocation();
+    const navigate = useNavigate();
+    const [connectDialogOpen, setConnectDialogOpen] = useState(() => isOpenConnectState(location.state));
+
+    // Forget the request once it's handled, so a reload or going back doesn't open the dialog again
+    useEffect(() => {
+        if (isOpenConnectState(location.state)) navigate('.', {replace: true, state: null});
+    }, [location.state, navigate]);
 
     useEffect(() => {
         shiftWeightStore.fetchPresets();

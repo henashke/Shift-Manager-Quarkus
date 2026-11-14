@@ -18,25 +18,33 @@ import {segmentedSx, segmentSx} from '../../theme';
 
 type App = 'claude' | 'chatgpt' | 'gemini';
 
+// Navigation state that opens this dialog when arriving at the settings page (from the feature's announcement)
+export const OPEN_CONNECT_STATE = {openConnect: true};
+export const isOpenConnectState = (state: unknown) =>
+    (state as typeof OPEN_CONNECT_STATE | null)?.openConnect === true;
+
 // Menu names are the apps' own (English) labels, so users can find them; they change now and then, hence the note
 const steps: Record<App, { steps: React.ReactNode[], note: string }> = {
     claude: {
         steps: [
-            <>בהגדרות של Claude (באתר או באפליקציה), פתחו את <b>Connectors</b>.</>,
-            <>לחצו על <b>Add custom connector</b>, תנו לו שם (למשל "כוננים") והדביקו את הכתובת.</>,
-            <>לחצו על <b>Connect</b>, התחברו עם שם המשתמש והסיסמה של כוננים ואשרו.</>,
+            <>בהגדרות של Claude, פתחו את <b>Connectors</b>.</>,
+            <>לחצו על <b>Add custom connector</b>.</>,
+            <>הזינו שם (למשל "כוננים") והדביקו את הכתובת.</>,
+            <>לחצו על <b>Continue</b>, התחברו עם שם המשתמש והסיסמה של כוננים ואשרו.</>,
             <>בצ'אט חדש, ודאו שהמחבר פעיל בתפריט הכלים, ושאלו.</>,
         ],
         note: 'ייתכן שמחברים מותאמים דורשים מנוי בתשלום.',
     },
     chatgpt: {
         steps: [
-            <>בהגדרות של ChatGPT, פתחו את <b>Apps & Connectors</b>, ואז את <b>Advanced settings</b>, והפעילו את <b>Developer mode</b>.</>,
-            <>לחצו על <b>Create</b>, תנו שם, הדביקו את הכתובת ובחרו <b>OAuth</b> כשיטת האימות.</>,
-            <>התחברו עם שם המשתמש והסיסמה של כוננים ואשרו.</>,
-            <>בצ'אט חדש, בחרו את המחבר מתפריט ה־<b>+</b> ושאלו.</>,
+            <>פתחו את ChatGPT <b>באתר, בדפדפן</b>. כרגע אי אפשר להוסיף את החיבור מהאפליקציה.</>,
+            <>בהגדרות, פתחו את <b>Plugins</b> ולחצו על <b>Browse directory</b>.</>,
+            <>לחצו על <b>Add</b>, ואז על <b>Add custom MCP server</b>.</>,
+            <>הזינו שם (למשל "כוננים") והדביקו את הכתובת.</>,
+            <>לחצו על <b>Create as plugin</b>, התחברו עם שם המשתמש והסיסמה של כוננים ואשרו.</>,
+            <>בצ'אט חדש, שאלו.</>,
         ],
-        note: 'נדרש מנוי בתשלום. שמות התפריטים עשויים להשתנות.',
+        note: 'ייתכן שנדרש מנוי בתשלום. שמות התפריטים עשויים להשתנות.',
     },
     gemini: {
         steps: [
@@ -49,7 +57,14 @@ const steps: Record<App, { steps: React.ReactNode[], note: string }> = {
     },
 };
 
-const examples = ['מתי יש לי משמרות בשבוע הבא?', 'מי הכונן הלילה?', 'אני לא יכול ביום שלישי בלילה, תעדכן אילוץ'];
+// Also shown in the announcement of this feature (announcements.tsx). The calendar one works when the chat app has a
+// calendar connected too.
+export const mcpExamples = [
+    'מתי יש לי משמרות בשבוע הבא?',
+    'מי הכונן הלילה?',
+    'תכניס את כל המשמרות שלי של שבוע הבא ליומן',
+    'אני לא יכול ביום שלישי בלילה, תעדכן אילוץ',
+];
 const adminExamples = ['מי עוד לא שובץ בשבוע הבא?', 'תחליף בין יוסי לדנה ביום רביעי'];
 
 const labelSx: SxProps<Theme> = {display: 'block', fontWeight: 600, fontSize: '0.9rem', mb: 0.75};
@@ -148,10 +163,13 @@ const McpConnectDialog: React.FC<{ open: boolean, onClose: () => void }> = ({ope
             <Box>
                 <Typography component="span" sx={labelSx}>דוגמאות לשאלות</Typography>
                 <Box sx={examplesSx}>
-                    {(authStore.isAdmin() ? [...examples, ...adminExamples] : examples).map(example => (
+                    {(authStore.isAdmin() ? [...mcpExamples, ...adminExamples] : mcpExamples).map(example => (
                         <Box key={example} sx={exampleSx}>{example}</Box>
                     ))}
                 </Box>
+                <Typography variant="caption" color="text.secondary" sx={{display: 'block', mt: 1}}>
+                    כדי להכניס משמרות ליומן, חברו לאותה אפליקציה גם את היומן שלכם (למשל Google Calendar).
+                </Typography>
             </Box>
 
             <Typography variant="caption" color="text.secondary">
