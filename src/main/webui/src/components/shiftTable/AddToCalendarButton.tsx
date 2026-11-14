@@ -8,7 +8,7 @@ import {buildShiftsCalendar, calendarFileName, downloadCalendar} from '../../cal
 import {dateKey} from '../../dateFormat';
 
 // A calendar page with a plus (MUI's set has no such icon)
-const CalendarPlusIcon = createSvgIcon(
+export const CalendarPlusIcon = createSvgIcon(
     <g fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="5" width="18" height="16" rx="2"/>
         <path d="M8 3v4M16 3v4M3 10h18M12 13v6M9 16h6"/>
@@ -17,7 +17,7 @@ const CalendarPlusIcon = createSvgIcon(
 );
 
 // The usual icon button: a rounded square with a divider outline
-const buttonSx = {
+export const calendarButtonSx = {
     width: 40,
     height: 40,
     borderRadius: 2,
@@ -50,7 +50,7 @@ const AddToCalendarButton: React.FC = () => {
     };
 
     return (
-        <IconButton onClick={handleClick} sx={buttonSx} aria-label={LABEL} title={LABEL}>
+        <IconButton onClick={handleClick} sx={calendarButtonSx} aria-label={LABEL} title={LABEL}>
             <CalendarPlusIcon/>
         </IconButton>
     );

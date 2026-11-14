@@ -5,7 +5,9 @@ import NewReleasesOutlined from '@mui/icons-material/NewReleasesOutlined';
 import SmartToyOutlined from '@mui/icons-material/SmartToyOutlined';
 import TableChartOutlined from '@mui/icons-material/TableChartOutlined';
 import UserCard from './components/basicSharedComponents/UserCard';
+import {calendarButtonSx, CalendarPlusIcon} from './components/shiftTable/AddToCalendarButton';
 import {mcpExamples, OPEN_CONNECT_STATE} from './components/dialogs/McpConnectDialog';
+import {alpha, Theme} from '@mui/material/styles';
 import {primaryGradient} from './theme';
 
 /**
@@ -76,6 +78,30 @@ const bubbleSx = {
     fontSize: '0.85rem',
     color: 'common.white',
     background: primaryGradient,
+} as const;
+
+// A still copy of the shifts table's header corner with the calendar button, and the events it adds
+const sampleHeaderSx = {display: 'flex', alignItems: 'center', gap: 3, mb: 0.5} as const;
+const sampleCalendarButtonSx = {
+    ...calendarButtonSx,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: 'primary.light',
+    borderColor: 'primary.main',
+} as const;
+const sampleEventSx = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: 2,
+    width: 220,
+    px: 1.5,
+    py: 0.75,
+    borderRadius: 2,
+    fontSize: '0.85rem',
+    borderInlineStart: '3px solid',
+    borderColor: 'primary.main',
+    bgcolor: (theme: Theme) => alpha(theme.palette.primary.main, 0.14),
 } as const;
 
 export const announcements: Announcement[] = [
@@ -154,6 +180,38 @@ export const announcements: Announcement[] = [
                     </Typography>
                     <Typography component="li" variant="body2">
                         העוזר פועל בשמכם, ויכול לראות ולשנות רק את מה שאתם יכולים.
+                    </Typography>
+                </Box>
+            </>
+        ),
+    },
+    {
+        id: 'add-to-calendar',
+        title: 'חדש: המשמרות שלכם ביומן',
+        description: 'אפשר עכשיו להוסיף את המשמרות שלכם ליומן בטלפון או במחשב.',
+        icon: <CalendarPlusIcon/>,
+        showUntil: '2027-03-31',
+        content: () => (
+            <>
+                <Box sx={previewSx} aria-hidden>
+                    <Box sx={sampleHeaderSx}>
+                        <Box sx={sampleCalendarButtonSx}><CalendarPlusIcon/></Box>
+                        <Typography variant="h6">יום</Typography>
+                        <Typography variant="h6">לילה</Typography>
+                    </Box>
+                    <Box sx={sampleEventSx}>
+                        <span>משמרת יום</span><span dir="ltr">08:00–20:00</span>
+                    </Box>
+                    <Box sx={sampleEventSx}>
+                        <span>משמרת לילה</span><span dir="ltr">20:00–08:00</span>
+                    </Box>
+                </Box>
+                <Box component="ul" sx={pointsSx}>
+                    <Typography component="li" variant="body2">
+                        לחצו על סמל היומן בפינה של טבלת המשמרות, ויורד קובץ עם המשמרות שלכם בשבוע המוצג.
+                    </Typography>
+                    <Typography component="li" variant="body2">
+                        פותחים את הקובץ, והמשמרות נכנסות ליומן של <bdi>Google</bdi>, של <bdi>Apple</bdi> או של <bdi>Outlook</bdi>.
                     </Typography>
                 </Box>
             </>
